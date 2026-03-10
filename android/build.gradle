@@ -54,7 +54,7 @@ android {
 }
 
 repositories {
-  // needed for AAPT2, may be needed for other tools
+  // needed for AAPT2, may be needed for other toos ddddddddddddddddddddddddddddddddddddddddddddddd
   google()
 }
 
