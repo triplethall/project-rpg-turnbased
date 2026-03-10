@@ -5,7 +5,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
+/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platformsыы. */
 public class RPGTurnbased extends ApplicationAdapter {
     private SpriteBatch batch;
     private Texture image;
