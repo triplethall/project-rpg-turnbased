@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
@@ -20,7 +21,8 @@ public class RPGTurnbased extends ApplicationAdapter {
     private final int CELL_GAP = 4;
     private float mapWidthPixels;
     private float mapHeightPixels;
-
+    private BitmapFont debugFont;
+    private boolean showDebug = true;
     private Vector3 touchStart = new Vector3();
     private Vector3 cameraStartPos = new Vector3();
     private boolean isDragging = false;
@@ -30,7 +32,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     @Override
     public void create() {
         batch = new SpriteBatch();
-        image = new Texture("libgdx.png");
+
 
         gameMap = new GameMap(21, 21);
         gameMap.generate();
@@ -67,7 +69,9 @@ public class RPGTurnbased extends ApplicationAdapter {
         camera.position.set(mapWidthPixels / 2f, mapHeightPixels / 2f, 0);
         camera.zoom = 1f;
         camera.update();
-
+        debugFont = new BitmapFont();
+        debugFont.setColor(Color.YELLOW);
+        debugFont.getData().setScale(1.5f);
         Gdx.app.log("Camera", "Viewport: " + camera.viewportWidth + "x" + camera.viewportHeight);
         Gdx.app.log("Camera", "Map: " + mapWidthPixels + "x" + mapHeightPixels);
         Gdx.app.log("Camera", "Screen: " + Gdx.graphics.getWidth() + "x" + Gdx.graphics.getHeight());
@@ -76,7 +80,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     @Override
     public void render() {
         handleInput();
-        //clampCamera();
+        clampCamera();
 
         ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
 
@@ -99,7 +103,25 @@ public class RPGTurnbased extends ApplicationAdapter {
                 batch.draw(pixelTexture, posX, posY, CELL_SIZE, CELL_SIZE);
             }
         }
+        if (showDebug) {
+            float visibleW = camera.viewportWidth / camera.zoom;
+            float visibleH = camera.viewportHeight / camera.zoom;
 
+            debugFont.draw(batch, "Zoom: " + String.format("%.2f", camera.zoom), 10, Gdx.graphics.getHeight() - 40);
+            debugFont.draw(batch, "Visible: " + String.format("%.0f", visibleW) + "x" + String.format("%.0f", visibleH), 10, Gdx.graphics.getHeight() - 70);
+            debugFont.draw(batch, "Mapwidthpixels: " + String.format("%.0f", mapWidthPixels) + "x" + String.format("%.0f", mapHeightPixels), 10, Gdx.graphics.getHeight() - 100);
+            debugFont.draw(batch, "Cam Pos: " + String.format("%.1f", camera.position.x) + ", " + String.format("%.1f", camera.position.y), 10, Gdx.graphics.getHeight() - 130);
+            float visibleWidth = camera.viewportWidth / camera.zoom;
+            float visibleHeight = camera.viewportHeight / camera.zoom;
+            float minX = visibleW / 2;
+            float maxX = mapWidthPixels - visibleW / 2;
+            float minY = visibleH / 2;
+            float maxY = mapHeightPixels - visibleH / 2;
+            debugFont.draw(batch, "visiblewidth*height: " + String.format("%.1f", visibleWidth) + " to " + String.format("%.1f", visibleHeight), 10, Gdx.graphics.getHeight() - 220);
+            debugFont.draw(batch, "zoom: " + String.format("%.1f", camera.zoom), 10, Gdx.graphics.getHeight() - 250);
+            debugFont.draw(batch, "Clamp X: " + String.format("%.1f", minX) + " to " + String.format("%.1f", maxX), 10, Gdx.graphics.getHeight() - 160);
+            debugFont.draw(batch, "Clamp Y: " + String.format("%.1f", minY) + " to " + String.format("%.1f", maxY), 10, Gdx.graphics.getHeight() - 190);
+        }
         batch.setColor(Color.WHITE);
         batch.end();
     }
@@ -117,7 +139,7 @@ public class RPGTurnbased extends ApplicationAdapter {
                 float cur = getPinchDistance();
                 float scale = cur / initialPinchDistance;
                 if (Math.abs(scale - 1f) > 0.02f) {
-                    camera.zoom = MathUtils.clamp(zoomStart / scale, 0.25f, 10f);
+                    camera.zoom = MathUtils.clamp(zoomStart / scale, 0.25f, 1.5f);
                 }
             }
         } else {
@@ -168,33 +190,34 @@ public class RPGTurnbased extends ApplicationAdapter {
 
     private void clampCamera() {
         // Видимая область в мировых координатах (с учётом зума)
-        float visibleWidth = camera.viewportWidth / camera.zoom;
-        float visibleHeight = camera.viewportHeight / camera.zoom;
+        float visibleWidth = camera.viewportWidth * camera.zoom;
+        float visibleHeight = camera.viewportHeight * camera.zoom;
 
-        // Половина видимой области
         float halfVisibleW = visibleWidth / 2;
         float halfVisibleH = visibleHeight / 2;
 
-        // Ограничиваем X: центр камеры не может уйти дальше края карты
-        float minX = halfVisibleW;
-        float maxX = mapWidthPixels - halfVisibleW;
+        float bufferFactor = 0.7f;
+        float bufferW = halfVisibleW * bufferFactor;
+        float bufferH = halfVisibleH * bufferFactor;
 
-        // Если карта меньше экрана — центрируем
-        if (minX >= maxX) {
-            camera.position.x = mapWidthPixels / 2;
-        } else {
+        // Ограничиваем X с буфером
+        float minX = halfVisibleW - bufferW;                    // Край карты может уйти к центру
+        float maxX = mapWidthPixels - halfVisibleW + bufferW;   // с другой стороны тоже
+
+        if (minX < maxX) {
             camera.position.x = MathUtils.clamp(camera.position.x, minX, maxX);
+        } else {
+            camera.position.x = mapWidthPixels / 2;
         }
 
-        // Ограничиваем Y: центр камеры не может уйти дальше края карты
-        float minY = halfVisibleH;
-        float maxY = mapHeightPixels - halfVisibleH;
+        // Ограничиваем Y с буфером
+        float minY = halfVisibleH - bufferH;
+        float maxY = mapHeightPixels - halfVisibleH + bufferH;
 
-        // Если карта меньше экрана — центрируем
-        if (minY >= maxY) {
-            camera.position.y = mapHeightPixels / 2;
-        } else {
+        if (minY < maxY) {
             camera.position.y = MathUtils.clamp(camera.position.y, minY, maxY);
+        } else {
+            camera.position.y = mapHeightPixels / 2;
         }
     }
 
@@ -203,5 +226,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         batch.dispose();
         image.dispose();
         pixelTexture.dispose();
+
+        debugFont.dispose();
     }
 }
