@@ -88,9 +88,9 @@ public class RPGTurnbased extends ApplicationAdapter {
         for (int x = 0; x < gameMap.getWidth(); x++) {
             for (int y = 0; y < gameMap.getHeight(); y++) {
                 if (gameMap.isWalkable(x, y)) {
-                    batch.setColor(Color.GRAY);
+                    batch.setColor(Color.GREEN);
                 } else {
-                    batch.setColor(Color.RED);
+                    batch.setColor(Color.BLUE);
                 }
 
                 float posX = x * (CELL_SIZE + CELL_GAP);
