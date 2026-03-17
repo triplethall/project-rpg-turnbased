@@ -6,7 +6,8 @@ import kotlin.random.Random
 enum class TerrainType {
     WATER,
     LAND,
-    MOUNTAIN
+    MOUNTAIN,
+    Chest
 }
 
 class GameMap(
@@ -23,7 +24,7 @@ class GameMap(
 
     fun isWalkable(x: Int, y: Int): Boolean {
         val t = getTerrain(x, y)
-        return t == TerrainType.LAND
+        return t == TerrainType.LAND || t == TerrainType.Chest
     }
 
     fun generate() {
@@ -33,7 +34,7 @@ class GameMap(
         placeMountains()
         ensureStartAreaIsWalkable()
         validateMountainPaths()
-
+        placeChests()
     }
 
     // --- Логика генерации ---
@@ -226,6 +227,38 @@ class GameMap(
         }
     }
 
+    private fun placeChests() {
+        val random = Random
+        val landCells = mutableListOf<Pair<Int, Int>>()
+        val centerX = width / 2
+        val centerY = height / 2
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.LAND) {
+                    if (kotlin.math.abs(x - centerX) > 3 || kotlin.math.abs(y - centerY) > 3) {
+                        landCells.add(Pair(x, y))
+                    }
+                }
+            }
+        }
+        if (landCells.isEmpty()) return
+        val chestCount = random.nextInt(5, minOf(12, landCells.size / 10 + 5))
+        repeat(chestCount) {
+            val (cx, cy) = landCells.random(random)
+            if (terrain[cx][cy] == TerrainType.LAND) {
+                terrain[cx][cy] = TerrainType.Chest
+            }
+        }
+    }
+
+    fun collectChest(x: Int, y: Int): Boolean {
+        if (x !in 0 until width || y !in 0 until height) return false
+        if (terrain[x][y] == TerrainType.Chest) {
+            terrain[x][y] = TerrainType.LAND
+            return true
+        }
+        return false
+    }
     private fun countAdjacentMountains(x: Int, y: Int): Int {
         var count = 0
         for (dx in -1..1) {
