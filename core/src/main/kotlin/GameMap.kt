@@ -7,7 +7,8 @@ enum class TerrainType {
     WATER,
     LAND,
     MOUNTAIN,
-    CITY
+    CITY,
+    ENEMY
 }
 
 class GameMap(
@@ -35,7 +36,7 @@ class GameMap(
         ensureStartAreaIsWalkable()
         validateMountainPaths()
         placeCity()
-
+        placeEnemies()
     }
 
     // --- Логика генерации ---
@@ -556,5 +557,46 @@ class GameMap(
                 terrain[cx+dx][cy+dy] = TerrainType.CITY
             }
         }
+    }
+    private fun placeEnemies(count: Int = 10)
+    {
+        val random = Random
+        var placed = 0
+        var attemps = 0
+        while (placed < count && attemps < 2000)
+        {
+            attemps++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceEnemy(x,y))
+            {
+                terrain[x][y] = TerrainType.ENEMY
+                placed++
+            }
+        }
+    }
+    private fun canPlaceEnemy(x: Int, y: Int): Boolean
+    {
+        val t = terrain[x][y]
+        if (t != TerrainType.LAND)
+        {
+            return false
+        }
+        for (dx in -2..2)
+        {
+            for (dy in -2..2)
+            {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height)
+                {
+                    if (terrain[nx][ny] == TerrainType.CITY)
+                    {
+                        return false
+                    }
+                }
+            }
+        }
+        return true
     }
 }
