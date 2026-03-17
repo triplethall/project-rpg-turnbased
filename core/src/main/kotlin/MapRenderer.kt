@@ -28,19 +28,26 @@ class MapRenderer (
     fun dispose() {
         pixelTexture.dispose()
     }
+val visibilityManager = VisibilityManager(gameMap)
+    fun render(batch: SpriteBatch, player: Player) {
+        visibilityManager.updateVisibility(Pair(player.x, player.y))
 
-
-    fun render(batch: SpriteBatch) {
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
+                val posX = (x * (cellSize + cellGap))
+                val posY = (y * (cellSize + cellGap))
+
+                if (!gameMap.isExplored(x, y)) {
+                    batch.color = Color.DARK_GRAY // Незнакомые клетки остаются тёмными
+                    batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                    continue
+                }
+
                 batch.color = when (gameMap.getTerrain(x, y)) {
-                    TerrainType.WATER -> continue     // Вода (фон)
+                    TerrainType.WATER -> Color.TEAL     // Вода (фон)
                     TerrainType.LAND -> Color.GREEN      // Земля
                     TerrainType.MOUNTAIN -> Color.BLACK  // Горы
                 }
-
-                val posX = (x * (cellSize + cellGap))
-                val posY = (y * (cellSize + cellGap))
 
                 batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
             }

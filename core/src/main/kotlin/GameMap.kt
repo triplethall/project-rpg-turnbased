@@ -15,7 +15,13 @@ class GameMap(
 ) {
 
     private val terrain = Array(width) { Array(height) { TerrainType.WATER } }
+    private val explored = Array(width) { BooleanArray(height) { false } }
 
+    fun markExplored(x: Int, y: Int) {
+        explored[x][y] = true
+    }
+
+    fun isExplored(x: Int, y: Int): Boolean = explored[x][y]
     fun getTerrain(x: Int, y: Int): TerrainType {
         if (x !in 0 until width || y !in 0 until height) return TerrainType.WATER
         return terrain[x][y]

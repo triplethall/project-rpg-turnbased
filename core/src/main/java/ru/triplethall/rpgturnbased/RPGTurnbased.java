@@ -95,7 +95,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         batch.setProjectionMatrix(cameraControl.getCamera().combined);
         batch.begin();
-        mapRenderer.render(batch);
+        mapRenderer.render(batch, player);
         player.render(batch, font, CELL_SIZE, CELL_GAP);
         batch.end();
 
