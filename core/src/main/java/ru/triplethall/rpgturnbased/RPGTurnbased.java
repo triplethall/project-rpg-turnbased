@@ -15,6 +15,10 @@ public class RPGTurnbased extends ApplicationAdapter {
     private SpriteBatch batch;
     private CameraControl cameraControl;
     private MapRenderer mapRenderer;
+    private PauseMenu pauseMenu;
+    private com.badlogic.gdx.graphics.Texture whitePixel;
+    private boolean isPaused = false;
+    private OrthographicCamera uiCamera;
     private Texture image;
     private GameMap gameMap;
     private Player player;
@@ -63,22 +67,45 @@ public class RPGTurnbased extends ApplicationAdapter {
         font.setColor(Color.YELLOW);
         font.getData().setScale(1.5f);
 
+        com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+        pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
+        pixmap.fill();
+        whitePixel = new com.badlogic.gdx.graphics.Texture(pixmap);
+        pixmap.dispose();
+
+        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+
         player = new Player();
         player.spawnOnShore(gameMap);
     }
 
     @Override
     public void render() {
-        handlePlayerInput();
+        boolean menuClicked = pauseMenu.handleInput();
+        isPaused = pauseMenu.isVisible();
+
+        if (!isPaused && !menuClicked) {
+            handlePlayerInput();
+        }
+
         ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
 
         cameraControl.update();
+
+
         batch.setProjectionMatrix(cameraControl.getCamera().combined);
-
         batch.begin();
-
         mapRenderer.render(batch);
-        player.render(batch, font, CELL_SIZE, CELL_GAP);  // ← ДОБАВЬ ПЕРЕД batch.end()
+        player.render(batch, font, CELL_SIZE, CELL_GAP);
+        batch.end();
+
+
+        OrthographicCamera uiCamera = new OrthographicCamera();
+        uiCamera.setToOrtho(true, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        pauseMenu.render(batch, whitePixel);
         batch.end();
     }
 
@@ -105,8 +132,9 @@ public class RPGTurnbased extends ApplicationAdapter {
     @Override
     public void dispose() {
         batch.dispose();
-        image.dispose();
-        pixelTexture.dispose();
+        if (image != null) image.dispose();
+        if (pixelTexture != null) pixelTexture.dispose();
+        if (whitePixel != null) whitePixel.dispose();
         mapRenderer.dispose();
         font.dispose();
     }
