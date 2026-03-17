@@ -1,87 +1,487 @@
 package ru.triplethall.rpgturnbased
 
-import kotlin.math.sqrt
-import kotlin.jvm.JvmOverloads
+import kotlin.random.Random
+
+// Типы местности
+enum class TerrainType {
+    WATER,
+    LAND,
+    MOUNTAIN
+}
 
 class GameMap(
-    val width: Int = 21,
-    val height: Int = 21
+    val width: Int = 100,
+    val height: Int = 100
 ) {
-    private val walkable = Array(width) { BooleanArray(height) { true } }
+
+    private val terrain = Array(width) { Array(height) { TerrainType.WATER } }
+
+    fun getTerrain(x: Int, y: Int): TerrainType {
+        if (x !in 0 until width || y !in 0 until height) return TerrainType.WATER
+        return terrain[x][y]
+    }
 
     fun isWalkable(x: Int, y: Int): Boolean {
-        if (x < 0 || x >= width || y < 0 || y >= height) return false
-        return walkable[x][y]
+        val t = getTerrain(x, y)
+        return t == TerrainType.LAND
     }
 
-    fun setBlocked(x: Int, y: Int, blocked: Boolean) {
-        if (x in 0 until width && y in 0 until height) {
-            walkable[x][y] = !blocked
-        }
+    fun generate() {
+        generateIslandShape()
+        ensureSingleIsland()
+        fillSmallLakes()
+        placeMountains()
+        ensureStartAreaIsWalkable()
+        validateMountainPaths()
+
     }
 
-    @JvmOverloads
-    fun generate(seed: Int = 42) {
-        val perlin = PerlinNoise(seed)
+    // --- Логика генерации ---
 
-        val centerX = width / 2.0
-        val centerY = height / 2.0
-        val maxDist = minOf(centerX, centerY) // радиус острова
-        val noiseScale = 0.2                         // масштаб шума
-        val threshold = 1.0                           // порог
+    private fun generateIslandShape() {
+        val random = Random
 
         for (x in 0 until width) {
             for (y in 0 until height) {
-                val dx = (x - centerX) / maxDist
-                val dy = (y - centerY) / maxDist
-                val distance = sqrt(dx * dx + dy * dy)
-                val noise = perlin.noise(x * noiseScale, y * noiseScale)
-                val value = distance + noise * 0.3
-                walkable[x][y] = value < threshold
+                terrain[x][y] = TerrainType.WATER
             }
         }
 
-        // Гарантируем, что центральная клетка – суша
-        walkable[centerX.toInt()][centerY.toInt()] = true
+        val centerPoints = listOf(
+            Pair(width / 2, height / 2),
+            Pair(width / 2 + random.nextInt(-5, 6), height / 2 + random.nextInt(-5, 6)),
+            Pair(width / 2 + random.nextInt(-5, 6), height / 2 + random.nextInt(-5, 6)),
+            Pair(width / 2 + random.nextInt(-5, 6), height / 2 + random.nextInt(-5, 6)),
+            Pair(width / 2 + random.nextInt(-5, 6), height / 2 + random.nextInt(-5, 6)),
+            Pair(width / 2 + random.nextInt(-5, 6), height / 2 + random.nextInt(-5, 6)),
+            Pair(width / 2 + random.nextInt(-5, 6), height / 2 + random.nextInt(-5, 6))
+        )
+
+        for ((cx, cy) in centerPoints) {
+            growLand(cx, cy, random.nextInt(30, 35))
+        }
+
+        addRandomCapes(random)
+
+        cleanNoise()
     }
-}
 
-// Вспомогательный класс для шума Перлина
-class PerlinNoise(seed: Int) {
-    private val p = IntArray(512)
-    private val permutation = IntArray(256) { (it + seed) % 256 }
+    private fun growLand(startX: Int, startY: Int, maxSteps: Int) {
+        val random = Random
+        var x = startX
+        var y = startY
+        val directions = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0))
 
-    init {
-        for (i in 0 until 256) {
-            p[i] = permutation[i]
-            p[i + 256] = permutation[i]
+        for (i in 0 until maxSteps) {
+            if (x in 0 until width && y in 0 until height) {
+                terrain[x][y] = TerrainType.LAND
+            }
+
+            val (dx, dy) = directions.random(random)
+            x += dx
+            y += dy
+
+            if (random.nextFloat() < 0.15f) {
+                val (dx2, dy2) = directions.random(random)
+                if (x + dx2 in 0 until width && y + dy2 in 0 until height) {
+                    terrain[x + dx2][y + dy2] = TerrainType.LAND
+                }
+            }
         }
     }
 
-    fun noise(x: Double, y: Double): Double {
-        val xi = x.toInt() and 255
-        val yi = y.toInt() and 255
-        val xf = x - x.toInt()
-        val yf = y - y.toInt()
-        val u = fade(xf)
-        val v = fade(yf)
-        val a = p[xi] + yi
-        val b = p[xi + 1] + yi
-        return lerp(v,
-            lerp(u, grad(p[a], xf, yf), grad(p[b], xf - 1, yf)),
-            lerp(u, grad(p[a + 1], xf, yf - 1), grad(p[b + 1], xf - 1, yf - 1))
-        )
+    private fun addRandomCapes(random: Random) {
+        val landCells = mutableListOf<Pair<Int, Int>>()
+
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.LAND) {
+                    landCells.add(Pair(x, y))
+                }
+            }
+        }
+
+        val capeCount = random.nextInt(25, 40)
+        for (i in 0 until capeCount) {
+            val (sx, sy) = landCells.random(random)
+            val length = random.nextInt(10, 15) // Длина мыса
+
+            val dir = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0)).random(random)
+
+            var cx = sx
+            var cy = sy
+            for (j in 0 until length) {
+                cx += dir.first
+                cy += dir.second
+                if (cx in 0 until width && cy in 0 until height) {
+                    terrain[cx][cy] = TerrainType.LAND
+                } else {
+                    break
+                }
+            }
+        }
     }
 
-    private fun fade(t: Double): Double = t * t * t * (t * (t * 6 - 15) + 10)
-    private fun lerp(t: Double, a: Double, b: Double): Double = a + t * (b - a)
-    private fun grad(hash: Int, x: Double, y: Double): Double {
-        val h = hash and 3
-        return when (h) {
-            0 -> x + y
-            1 -> -x + y
-            2 -> x - y
-            else -> -x - y
+    private fun cleanNoise() {
+        val newTerrain = Array(width) { x ->
+            Array(height) { y ->
+                terrain[x][y]
+            }
+        }
+
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                val neighbors = countLandNeighbors(x, y)
+                if (terrain[x][y] == TerrainType.LAND && neighbors < 3) {
+                    newTerrain[x][y] = TerrainType.WATER // Убираем одиночки
+                }
+                if (terrain[x][y] == TerrainType.WATER && neighbors > 6) {
+                    newTerrain[x][y] = TerrainType.LAND // Убираем одиночки
+                }
+            }
+        }
+
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                terrain[x][y] = newTerrain[x][y]
+            }
+        }
+    }
+
+    private fun countLandNeighbors(x: Int, y: Int): Int {
+        var count = 0
+        for (dx in -1..1) {
+            for (dy in -1..1) {
+                if (dx == 0 && dy == 0) continue
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height && terrain[nx][ny] == TerrainType.LAND) {
+                    count++
+                }
+            }
+        }
+        return count
+    }
+
+    private fun placeMountains() {
+        val random = Random
+        val landCells = mutableListOf<Pair<Int, Int>>()
+
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.LAND) {
+                    landCells.add(Pair(x, y))
+                }
+            }
+        }
+
+        val mountainGroups = random.nextInt(3, 7) // 3-5 групп гор на карте
+
+        for (g in 0 until mountainGroups) {
+            val attempts = 20
+            for (a in 0 until attempts) {
+                val (sx, sy) = landCells.random(random)
+
+                if (countLandNeighbors(sx, sy) < 5) continue
+                if (hasDiagonalWater(sx, sy)) continue
+
+                val groupSize = random.nextInt(1, 4) // 1, 2 или 3
+                val placed = mutableListOf<Pair<Int, Int>>()
+                placed.add(Pair(sx, sy))
+
+                var valid = true
+
+                for (i in 1 until groupSize) {
+                    val last = placed.last()
+                    val directions = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0))
+                    val (dx, dy) = directions.random(random)
+                    val nx = last.first + dx
+                    val ny = last.second + dy
+
+                    if (nx in 0 until width && ny in 0 until height &&
+                        terrain[nx][ny] == TerrainType.LAND &&
+                        !placed.contains(Pair(nx, ny))) {
+
+
+                        val existingMountainsNearby = countAdjacentMountains(nx, ny)
+                        if (existingMountainsNearby + placed.size < 3) {
+                            placed.add(Pair(nx, ny))
+                        } else {
+                            valid = false
+                            break
+                        }
+                    } else {
+                        valid = false
+                        break
+                    }
+                }
+
+                if (valid) {
+                    for ((px, py) in placed) {
+                        terrain[px][py] = TerrainType.MOUNTAIN
+                    }
+                    break
+                }
+            }
+        }
+    }
+
+    private fun countAdjacentMountains(x: Int, y: Int): Int {
+        var count = 0
+        for (dx in -1..1) {
+            for (dy in -1..1) {
+                if (dx == 0 && dy == 0) continue
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height && terrain[nx][ny] == TerrainType.MOUNTAIN) {
+                    count++
+                }
+            }
+        }
+        return count
+    }
+
+    private fun ensureStartAreaIsWalkable() {
+        val centerX = width / 2
+        val centerY = height / 2
+        for (x in (centerX - 2)..(centerX + 2)) {
+            for (y in (centerY - 2)..(centerY + 2)) {
+                if (x in 0 until width && y in 0 until height) {
+                    terrain[x][y] = TerrainType.LAND // Стартовая зона всегда земля
+                }
+            }
+        }
+    }
+
+    private fun ensureSingleIsland() {
+        val visited = Array(width) { BooleanArray(height) { false } }
+        val landCells = mutableListOf<Pair<Int, Int>>()
+
+
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.LAND) {
+                    landCells.add(Pair(x, y))
+                }
+            }
+        }
+
+        if (landCells.isEmpty()) return
+
+
+        val mainIsland = mutableSetOf<Pair<Int, Int>>()
+        val queue = ArrayDeque<Pair<Int, Int>>()
+        val center = landCells.minByOrNull {
+            kotlin.math.abs(it.first - width/2) + kotlin.math.abs(it.second - height/2)
+        } ?: return
+
+        queue.add(center)
+        mainIsland.add(center)
+        visited[center.first][center.second] = true
+
+        while (queue.isNotEmpty()) {
+            val (x, y) = queue.removeFirst()
+            for (dx in -1..1) {
+                for (dy in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    val nx = x + dx
+                    val ny = y + dy
+                    if (nx in 0 until width && ny in 0 until height &&
+                        !visited[nx][ny] && terrain[nx][ny] == TerrainType.LAND) {
+                        visited[nx][ny] = true
+                        mainIsland.add(Pair(nx, ny))
+                        queue.add(Pair(nx, ny))
+                    }
+                }
+            }
+        }
+
+
+        for ((x, y) in landCells) {
+            if (!mainIsland.contains(Pair(x, y))) {
+                terrain[x][y] = TerrainType.WATER
+            }
+        }
+    }
+
+    private fun fillSmallLakes() {
+        val visited = Array(width) { BooleanArray(height) { false } }
+        val lakes = mutableListOf<MutableList<Pair<Int, Int>>>()
+
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.WATER && !visited[x][y]) {
+                    val lake = findWaterArea(x, y, visited)
+                    if (lake.isNotEmpty() && isEnclosedLake(lake)) {
+                        lakes.add(lake)
+                    }
+                }
+            }
+        }
+
+        lakes.sortByDescending { it.size }
+
+
+        for ((index, lake) in lakes.withIndex()) {
+            if (index >= 2 || lake.size <= 5) {
+                for ((x, y) in lake) {
+                    terrain[x][y] = TerrainType.LAND
+                }
+            }
+        }
+    }
+
+    private fun findWaterArea(startX: Int, startY: Int, visited: Array<BooleanArray>): MutableList<Pair<Int, Int>> {
+        val area = mutableListOf<Pair<Int, Int>>()
+        val queue = ArrayDeque<Pair<Int, Int>>()
+
+        queue.add(Pair(startX, startY))
+        visited[startX][startY] = true
+
+        while (queue.isNotEmpty()) {
+            val (x, y) = queue.removeFirst()
+            area.add(Pair(x, y))
+
+            for (dx in -1..1) {
+                for (dy in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > 1) continue // Только 4 направления
+
+                    val nx = x + dx
+                    val ny = y + dy
+                    if (nx in 0 until width && ny in 0 until height &&
+                        !visited[nx][ny] && terrain[nx][ny] == TerrainType.WATER) {
+                        visited[nx][ny] = true
+                        queue.add(Pair(nx, ny))
+                    }
+                }
+            }
+        }
+
+        return area
+    }
+
+    private fun isEnclosedLake(lake: List<Pair<Int, Int>>): Boolean {
+        for ((x, y) in lake) {
+            for (dx in -1..1) {
+                for (dy in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > 1) continue
+
+                    val nx = x + dx
+                    val ny = y + dy
+                    if (nx !in 0 until width || ny !in 0 until height) {
+                        return false // Касается края карты — не озеро
+                    }
+                    if (terrain[nx][ny] == TerrainType.WATER && !lake.contains(Pair(nx, ny))) {
+                        return false // Связано с другой водой — не озеро
+                    }
+                }
+            }
+        }
+        return true
+    }
+
+    private fun hasDiagonalWater(x: Int, y: Int): Boolean {
+        val diagonalDirections = listOf(
+            Pair(-1, -1), Pair(-1, 1),
+            Pair(1, -1), Pair(1, 1)
+        )
+
+        for ((dx, dy) in diagonalDirections) {
+            val nx = x + dx
+            val ny = y + dy
+
+            if (nx !in 0 until width || ny !in 0 until height) {
+                return true
+            }
+
+            if (terrain[nx][ny] == TerrainType.WATER) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private fun validateMountainPaths() {
+
+        val allLandCells = mutableListOf<Pair<Int, Int>>()
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.LAND || terrain[x][y] == TerrainType.MOUNTAIN) {
+                    allLandCells.add(Pair(x, y))
+                }
+            }
+        }
+
+        if (allLandCells.isEmpty()) return
+
+        val reachableCells = mutableListOf<Pair<Int, Int>>()
+        val visited = mutableSetOf<Pair<Int, Int>>()
+        val queue = ArrayDeque<Pair<Int, Int>>()
+
+        val start = Pair(width / 2, height / 2)
+        if (terrain[start.first][start.second] == TerrainType.LAND) {
+            queue.add(start)
+            visited.add(start)
+            reachableCells.add(start)
+        } else {
+            val nearestLand = allLandCells.minByOrNull {
+                kotlin.math.abs(it.first - width/2) + kotlin.math.abs(it.second - height/2)
+            } ?: return
+
+            queue.add(nearestLand)
+            visited.add(nearestLand)
+            reachableCells.add(nearestLand)
+        }
+
+        while (queue.isNotEmpty()) {
+            val (x, y) = queue.removeFirst()
+
+            val directions = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0))
+            for ((dx, dy) in directions) {
+                val nx = x + dx
+                val ny = y + dy
+
+                if (nx in 0 until width && ny in 0 until height &&
+                    !visited.contains(Pair(nx, ny))) {
+
+                    if (terrain[nx][ny] == TerrainType.LAND) {
+                        visited.add(Pair(nx, ny))
+                        reachableCells.add(Pair(nx, ny))
+                        queue.add(Pair(nx, ny))
+                    }
+
+                }
+            }
+        }
+
+
+        if (reachableCells.size == allLandCells.size) {
+            return  // Всё ок, вся суша достижима
+        }
+
+        val unreachableCells = allLandCells.filter { !reachableCells.contains(it) }
+
+        var fixed = false
+        for ((ux, uy) in unreachableCells) {
+            val directions = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0))
+            for ((dx, dy) in directions) {
+                val nx = ux + dx
+                val ny = uy + dy
+
+                if (nx in 0 until width && ny in 0 until height &&
+                    reachableCells.contains(Pair(nx, ny)) &&
+                    terrain[nx][ny] == TerrainType.MOUNTAIN) {
+                    terrain[nx][ny] = TerrainType.LAND
+                    fixed = true
+                }
+            }
+        }
+
+        if (fixed) {
+            validateMountainPaths()
         }
     }
 }
