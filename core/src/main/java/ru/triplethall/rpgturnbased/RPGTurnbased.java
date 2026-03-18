@@ -10,6 +10,9 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.graphics.Color;
 
+import ru.triplethall.rpgturnbased.GameMap;
+import ru.triplethall.rpgturnbased.Player;
+import ru.triplethall.rpgturnbased.PauseMenu;
 
 public class RPGTurnbased extends ApplicationAdapter {
     private SpriteBatch batch;
@@ -81,7 +84,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
     @Override
     public void render() {
-        boolean menuClicked = pauseMenu.handleInput();
+        boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
 
         if (!isPaused && !menuClicked) {
@@ -105,7 +108,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
-        pauseMenu.render(batch, whitePixel);
+        pauseMenu.render(batch, whitePixel, player);
         batch.end();
     }
 
