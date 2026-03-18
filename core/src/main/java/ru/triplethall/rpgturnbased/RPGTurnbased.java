@@ -31,6 +31,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private final int CELL_GAP = 4;
     private float mapWidthPixels;
     private float mapHeightPixels;
+    private BattleScene battleScene;
 
     @Override
     public void create() {
@@ -77,7 +78,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         pixmap.dispose();
 
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-
+        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap);
         player = new Player();
         player.spawnOnShore(gameMap);
     }
@@ -87,7 +88,10 @@ public class RPGTurnbased extends ApplicationAdapter {
         boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
 
-        if (!isPaused && !menuClicked) {
+        // Обработка ввода для сцены битвы
+        if (battleScene.isActive()) {
+            battleScene.handleInput();
+        } else if (!isPaused && !menuClicked) {
             handlePlayerInput();
         }
 
@@ -95,20 +99,28 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         cameraControl.update();
 
-
+        // Рендер карты
         batch.setProjectionMatrix(cameraControl.getCamera().combined);
         batch.begin();
         mapRenderer.render(batch, player);
         player.render(batch, font, CELL_SIZE, CELL_GAP);
         batch.end();
 
-
+        // UI камера для интерфейса
         OrthographicCamera uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(true, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
+
+        // Сначала рендерим паузу
         pauseMenu.render(batch, whitePixel, player);
+
+        // Потом рендерим битву поверх, если активна
+        if (battleScene.isActive()) {
+            battleScene.render(batch, whitePixel, player);
+        }
+
         batch.end();
     }
 
@@ -128,7 +140,11 @@ public class RPGTurnbased extends ApplicationAdapter {
             int targetX = (int)grid.x;
             int targetY = (int)grid.y;
 
-            player.tryMoveTo(targetX, targetY, gameMap);
+            boolean moved = player.tryMoveTo(targetX, targetY, gameMap);
+
+            if (moved && gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
+                battleScene.startBattle(targetX, targetY);
+            }
         }
     }
 

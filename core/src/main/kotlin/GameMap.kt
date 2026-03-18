@@ -31,6 +31,13 @@ class GameMap(
         if (x !in 0 until width || y !in 0 until height) return TerrainType.WATER
         return terrain[x][y]
     }
+    fun setTerrain(x: Int, y: Int, type: TerrainType)
+    {
+        if (x in 0 until width && y in 0 until height)
+        {
+            terrain[x][y] = type;
+        }
+    }
 
     fun isWalkable(x: Int, y: Int): Boolean {
         val t = getTerrain(x, y)
