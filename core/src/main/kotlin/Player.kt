@@ -73,7 +73,7 @@ class Player(
         val posX = x * (cellSize + cellGap)
         val posY = y * (cellSize + cellGap)
 
-        font.color = Color.YELLOW
+        font.color = Color.BLACK
         font.draw(batch, "P", posX + 10f, posY + cellSize - 5f)
     }
 }
