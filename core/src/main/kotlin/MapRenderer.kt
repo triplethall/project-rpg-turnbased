@@ -4,6 +4,12 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.scenes.scene2d.actions.Actions.color
+import kotlin.math.pow
+import kotlin.math.sqrt
+
+
+const val MAX_RADIUS = 5.0f // Радиус видимости
 
 class MapRenderer (
     private val gameMap: GameMap,
@@ -37,14 +43,25 @@ val visibilityManager = VisibilityManager(gameMap)
                 val posX = (x * (cellSize + cellGap))
                 val posY = (y * (cellSize + cellGap))
 
-                if (!gameMap.isExplored(x, y)) {
+                // 1. Считаем дистанцию до игрока
+                val dx = (x - player.x).toDouble()
+                val dy = (y - player.y).toDouble()
+                val distance = sqrt(dx * dx + dy * dy).toFloat()
+
+                // 2. Считаем яркость: 1.0 (рядом) -> 0.2 (на границе видимости)
+                // Используем 0.2f как минимальную яркость для уже исследованных клеток
+                val light = (1.0f - (distance / MAX_RADIUS)).coerceIn(0.2f, 1.0f)
+
+                val terrain = gameMap.getTerrain(x, y)
+                if (!gameMap.isExplored(x, y) && terrain != TerrainType.WATER) {
                     batch.color = Color.DARK_GRAY // Незнакомые клетки остаются тёмными
+
                     batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
                     continue
                 }
 
                 batch.color = when (gameMap.getTerrain(x, y)) {
-                    TerrainType.WATER -> Color.TEAL     // Вода (фон)
+                    TerrainType.WATER -> Color.CYAN     // Вода (фон)
                     TerrainType.LAND -> Color.GREEN      // Земля
                     TerrainType.MOUNTAIN -> Color.BLACK  // Горы
                     TerrainType.CITY -> Color.BROWN     // Город
@@ -53,6 +70,8 @@ val visibilityManager = VisibilityManager(gameMap)
                     TerrainType.UPGRADE -> Color.ORANGE // Улучшения
                     TerrainType.OUTPOST -> Color.CORAL  // Аванпосты
                 }
+                val c = batch.color
+                batch.setColor(c.r * light, c.g * light, c.b * light, 1f)
 
                 batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
             }
