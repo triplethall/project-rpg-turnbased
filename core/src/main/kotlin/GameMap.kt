@@ -6,7 +6,9 @@ import kotlin.random.Random
 enum class TerrainType {
     WATER,
     LAND,
-    MOUNTAIN
+    MOUNTAIN,
+    CITY,
+    ENEMY
 }
 
 class GameMap(
@@ -33,7 +35,8 @@ class GameMap(
         placeMountains()
         ensureStartAreaIsWalkable()
         validateMountainPaths()
-
+        placeCity()
+        placeEnemies()
     }
 
     // --- Логика генерации ---
@@ -483,5 +486,117 @@ class GameMap(
         if (fixed) {
             validateMountainPaths()
         }
+    }
+    private fun canPlaceCity(x: Int, y: Int): Boolean
+    {
+        for (dx in 0..1)
+        {
+            for (dy in 0..1)
+            {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx !in 0 until width || ny !in 0 until height)
+                {
+                    return false
+                }
+                if (terrain[nx][ny] != TerrainType.LAND)
+                {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    private fun goodCityPosition(x: Int, y: Int): Boolean
+    {
+        var landCount = 0
+        for (dx in -2..3)
+        {
+            for (dy in -2..3)
+            {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height)
+                {
+                    if (terrain[nx][ny] == TerrainType.LAND)
+                    {
+                        landCount++
+                    }
+                }
+            }
+        }
+        return landCount > 20
+    }
+    private fun placeCity()
+    {
+        val random = Random
+        var attemps = 0
+        while (attemps < 1000)
+        {
+            attemps++
+            val x = random.nextInt(1, width - 2)
+            val y = random.nextInt(1, height - 2)
+            if (canPlaceCity(x, y) && goodCityPosition(x,y))
+            {
+                for (dx in 0..1)
+                {
+                    for (dy in 0..1)
+                    {
+                        terrain[x + dx][y + dy] = TerrainType.CITY
+                    }
+                }
+                return
+            }
+        }
+        val cx = width / 2
+        val cy = height / 2
+        for (dx in 0..1)
+        {
+            for (dy in 0..1)
+            {
+                terrain[cx+dx][cy+dy] = TerrainType.CITY
+            }
+        }
+    }
+    private fun placeEnemies(count: Int = 10)
+    {
+        val random = Random
+        var placed = 0
+        var attemps = 0
+        while (placed < count && attemps < 2000)
+        {
+            attemps++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceEnemy(x,y))
+            {
+                terrain[x][y] = TerrainType.ENEMY
+                placed++
+            }
+        }
+    }
+    private fun canPlaceEnemy(x: Int, y: Int): Boolean
+    {
+        val t = terrain[x][y]
+        if (t != TerrainType.LAND)
+        {
+            return false
+        }
+        for (dx in -2..2)
+        {
+            for (dy in -2..2)
+            {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height)
+                {
+                    if (terrain[nx][ny] == TerrainType.CITY)
+                    {
+                        return false
+                    }
+                }
+            }
+        }
+        return true
     }
 }
