@@ -9,19 +9,22 @@ import kotlin.random.Random
 
 class Player(
     var x: Int = 0,
-    var y: Int = 0
+    var y: Int = 0,
+    var playerClass : PlayerClasses = PlayerClasses.ADVENTURIST // класс по умолчанию
 ) {
     // Базовые характеристики
-    var damage: Int = 15                 // Урон
-    var defense: Double = 0.0             // Защита (процентная)
-    var mana: Int = 50                    // Мана
-    var attackSpeed: Double = 1.0         // Скорость (атаки)
-    var accuracy: Double = 0.8            // Точность (шанс попадания по врагу)
-    var will: Double = 0.5                 // Воля (сопротивление дебафам)
-    var corruption: Int = 0                // Скверна
-    var level: Int = 1                     // Уровень
+    var damage: Int = 15                    // Урон
+    var defense: Double = 0.0               // Защита (процентная)
+    var mana: Int = 50                      // Мана
+    var attackSpeed: Double = 1.0           // Скорость (атаки)
+    var accuracy: Double = 0.8              // Точность (шанс попадания по врагу)
+    var will: Double = 0.5                  // Воля (сопротивление дебафам)
+    var corruption: Int = 0                 // Скверна
+    var level: Int = 1                      // Уровень
     var experience: Int = 0                 // Опыт
-
+    var mageDamage: Int = 10                // урон магии
+    var luck: Double = 0.01                  // Удача
+    var critChance: Double = 0.01           // крит шанс
 
     // Максимальные значения
     var maxMana: Int = 50
@@ -77,6 +80,9 @@ class Player(
         attackSpeed += 0.05
         accuracy += 0.02
         will = 0.02
+        mageDamage += 4
+        luck += 0.02
+        critChance += 0.01
     }
 
 
@@ -86,6 +92,9 @@ class Player(
     }
     fun getCorruptionDamageModifier(): Double {
         return 1.0 + (corruption * 0.07)
+    }
+    fun getCorruptionMageDamageModifier(): Double {
+        return 1.0 + (corruption * 0.04)
     }
 
 
@@ -167,11 +176,17 @@ class Player(
         return false
     }
 
+    fun changeClass(newClass: PlayerClasses) {
+        playerClass = newClass
+        newClass.applyToPlayer(this)
+    }
+
+
     fun render(batch: SpriteBatch, font: BitmapFont, cellSize: Int, cellGap: Int) {
         val posX = x * (cellSize + cellGap)
         val posY = y * (cellSize + cellGap)
 
-        font.color = Color.BLACK
+        font.color = Color.YELLOW
         font.draw(batch, "P", posX + 10f, posY + cellSize - 5f)
     }
 }
