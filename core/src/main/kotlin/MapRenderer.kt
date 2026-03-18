@@ -39,6 +39,9 @@ class MapRenderer (
                     TerrainType.MOUNTAIN -> Color.BLACK  // Горы
                     TerrainType.CITY -> Color.BROWN     // Город
                     TerrainType.ENEMY -> Color.RED      // Враг
+                    TerrainType.TRAP -> Color.GRAY      // Ловушки
+                    TerrainType.UPGRADE -> Color.ORANGE // Улучшения
+                    TerrainType.OUTPOST -> Color.CORAL  // Аванпосты
                 }
 
                 val posX = (x * (cellSize + cellGap))
