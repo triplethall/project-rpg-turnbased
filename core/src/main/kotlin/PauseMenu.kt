@@ -18,7 +18,13 @@ class PauseMenu(
     private val pauseButtonRect = Rectangle(0f, screenHeight - 120f, 120f, 120f)
 
     // Кнопки внутри меню
+    var isStatsVisible = false
+        private set
+    private var closeButtonRect = Rectangle()
+
+    
     private var resumeRect = Rectangle()
+    private var statsRect = Rectangle()
     private var exitRect = Rectangle()
 
     // Флаги для визуального отклика
@@ -41,13 +47,16 @@ class PauseMenu(
 
     fun toggle() {
         isVisible = !isVisible
+        if (!isVisible) {
+            isStatsVisible = false // Закрываем статистику при закрытии меню
+        }
     }
 
-    fun handleInput(): Boolean {
-        val touchX = Gdx.input.x.toFloat()
-        val touchY = Gdx.input.y.toFloat()
+    fun toggleStats() {
+        isStatsVisible = !isStatsVisible
+    }
 
-        // Проверяем только на экране, никаких преобразований координат!
+    fun handleInput(player: Player? = null): Boolean {
         if (!isVisible) {
             if (Gdx.input.justTouched() && pauseButtonRect.contains(touchX, touchY)) {
                 toggle()
@@ -67,11 +76,21 @@ class PauseMenu(
             isResumePressed = resumeRect.contains(touchX, touchY)
             isExitPressed = exitRect.contains(touchX, touchY)
 
-            if (isResumePressed) {
+            // Сначала проверяем кнопку закрытия статистики, если статистика открыта
+            if (isStatsVisible && closeButtonRect.contains(touchX, yInverted)) {
+                toggleStats()
+                return true
+            }
+
+            if (resumeRect.contains(touchX, yInverted)) {
                 toggle()
                 return true
             }
-            if (isExitPressed) {
+            if (statsRect.contains(touchX, yInverted)) {
+                toggleStats()
+                return true
+            }
+            if (exitRect.contains(touchX, yInverted)) {
                 Gdx.app.exit()
                 return true
             }
@@ -114,6 +133,20 @@ class PauseMenu(
         // Продолжить игру (меняется цвет при нажатии)
         batch.color = if (isResumePressed) Color.LIGHT_GRAY else Color.GRAY
         batch.draw(whitePixel, resumeRect.x, resumeRect.y, resumeRect.width, resumeRect.height)
+        val btnW = 600f
+        val btnH = 120f
+        val cX = pX + (panelW - btnW) / 2
+
+
+        // Кнопки меню
+        resumeRect.set(cX, pY + 180f, btnW, btnH)
+        statsRect.set(cX, pY + 90f, btnW, btnH)
+        exitRect.set(cX, pY, btnW, btnH)
+
+
+        
+        batch.draw(whitePixel, statsRect.x, statsRect.y, statsRect.width, statsRect.height)
+        batch.draw(whitePixel, exitRect.x, exitRect.y, exitRect.width, exitRect.height)
 
         // Выход из игры
         batch.color = if (isExitPressed) Color.LIGHT_GRAY else Color.GRAY
@@ -122,11 +155,79 @@ class PauseMenu(
         // Надписи на кнопках
         font.color = Color.WHITE
         font.data.setScale(1.2f)
-        font.draw(batch, "CONTINUE", resumeRect.x + 30f, resumeRect.y + 28f)
-        font.draw(batch, "EXIT", exitRect.x + 70f, exitRect.y + 28f)
+        font.draw(batch, "CONTINUE", cX + 30f, resumeRect.y + 28f)
+        font.draw(batch, "STATISTICS", cX + 30f, statsRect.y + 28f)
+        font.draw(batch, "EXIT", cX + 70f, exitRect.y + 28f)
         font.data.setScale(1f)
 
-        // Восстанавливаем исходный цвет
+
+        // отображение статистки при открытом окнэ
+        if (isStatsVisible && player != null) {
+            renderStats(batch, whitePixel, player, pX, pY, panelW, panelH)
+        }
+
         batch.color = Color.WHITE
+    }
+
+    private fun renderStats(batch: SpriteBatch, whitePixel: Texture, player: Player, pX: Float, pY: Float, panelW: Float, panelH: Float) {
+        val statsW = panelW * 0.9f
+        val statsH = panelH * 0.6f
+        val statsX = pX + (panelW - statsW) / 2
+        val statsY = pY + 250f
+
+        // Полупрозрачный фон статистики
+        batch.color = Color(0.1f, 0.1f, 0.1f, 0.9f)
+        batch.draw(whitePixel, statsX, statsY, statsW, statsH)
+
+        font.color = Color.YELLOW
+        font.data.setScale(1.5f)
+        font.draw(batch, "Player Statistics", statsX + 20f, statsY + statsH - 20f)
+        font.data.setScale(1.2f)
+
+        // Рассчитываем модификаторы от скверны
+        val healthMod = player.getCorruptionHealthModifier()
+        val damageMod = player.getCorruptionDamageModifier()
+
+        val statsList = listOf(
+            "Level: ${player.level}",
+            "Experience: ${player.experience}/${player.getExpForNextLevel()} (${(player.getExpProgress() * 100).toInt()}%)",
+            "Health: ${player.currentHealth}/${player.maxHealth}",
+            "Mana: ${player.currentMana}/${player.maxMana}",
+            "Damage: ${player.damage}",
+            "Defense: ${(player.defense * 100).toInt()}%",
+            "Accuracy: ${(player.accuracy * 100).toInt()}%",
+            "Attack speed: ${String.format("%.2f", player.attackSpeed)}",
+            "Will: ${(player.will * 100).toInt()}%",
+            "Corruption: ${player.corruption}",
+            "  Health modifier: ${(healthMod * 100).toInt()}%",
+            "  Damage modifier: ${(damageMod * 100).toInt()}%"
+        )
+
+        var yOffset = statsY + statsH - 60f
+        for (stat in statsList) {
+            if (stat.startsWith("  ")) {
+                font.color = Color.LIGHT_GRAY
+            } else {
+                font.color = Color.WHITE
+            }
+            font.draw(batch, stat, statsX + 30f, yOffset)
+            yOffset -= 30f
+        }
+
+        // кнопка закрытия статов
+        val closeBtnW = 100f
+        val closeBtnH = 40f
+        val closeBtnX = statsX + statsW - closeBtnW - 10f
+        val closeBtnY = statsY + 10f
+
+        // Сохраняем прямоугольник кнопки для обработки нажатий
+        closeButtonRect.set(closeBtnX, closeBtnY, closeBtnW, closeBtnH)
+
+        batch.color = Color.RED
+        batch.draw(whitePixel, closeBtnX, closeBtnY, closeBtnW, closeBtnH)
+        font.color = Color.WHITE
+        font.data.setScale(1f)
+        font.draw(batch, "CLOSE", closeBtnX + 20f, closeBtnY + 28f)
+        font.data.setScale(1.2f)
     }
 }

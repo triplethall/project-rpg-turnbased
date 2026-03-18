@@ -6,7 +6,12 @@ import kotlin.random.Random
 enum class TerrainType {
     WATER,
     LAND,
-    MOUNTAIN
+    MOUNTAIN,
+    CITY,
+    ENEMY,
+    TRAP,
+    UPGRADE,
+    OUTPOST
 }
 
 class GameMap(
@@ -15,7 +20,13 @@ class GameMap(
 ) {
 
     private val terrain = Array(width) { Array(height) { TerrainType.WATER } }
+    private val explored = Array(width) { BooleanArray(height) { false } }
 
+    fun markExplored(x: Int, y: Int) {
+        explored[x][y] = true
+    }
+
+    fun isExplored(x: Int, y: Int): Boolean = explored[x][y]
     fun getTerrain(x: Int, y: Int): TerrainType {
         if (x !in 0 until width || y !in 0 until height) return TerrainType.WATER
         return terrain[x][y]
@@ -23,7 +34,12 @@ class GameMap(
 
     fun isWalkable(x: Int, y: Int): Boolean {
         val t = getTerrain(x, y)
-        return t == TerrainType.LAND
+        return t == TerrainType.LAND ||
+            t == TerrainType.CITY ||
+            t == TerrainType.ENEMY ||
+            t == TerrainType.TRAP ||
+            t == TerrainType.UPGRADE ||
+            t == TerrainType.OUTPOST
     }
 
     fun generate() {
@@ -33,7 +49,11 @@ class GameMap(
         placeMountains()
         ensureStartAreaIsWalkable()
         validateMountainPaths()
-
+        placeCity()
+        placeEnemies()
+        placeTraps()
+        placeUpgrade()
+        placeOutpost()
     }
 
     // --- Логика генерации ---
@@ -483,5 +503,238 @@ class GameMap(
         if (fixed) {
             validateMountainPaths()
         }
+    }
+    private fun canPlaceCity(x: Int, y: Int): Boolean
+    {
+        for (dx in 0..1)
+        {
+            for (dy in 0..1)
+            {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx !in 0 until width || ny !in 0 until height)
+                {
+                    return false
+                }
+                if (terrain[nx][ny] != TerrainType.LAND)
+                {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    private fun goodCityPosition(x: Int, y: Int): Boolean
+    {
+        var landCount = 0
+        for (dx in -2..3)
+        {
+            for (dy in -2..3)
+            {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height)
+                {
+                    if (terrain[nx][ny] == TerrainType.LAND)
+                    {
+                        landCount++
+                    }
+                }
+            }
+        }
+        return landCount > 20
+    }
+    private fun placeCity()
+    {
+        val random = Random
+        var attemps = 0
+        while (attemps < 1000)
+        {
+            attemps++
+            val x = random.nextInt(1, width - 2)
+            val y = random.nextInt(1, height - 2)
+            if (canPlaceCity(x, y) && goodCityPosition(x,y))
+            {
+                for (dx in 0..1)
+                {
+                    for (dy in 0..1)
+                    {
+                        terrain[x + dx][y + dy] = TerrainType.CITY
+                    }
+                }
+                return
+            }
+        }
+        val cx = width / 2
+        val cy = height / 2
+        for (dx in 0..1)
+        {
+            for (dy in 0..1)
+            {
+                terrain[cx+dx][cy+dy] = TerrainType.CITY
+            }
+        }
+    }
+    private fun placeEnemies(count: Int = 10)
+    {
+        val random = Random
+        var placed = 0
+        var attemps = 0
+        while (placed < count && attemps < 2000)
+        {
+            attemps++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceEnemy(x,y))
+            {
+                terrain[x][y] = TerrainType.ENEMY
+                placed++
+            }
+        }
+    }
+    private fun canPlaceEnemy(x: Int, y: Int): Boolean
+    {
+        val t = terrain[x][y]
+        if (t != TerrainType.LAND)
+        {
+            return false
+        }
+        for (dx in -2..2)
+        {
+            for (dy in -2..2)
+            {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height)
+                {
+                    if (terrain[nx][ny] == TerrainType.CITY)
+                    {
+                        return false
+                    }
+                }
+            }
+        }
+        return true
+    }
+    private fun placeTraps(count: Int = 3)
+    {
+        val random = Random
+        var placed = 0
+        var attempts = 0
+        while (placed < count && attempts < 2000)
+        {
+            attempts++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceTraps(x, y))
+            {
+                terrain[x][y] = TerrainType.TRAP
+                placed++
+            }
+        }
+        if (placed == 0)
+        {
+            for (x in 0 until width)
+            {
+                for (y in 0 until height)
+                {
+                    if (terrain[x][y] == TerrainType.LAND)
+                    {
+                        terrain[x][y]=TerrainType.TRAP
+                        return
+                    }
+                }
+            }
+        }
+
+    }
+    private fun canPlaceTraps(x: Int, y: Int): Boolean
+    {
+        if (terrain[x][y] != TerrainType.LAND)
+        {
+            return false
+        }
+        return true
+    }
+    private fun placeUpgrade()
+    {
+        val random = Random
+        if (random.nextFloat() > 0.5f)
+        {
+            return
+        }
+        var attemps = 0
+        while (attemps < 1000)
+        {
+            attemps++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceUpgrade(x, y))
+            {
+                terrain[x][y] = TerrainType.UPGRADE
+                return
+            }
+        }
+    }
+    private fun canPlaceUpgrade(x: Int, y: Int): Boolean
+    {
+        if (terrain[x][y] != TerrainType.LAND)
+        {
+            return false
+        }
+        return true
+    }
+    private fun placeOutpost()
+    {
+        val random = Random
+        if (random.nextFloat() > 0.25f)
+        {
+            return
+        }
+        var attempts = 0
+        while (attempts < 1000)
+        {
+            attempts++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            val horizontal = random.nextBoolean()
+            if (canPlaceOutpost(x, y, horizontal))
+            {
+                if (horizontal)
+                {
+                    terrain[x][y] = TerrainType.OUTPOST
+                    terrain[x+1][y] = TerrainType.OUTPOST
+                }
+                else
+                {
+                    terrain[x][y] = TerrainType.OUTPOST
+                    terrain[x][y+1] = TerrainType.OUTPOST
+                }
+                return
+            }
+        }
+    }
+    private fun canPlaceOutpost(x: Int, y: Int, horizontal: Boolean): Boolean
+    {
+        val positions = if (horizontal)
+        {
+            listOf( Pair(x, y) , Pair( x + 1, y))
+        }
+        else
+        {
+            listOf( Pair(x , y) , Pair(x , y + 1))
+        }
+        for ((nx, ny) in positions)
+        {
+            if (nx !in 0 until width || ny !in 0 until height)
+            {
+                return false
+            }
+            if (terrain[nx][ny] != TerrainType.LAND)
+            {
+                return false
+            }
+        }
+        return true
     }
 }
