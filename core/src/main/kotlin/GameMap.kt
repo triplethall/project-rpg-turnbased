@@ -8,7 +8,10 @@ enum class TerrainType {
     LAND,
     MOUNTAIN,
     CITY,
-    ENEMY
+    ENEMY,
+    TRAP,
+    UPGRADE,
+    OUTPOST
 }
 
 class GameMap(
@@ -31,7 +34,12 @@ class GameMap(
 
     fun isWalkable(x: Int, y: Int): Boolean {
         val t = getTerrain(x, y)
-        return t == TerrainType.LAND
+        return t == TerrainType.LAND ||
+            t == TerrainType.CITY ||
+            t == TerrainType.ENEMY ||
+            t == TerrainType.TRAP ||
+            t == TerrainType.UPGRADE ||
+            t == TerrainType.OUTPOST
     }
 
     fun generate() {
@@ -43,6 +51,9 @@ class GameMap(
         validateMountainPaths()
         placeCity()
         placeEnemies()
+        placeTraps()
+        placeUpgrade()
+        placeOutpost()
     }
 
     // --- Логика генерации ---
@@ -601,6 +612,127 @@ class GameMap(
                         return false
                     }
                 }
+            }
+        }
+        return true
+    }
+    private fun placeTraps(count: Int = 3)
+    {
+        val random = Random
+        var placed = 0
+        var attempts = 0
+        while (placed < count && attempts < 2000)
+        {
+            attempts++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceTraps(x, y))
+            {
+                terrain[x][y] = TerrainType.TRAP
+                placed++
+            }
+        }
+        if (placed == 0)
+        {
+            for (x in 0 until width)
+            {
+                for (y in 0 until height)
+                {
+                    if (terrain[x][y] == TerrainType.LAND)
+                    {
+                        terrain[x][y]=TerrainType.TRAP
+                        return
+                    }
+                }
+            }
+        }
+
+    }
+    private fun canPlaceTraps(x: Int, y: Int): Boolean
+    {
+        if (terrain[x][y] != TerrainType.LAND)
+        {
+            return false
+        }
+        return true
+    }
+    private fun placeUpgrade()
+    {
+        val random = Random
+        if (random.nextFloat() > 0.5f)
+        {
+            return
+        }
+        var attemps = 0
+        while (attemps < 1000)
+        {
+            attemps++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceUpgrade(x, y))
+            {
+                terrain[x][y] = TerrainType.UPGRADE
+                return
+            }
+        }
+    }
+    private fun canPlaceUpgrade(x: Int, y: Int): Boolean
+    {
+        if (terrain[x][y] != TerrainType.LAND)
+        {
+            return false
+        }
+        return true
+    }
+    private fun placeOutpost()
+    {
+        val random = Random
+        if (random.nextFloat() > 0.25f)
+        {
+            return
+        }
+        var attempts = 0
+        while (attempts < 1000)
+        {
+            attempts++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            val horizontal = random.nextBoolean()
+            if (canPlaceOutpost(x, y, horizontal))
+            {
+                if (horizontal)
+                {
+                    terrain[x][y] = TerrainType.OUTPOST
+                    terrain[x+1][y] = TerrainType.OUTPOST
+                }
+                else
+                {
+                    terrain[x][y] = TerrainType.OUTPOST
+                    terrain[x][y+1] = TerrainType.OUTPOST
+                }
+                return
+            }
+        }
+    }
+    private fun canPlaceOutpost(x: Int, y: Int, horizontal: Boolean): Boolean
+    {
+        val positions = if (horizontal)
+        {
+            listOf( Pair(x, y) , Pair( x + 1, y))
+        }
+        else
+        {
+            listOf( Pair(x , y) , Pair(x , y + 1))
+        }
+        for ((nx, ny) in positions)
+        {
+            if (nx !in 0 until width || ny !in 0 until height)
+            {
+                return false
+            }
+            if (terrain[nx][ny] != TerrainType.LAND)
+            {
+                return false
             }
         }
         return true
