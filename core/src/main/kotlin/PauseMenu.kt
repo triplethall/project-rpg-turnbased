@@ -22,7 +22,7 @@ class PauseMenu(
         private set
     private var closeButtonRect = Rectangle()
 
-    
+
     private var resumeRect = Rectangle()
     private var statsRect = Rectangle()
     private var exitRect = Rectangle()
@@ -57,7 +57,11 @@ class PauseMenu(
     }
 
     fun handleInput(player: Player? = null): Boolean {
+        val touchX = Gdx.input.x.toFloat()
+        val touchY = Gdx.input.y.toFloat()
+        val yInverted = screenHeight - touchY
         if (!isVisible) {
+
             if (Gdx.input.justTouched() && pauseButtonRect.contains(touchX, touchY)) {
                 toggle()
                 return true
@@ -102,7 +106,7 @@ class PauseMenu(
         return false
     }
 
-    fun render(batch: SpriteBatch, whitePixel: Texture) {
+    fun render(batch: SpriteBatch, whitePixel: Texture, player: Player? = null) {
         // Отображаем кнопку паузы только когда меню скрыто
         if (!isVisible) {
             batch.color = Color.BLACK
@@ -144,7 +148,7 @@ class PauseMenu(
         exitRect.set(cX, pY, btnW, btnH)
 
 
-        
+
         batch.draw(whitePixel, statsRect.x, statsRect.y, statsRect.width, statsRect.height)
         batch.draw(whitePixel, exitRect.x, exitRect.y, exitRect.width, exitRect.height)
 
