@@ -29,6 +29,7 @@ class Player(
     var currentHealth: Int = 100
     var currentMana: Int = 50
 
+    val equipment = PlayerEquipment()
 
     // формула для расчета опыта
     companion object {

@@ -49,7 +49,7 @@ class GameMap(
             t == TerrainType.OUTPOST
     }
 
-    fun generate() {
+    fun generate(playerStartX: Int, playerStartY: Int) {
         generateIslandShape()
         ensureSingleIsland()
         fillSmallLakes()
@@ -57,8 +57,8 @@ class GameMap(
         ensureStartAreaIsWalkable()
         validateMountainPaths()
         placeCity()
-        placeEnemies()
-        placeTraps()
+        placeEnemies(10, playerStartX, playerStartY)
+        placeTraps(3, playerStartX, playerStartY)
         placeUpgrade()
         placeOutpost()
     }
@@ -582,27 +582,70 @@ class GameMap(
             }
         }
     }
-    private fun placeEnemies(count: Int = 10)
+    // метод, чтобы вычислять спавн игрока
+    private fun isPlayerStartPosition(x: Int, y: Int, playerStartX: Int, playerStartY: Int, minDistance: Int = 3): Boolean
+    {
+        val dx = kotlin.math.abs(x - playerStartX)
+        val dy = kotlin.math.abs(y - playerStartY)
+        val distance = kotlin.math.sqrt((dx * dx + dy * dy).toDouble())
+        return distance < minDistance
+    }
+    private fun placeEnemies(count: Int = 10, playerStartX: Int, playerStartY: Int)
     {
         val random = Random
         var placed = 0
-        var attemps = 0
-        while (placed < count && attemps < 2000)
+        // Сначала собираем все возможные позиции
+        val availablePositions = mutableListOf<Pair<Int, Int>>()
+        for (x in 0 until width)
         {
-            attemps++
-            val x = random.nextInt(0, width)
-            val y = random.nextInt(0, height)
-            if (canPlaceEnemy(x,y))
+            for (y in 0 until height)
             {
+                if (canPlaceEnemy(x, y, playerStartX, playerStartY))
+                {
+                    availablePositions.add(Pair(x, y))
+                }
+            }
+        }
+
+        // Перемешиваем и берем нужное количество
+        if (availablePositions.isNotEmpty()) {
+            val shuffled = availablePositions.shuffled(random)
+            val toPlace = minOf(count, shuffled.size)
+
+            for (i in 0 until toPlace)
+            {
+                val (x, y) = shuffled[i]
                 terrain[x][y] = TerrainType.ENEMY
                 placed++
             }
         }
+        // если все еще не хватает врагов, пробуем с увеличенным радиусом
+        if (placed < count)
+        {
+            var relaxedAttempts = 0
+            while (placed < count && relaxedAttempts < 1000)
+            {
+                relaxedAttempts++
+                val x = random.nextInt(0, width)
+                val y = random.nextInt(0, height)
+                if (terrain[x][y] == TerrainType.LAND && !isPlayerStartPosition(x, y, playerStartX, playerStartY, 3))
+                {
+                    terrain[x][y] = TerrainType.ENEMY
+                    placed++
+                }
+            }
+        }
+
     }
-    private fun canPlaceEnemy(x: Int, y: Int): Boolean
+    private fun canPlaceEnemy(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean
     {
         val t = terrain[x][y]
         if (t != TerrainType.LAND)
+        {
+            return false
+        }
+        // проверка расстояния до стартовой позиции игрока
+        if (isPlayerStartPosition(x, y, playerStartX, playerStartY, 5))
         {
             return false
         }
@@ -614,7 +657,11 @@ class GameMap(
                 val ny = y + dy
                 if (nx in 0 until width && ny in 0 until height)
                 {
-                    if (terrain[nx][ny] == TerrainType.CITY)
+                    if (terrain[nx][ny] == TerrainType.CITY ||
+                        terrain[nx][ny] == TerrainType.OUTPOST ||
+                        terrain[nx][ny] == TerrainType.UPGRADE ||
+                        terrain[nx][ny] == TerrainType.TRAP ||
+                        terrain[nx][ny] == TerrainType.ENEMY)
                     {
                         return false
                     }
@@ -623,31 +670,44 @@ class GameMap(
         }
         return true
     }
-    private fun placeTraps(count: Int = 3)
+    private fun placeTraps(count: Int = 3, playerStartX: Int, playerStartY: Int)
     {
         val random = Random
         var placed = 0
-        var attempts = 0
-        while (placed < count && attempts < 2000)
+        // Собираем доступные позиции
+        val availablePositions = mutableListOf<Pair<Int, Int>>()
+        for (x in 0 until width)
         {
-            attempts++
-            val x = random.nextInt(0, width)
-            val y = random.nextInt(0, height)
-            if (canPlaceTraps(x, y))
+            for (y in 0 until height)
             {
+                if (canPlaceTraps(x, y, playerStartX, playerStartY))
+                {
+                    availablePositions.add(Pair(x, y))
+                }
+            }
+        }
+
+        // Перемешиваем и берем нужное количество
+        if (availablePositions.isNotEmpty())
+        {
+            val shuffled = availablePositions.shuffled(random)
+            val toPlace = minOf(count, shuffled.size)
+
+            for (i in 0 until toPlace)
+            {
+                val (x, y) = shuffled[i]
                 terrain[x][y] = TerrainType.TRAP
                 placed++
             }
         }
-        if (placed == 0)
-        {
+        if (placed == 0) {
             for (x in 0 until width)
             {
                 for (y in 0 until height)
                 {
-                    if (terrain[x][y] == TerrainType.LAND)
+                    if (terrain[x][y] == TerrainType.LAND && !isPlayerStartPosition(x, y, playerStartX, playerStartY, 2))
                     {
-                        terrain[x][y]=TerrainType.TRAP
+                        terrain[x][y] = TerrainType.TRAP
                         return
                     }
                 }
@@ -655,11 +715,32 @@ class GameMap(
         }
 
     }
-    private fun canPlaceTraps(x: Int, y: Int): Boolean
+    private fun canPlaceTraps(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean
     {
-        if (terrain[x][y] != TerrainType.LAND)
-        {
+        if (terrain[x][y] != TerrainType.LAND) {
             return false
+        }
+        // Проверка расстояния до стартовой позиции игрока
+        if (isPlayerStartPosition(x, y, playerStartX, playerStartY, 4)) {
+            return false
+        }
+        // Проверка, что не ставим ловушку на другие объекты
+        for (dx in -1..1) {
+            for (dy in -1..1) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height)
+                {
+                    if (terrain[nx][ny] == TerrainType.CITY ||
+                        terrain[nx][ny] == TerrainType.ENEMY ||
+                        terrain[nx][ny] == TerrainType.UPGRADE ||
+                        terrain[nx][ny] == TerrainType.OUTPOST ||
+                        terrain[nx][ny] == TerrainType.TRAP)
+                    {
+                        return false
+                    }
+                }
+            }
         }
         return true
     }
