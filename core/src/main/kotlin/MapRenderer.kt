@@ -100,6 +100,7 @@ val visibilityManager = VisibilityManager(gameMap)
                     TerrainType.TRAP -> Color.GRAY      // Ловушки
                     TerrainType.UPGRADE -> Color.ORANGE // Улучшения
                     TerrainType.OUTPOST -> Color.CORAL  // Аванпосты
+                    TerrainType.Chest -> Color.GOLD     // Сундуки
                 }
 
                 batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
