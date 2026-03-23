@@ -39,7 +39,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         batch = new SpriteBatch();
 
         gameMap = new GameMap(21, 21);
-        gameMap.generate();
+        gameMap.generate(1,1);
 
 
         // Размер карты в пикселях
@@ -79,7 +79,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         pauseButtonTexture = new Texture("pauseButton.png");
         pixmap.dispose();
 
-        
+
         battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap);
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
 
