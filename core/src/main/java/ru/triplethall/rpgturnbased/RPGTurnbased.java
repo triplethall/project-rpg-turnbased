@@ -27,6 +27,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private Player player;
     private BitmapFont font;
     private Texture pixelTexture;
+    private Texture pauseButtonTexture;
     private final int CELL_SIZE = 32;
     private final int CELL_GAP = 4;
     private float mapWidthPixels;
@@ -74,9 +75,10 @@ public class RPGTurnbased extends ApplicationAdapter {
         pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
         pixmap.fill();
         whitePixel = new com.badlogic.gdx.graphics.Texture(pixmap);
+        pauseButtonTexture = new Texture("pauseButton.png");
         pixmap.dispose();
 
-        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
 
         player = new Player();
         player.spawnOnShore(gameMap);
@@ -104,7 +106,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
 
         OrthographicCamera uiCamera = new OrthographicCamera();
-        uiCamera.setToOrtho(true, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
@@ -138,6 +140,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (image != null) image.dispose();
         if (pixelTexture != null) pixelTexture.dispose();
         if (whitePixel != null) whitePixel.dispose();
+        if (pauseButtonTexture != null) pauseButtonTexture.dispose();
         mapRenderer.dispose();
         font.dispose();
     }
