@@ -17,7 +17,7 @@ class CameraControl (
     private var initialPinchDistance = -1f
     private var zoomStart = 1f
 
-    private val DRAG_THRESHOLD = 10f
+    private val DRAG_THRESHOLD =50f
 
     fun update() {
         handleInput()
