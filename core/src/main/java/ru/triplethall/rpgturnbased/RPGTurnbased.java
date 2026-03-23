@@ -94,7 +94,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
 
         cameraControl.update();
-
+        mapRenderer.update(Gdx.graphics.getDeltaTime());
 
         batch.setProjectionMatrix(cameraControl.getCamera().combined);
         batch.begin();
