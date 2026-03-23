@@ -162,6 +162,11 @@ class Player(
         if (gameMap.isWalkable(targetX, targetY)) {
             x = targetX
             y = targetY
+            // Проверяем, был ли на этой клетке сундук, и убираем его
+            if (gameMap.collectChest(targetX, targetY)) {
+                // Здесь можно добавить логику награды (например, увеличить счёт, выдать предмет)
+
+            }
             return true
         }
         return false

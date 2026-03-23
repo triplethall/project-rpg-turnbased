@@ -94,6 +94,7 @@ val visibilityManager = VisibilityManager(gameMap)
                     TerrainType.WATER -> continue     // Вода (фон)
                     TerrainType.LAND -> Color.GREEN      // Земля
                     TerrainType.MOUNTAIN -> Color.BLACK  // Горы
+                    TerrainType.Chest -> Color.GOLD // сундук
                     TerrainType.CITY -> Color.BROWN     // Город
                     TerrainType.ENEMY -> Color.RED      // Враг
                     TerrainType.TRAP -> Color.GRAY      // Ловушки
