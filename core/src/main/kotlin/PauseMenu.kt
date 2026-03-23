@@ -10,24 +10,22 @@ import com.badlogic.gdx.math.Rectangle
 class PauseMenu(
     private val font: BitmapFont,
     private val screenWidth: Float,
-    private val screenHeight: Float
+    private val screenHeight: Float,
+    private val pauseButtonTexture: Texture // Добавленный параметр для текстуры кнопки паузы
 ) {
     var isVisible = false
         private set
 
     private val pauseButtonRect = Rectangle(0f, screenHeight - 120f, 120f, 120f)
 
-    // Кнопки внутри меню
     var isStatsVisible = false
         private set
     private var closeButtonRect = Rectangle()
-
 
     private var resumeRect = Rectangle()
     private var statsRect = Rectangle()
     private var exitRect = Rectangle()
 
-    // Флаги для визуального отклика
     private var isResumePressed = false
     private var isExitPressed = false
 
@@ -41,14 +39,15 @@ class PauseMenu(
         val btnH = 120f
         val cX = pX + (panelW - btnW) / 2
 
-        resumeRect.set(cX, pY + 120f, btnW, btnH)
-        exitRect.set(cX, pY + 60f, btnW, btnH)
+        resumeRect.set(cX, pY + 350f, btnW, btnH)
+        statsRect.set(cX, pY + 200f, btnW, btnH)
+        exitRect.set(cX, pY + 50f, btnW, btnH)
     }
 
     fun toggle() {
         isVisible = !isVisible
         if (!isVisible) {
-            isStatsVisible = false // Закрываем статистику при закрытии меню
+            isStatsVisible = false
         }
     }
 
@@ -59,74 +58,67 @@ class PauseMenu(
     fun handleInput(player: Player? = null): Boolean {
         val touchX = Gdx.input.x.toFloat()
         val touchY = Gdx.input.y.toFloat()
-        val yInverted = screenHeight - touchY
-        if (!isVisible) {
+        val gameY = screenHeight - touchY
 
-            if (Gdx.input.justTouched() && pauseButtonRect.contains(touchX, touchY)) {
+        if (!isVisible) {
+            if (Gdx.input.justTouched() && pauseButtonRect.contains(touchX, gameY)) {
                 toggle()
                 return true
             }
-
-            // Всегда сбрасывать состояние флагов
             isResumePressed = false
             isExitPressed = false
             return false
         }
 
-        // Меню открыто, обработаем нажатия на внутренние кнопки
         updateMenuRects()
 
         if (Gdx.input.justTouched()) {
-            isResumePressed = resumeRect.contains(touchX, touchY)
-            isExitPressed = exitRect.contains(touchX, touchY)
-
-            // Сначала проверяем кнопку закрытия статистики, если статистика открыта
-            if (isStatsVisible && closeButtonRect.contains(touchX, yInverted)) {
+            if (isStatsVisible && closeButtonRect.contains(touchX, gameY)) {
                 toggleStats()
                 return true
             }
 
-            if (resumeRect.contains(touchX, yInverted)) {
+            if (resumeRect.contains(touchX, gameY)) {
                 toggle()
                 return true
             }
-            if (statsRect.contains(touchX, yInverted)) {
+            if (statsRect.contains(touchX, gameY)) {
                 toggleStats()
                 return true
             }
-            if (exitRect.contains(touchX, yInverted)) {
+            if (exitRect.contains(touchX, gameY)) {
                 Gdx.app.exit()
                 return true
             }
-        } else {
-            // Сброс состояния нажатий
-            isResumePressed = false
-            isExitPressed = false
         }
+
+        isResumePressed = false
+        isExitPressed = false
         return false
     }
 
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player? = null) {
-        // Отображаем кнопку паузы только когда меню скрыто
+        // Рисуем кнопку паузы только когда меню скрыто
         if (!isVisible) {
-            batch.color = Color.BLACK
-            batch.draw(whitePixel, pauseButtonRect.x, pauseButtonRect.y, pauseButtonRect.width, pauseButtonRect.height)
-
-            font.color = Color.WHITE
-            font.data.setScale(2f)
-            font.draw(batch, "||", pauseButtonRect.x + 12f, pauseButtonRect.y + 28f)
-            font.data.setScale(1f)
+            batch.color = Color.WHITE
+            batch.draw(
+                pauseButtonTexture,
+                pauseButtonRect.x,
+                pauseButtonRect.y,
+                pauseButtonRect.width,
+                pauseButtonRect.height
+            )
         }
 
-        // Если меню не видно, ничего больше не рисуем
         if (!isVisible) return
 
+        // Затемнение фона
         batch.color = Color(0f, 0f, 0f, 0.7f)
         batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
 
         updateMenuRects()
 
-        // Рисуем панель меню
+        // Панель меню
         batch.color = Color.DARK_GRAY
         val panelW = 900f
         val panelH = 600f
@@ -134,38 +126,27 @@ class PauseMenu(
         val pY = (screenHeight - panelH) / 2
         batch.draw(whitePixel, pX, pY, panelW, panelH)
 
-        // Продолжить игру (меняется цвет при нажатии)
+        // Кнопка CONTINUE
         batch.color = if (isResumePressed) Color.LIGHT_GRAY else Color.GRAY
         batch.draw(whitePixel, resumeRect.x, resumeRect.y, resumeRect.width, resumeRect.height)
-        val btnW = 600f
-        val btnH = 120f
-        val cX = pX + (panelW - btnW) / 2
 
-
-        // Кнопки меню
-        resumeRect.set(cX, pY + 180f, btnW, btnH)
-        statsRect.set(cX, pY + 90f, btnW, btnH)
-        exitRect.set(cX, pY, btnW, btnH)
-
-
-
+        // Кнопка STATISTICS
+        batch.color = Color.GRAY // пока без изменения цвета при нажатии
         batch.draw(whitePixel, statsRect.x, statsRect.y, statsRect.width, statsRect.height)
-        batch.draw(whitePixel, exitRect.x, exitRect.y, exitRect.width, exitRect.height)
 
-        // Выход из игры
+        // Кнопка EXIT
         batch.color = if (isExitPressed) Color.LIGHT_GRAY else Color.GRAY
         batch.draw(whitePixel, exitRect.x, exitRect.y, exitRect.width, exitRect.height)
 
-        // Надписи на кнопках
+        // Текст на кнопках
         font.color = Color.WHITE
-        font.data.setScale(1.2f)
-        font.draw(batch, "CONTINUE", cX + 30f, resumeRect.y + 28f)
-        font.draw(batch, "STATISTICS", cX + 30f, statsRect.y + 28f)
-        font.draw(batch, "EXIT", cX + 70f, exitRect.y + 28f)
+        font.data.setScale(2f)
+        font.draw(batch, "CONTINUE", resumeRect.x + 60f, resumeRect.y + 70f)
+        font.draw(batch, "STATISTICS", statsRect.x + 40f, statsRect.y + 70f)
+        font.draw(batch, "EXIT", exitRect.x + 90f, exitRect.y + 70f)
         font.data.setScale(1f)
 
-
-        // отображение статистки при открытом окнэ
+        // Отображение статистики
         if (isStatsVisible && player != null) {
             renderStats(batch, whitePixel, player, pX, pY, panelW, panelH)
         }
@@ -179,7 +160,6 @@ class PauseMenu(
         val statsX = pX + (panelW - statsW) / 2
         val statsY = pY + 250f
 
-        // Полупрозрачный фон статистики
         batch.color = Color(0.1f, 0.1f, 0.1f, 0.9f)
         batch.draw(whitePixel, statsX, statsY, statsW, statsH)
 
@@ -188,7 +168,6 @@ class PauseMenu(
         font.draw(batch, "Player Statistics", statsX + 20f, statsY + statsH - 20f)
         font.data.setScale(1.2f)
 
-        // Рассчитываем модификаторы от скверны
         val healthMod = player.getCorruptionHealthModifier()
         val damageMod = player.getCorruptionDamageModifier()
 
@@ -218,13 +197,12 @@ class PauseMenu(
             yOffset -= 30f
         }
 
-        // кнопка закрытия статов
+        // Кнопка закрытия статистики
         val closeBtnW = 100f
         val closeBtnH = 40f
         val closeBtnX = statsX + statsW - closeBtnW - 10f
         val closeBtnY = statsY + 10f
 
-        // Сохраняем прямоугольник кнопки для обработки нажатий
         closeButtonRect.set(closeBtnX, closeBtnY, closeBtnW, closeBtnH)
 
         batch.color = Color.RED
