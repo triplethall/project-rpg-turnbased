@@ -27,6 +27,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private Player player;
     private BitmapFont font;
     private Texture pixelTexture;
+    private Texture pauseButtonTexture;
     private final int CELL_SIZE = 32;
     private final int CELL_GAP = 4;
     private float mapWidthPixels;
@@ -75,10 +76,13 @@ public class RPGTurnbased extends ApplicationAdapter {
         pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
         pixmap.fill();
         whitePixel = new com.badlogic.gdx.graphics.Texture(pixmap);
+        pauseButtonTexture = new Texture("pauseButton.png");
         pixmap.dispose();
 
-        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        
         battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap);
+        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
+
         player = new Player();
         player.spawnOnShore(gameMap);
     }
@@ -98,8 +102,8 @@ public class RPGTurnbased extends ApplicationAdapter {
         ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
 
         cameraControl.update();
+        mapRenderer.update(Gdx.graphics.getDeltaTime());
 
-        // Рендер карты
         batch.setProjectionMatrix(cameraControl.getCamera().combined);
         batch.begin();
         mapRenderer.render(batch, player);
@@ -108,7 +112,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         // UI камера для интерфейса
         OrthographicCamera uiCamera = new OrthographicCamera();
-        uiCamera.setToOrtho(true, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
@@ -154,6 +158,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (image != null) image.dispose();
         if (pixelTexture != null) pixelTexture.dispose();
         if (whitePixel != null) whitePixel.dispose();
+        if (pauseButtonTexture != null) pauseButtonTexture.dispose();
         mapRenderer.dispose();
         font.dispose();
     }
