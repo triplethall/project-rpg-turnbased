@@ -396,7 +396,7 @@ object EquipmentDatabase
         name = "Rusty dagger",
         type = EquipmentType.WEAPON,
         weaponType = WeaponType.DAGGER,
-        allowedClasses = listOf(PlayerClasses.ASSASIN),
+        allowedClasses = listOf(PlayerClasses.ASSASSIN),
         //bonus
         description = "Attacks do not cause tetanus.",
         level = 1
@@ -406,7 +406,7 @@ object EquipmentDatabase
         name = "Central dirk",
         type = EquipmentType.WEAPON,
         weaponType = WeaponType.DAGGER,
-        allowedClasses = listOf(PlayerClasses.ASSASIN),
+        allowedClasses = listOf(PlayerClasses.ASSASSIN),
         //bonus
         description = "No, it's not \"central d#ck\"",
         level = 20
@@ -416,7 +416,7 @@ object EquipmentDatabase
         name = "Champion's dagger",
         type = EquipmentType.WEAPON,
         weaponType = WeaponType.DAGGER,
-        allowedClasses = listOf(PlayerClasses.ASSASIN),
+        allowedClasses = listOf(PlayerClasses.ASSASSIN),
         //bonus
         description = "No, it's not rip-off, I swear!",
         level = 40
