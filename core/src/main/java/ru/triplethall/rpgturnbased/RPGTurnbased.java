@@ -10,6 +10,9 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.graphics.Color;
 
+import ru.triplethall.rpgturnbased.GameMap;
+import ru.triplethall.rpgturnbased.Player;
+import ru.triplethall.rpgturnbased.PauseMenu;
 
 public class RPGTurnbased extends ApplicationAdapter {
     private SpriteBatch batch;
@@ -24,6 +27,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private Player player;
     private BitmapFont font;
     private Texture pixelTexture;
+    private Texture pauseButtonTexture;
     private final int CELL_SIZE = 32;
     private final int CELL_GAP = 4;
     private float mapWidthPixels;
@@ -71,9 +75,10 @@ public class RPGTurnbased extends ApplicationAdapter {
         pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
         pixmap.fill();
         whitePixel = new com.badlogic.gdx.graphics.Texture(pixmap);
+        pauseButtonTexture = new Texture("pauseButton.png");
         pixmap.dispose();
 
-        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
 
         player = new Player();
         player.spawnOnShore(gameMap);
@@ -81,7 +86,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
     @Override
     public void render() {
-        boolean menuClicked = pauseMenu.handleInput();
+        boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
 
         if (!isPaused && !menuClicked) {
@@ -91,21 +96,21 @@ public class RPGTurnbased extends ApplicationAdapter {
         ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
 
         cameraControl.update();
-
+        mapRenderer.update(Gdx.graphics.getDeltaTime());
 
         batch.setProjectionMatrix(cameraControl.getCamera().combined);
         batch.begin();
-        mapRenderer.render(batch);
+        mapRenderer.render(batch, player);
         player.render(batch, font, CELL_SIZE, CELL_GAP);
         batch.end();
 
 
         OrthographicCamera uiCamera = new OrthographicCamera();
-        uiCamera.setToOrtho(true, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
-        pauseMenu.render(batch, whitePixel);
+        pauseMenu.render(batch, whitePixel, player);
         batch.end();
     }
 
@@ -135,6 +140,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (image != null) image.dispose();
         if (pixelTexture != null) pixelTexture.dispose();
         if (whitePixel != null) whitePixel.dispose();
+        if (pauseButtonTexture != null) pauseButtonTexture.dispose();
         mapRenderer.dispose();
         font.dispose();
     }

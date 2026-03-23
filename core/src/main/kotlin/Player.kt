@@ -3,12 +3,110 @@ package ru.triplethall.rpgturnbased
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.random.Random
 
 class Player(
     var x: Int = 0,
     var y: Int = 0
 ) {
+    // Базовые характеристики
+    var damage: Int = 15                 // Урон
+    var defense: Double = 0.0             // Защита (процентная)
+    var mana: Int = 50                    // Мана
+    var attackSpeed: Double = 1.0         // Скорость (атаки)
+    var accuracy: Double = 0.8            // Точность (шанс попадания по врагу)
+    var will: Double = 0.5                 // Воля (сопротивление дебафам)
+    var corruption: Int = 0                // Скверна
+    var level: Int = 1                     // Уровень
+    var experience: Int = 0                 // Опыт
+
+
+    // Максимальные значения
+    var maxMana: Int = 50
+    var maxHealth: Int = 100
+    var currentHealth: Int = 100
+    var currentMana: Int = 50
+
+
+    // формула для расчета опыта
+    companion object {
+        private const val BASE_EXP = 100
+        private const val EXP_GROWTH_FACTOR = 1.5
+    }
+
+
+    // Расчет необходимого опыта для некст левела
+    fun getExpForNextLevel(): Int {
+        return (BASE_EXP * (EXP_GROWTH_FACTOR.pow(level - 1))).toInt()
+    }
+
+
+    // Получение прогресса опыта в процентах (полоска опыта)
+    fun getExpProgress(): Float {
+        val expNeeded = getExpForNextLevel()
+        return experience.toFloat() / expNeeded.toFloat()
+    }
+
+
+    // Добавление опыта + проверка на повышение уровня
+    fun addExperience(amount: Int) {
+        experience += amount
+
+        // Проверка достаточно ли опыта для нескольких уровней
+        while (experience >= getExpForNextLevel()) {
+            levelUp()
+        }
+    }
+
+
+    // Повышение уровня
+    private fun levelUp() {
+        val expNeeded = getExpForNextLevel()
+        experience -= expNeeded
+        level++
+
+        // Stats up за уровень
+        damage += 2
+        defense += 0.02
+        maxMana += 5
+        mana = maxMana  // восстановление маны за ур
+        maxHealth += 10
+        currentHealth = maxHealth
+        attackSpeed += 0.05
+        accuracy += 0.02
+        will = 0.02
+    }
+
+
+    // Скверна модификаторы
+    fun getCorruptionHealthModifier(): Double {
+        return 1.0 - (corruption * 0.09)
+    }
+    fun getCorruptionDamageModifier(): Double {
+        return 1.0 + (corruption * 0.07)
+    }
+
+
+    // скверна при смерти
+    fun applyCorruptionOnDeath() {
+        corruption++
+    }
+
+
+    // Проверка хватает ли опыта
+    fun canLevelUp(): Boolean {
+        return experience >= getExpForNextLevel()
+    }
+
+
+    // Сброс скверны (например после какого-то события)
+    fun removeCorruption(amount: Int) {
+        corruption = maxOf(0, corruption - amount)
+    }
+
+
     fun spawnOnShore(gameMap: GameMap) {
         val random = Random
         val candidates = mutableListOf<Pair<Int, Int>>()
@@ -78,7 +176,7 @@ class Player(
         val posX = x * (cellSize + cellGap)
         val posY = y * (cellSize + cellGap)
 
-        font.color = Color.YELLOW
+        font.color = Color.BLACK
         font.draw(batch, "P", posX + 10f, posY + cellSize - 5f)
     }
 }
