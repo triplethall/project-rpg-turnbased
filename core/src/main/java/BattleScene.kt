@@ -12,7 +12,8 @@ class BattleScene(
     private val font: BitmapFont,
     private val screenWidth: Float,
     private val screenHeight: Float,
-    private val gameMap: GameMap
+    private val gameMap: GameMap,
+    private val BGArena: Texture
 ) {
     var isActive = false
         private set
@@ -52,24 +53,26 @@ class BattleScene(
         {
             return
         }
-
-        batch.color = Color(0f, 0f, 0f, 0.8f)
-        batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
+        val rectHeight = 200f
+        val rectWidth = 150f
+        val space = screenWidth * 0.1f
+        val rectY = (screenHeight - rectHeight) / 2
+        val rectX = screenWidth - rectWidth - space
+        batch.draw(BGArena, 0f, 0f, screenWidth, screenHeight)
         batch.color = Color.BLUE // player rect
 
-        batch.draw(whitePixel, 200f, 300f, 150f, 200f)
+        batch.draw(whitePixel, space + 400f, rectY - 100f, rectWidth, rectHeight)
         font.color = Color.WHITE // player info
 
-        font.draw(batch, "PLAYER", 230f, 450f)
-        font.draw(batch, "${player.currentHealth}/${player.maxHealth}", 220f, 380f)
+        font.draw(batch, "PLAYER", space + 430f, rectY - 120f)
+        font.draw(batch, "${player.currentHealth}/${player.maxHealth}", space + 430f, rectY + rectHeight - 70f)
         batch.color = Color.RED // enemy rect
 
-        batch.draw(whitePixel, 550f, 300f, 150f, 200f)
+        batch.draw(whitePixel, rectX - 400f, rectY - 100f, rectWidth, rectHeight)
         font.color = Color.WHITE // enemy info
 
-        font.draw(batch, "ENEMY", 590f, 450f)
-        font.draw(batch, "currentHealth/maxHealth", 600f, 380f)
-
+        font.draw(batch, "ENEMY", rectX - 400f, rectY - 120f)
+        font.draw(batch, "currentHealth/maxHealth", rectX - 400f, rectY + rectHeight - 70f)
         val btnX = screenWidth / 2 - 100f
         val btnY = 100f // leave button
 
