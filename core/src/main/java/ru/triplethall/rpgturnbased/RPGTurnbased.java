@@ -28,6 +28,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private BitmapFont font;
     private Texture pixelTexture;
     private Texture pauseButtonTexture;
+    private Texture BGArena;
     private final int CELL_SIZE = 32;
     private final int CELL_GAP = 4;
     private float mapWidthPixels;
@@ -77,10 +78,11 @@ public class RPGTurnbased extends ApplicationAdapter {
         pixmap.fill();
         whitePixel = new com.badlogic.gdx.graphics.Texture(pixmap);
         pauseButtonTexture = new Texture("pauseButton.png");
+        BGArena = new Texture("bg/forest_light_arena.png");
         pixmap.dispose();
 
 
-        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap);
+        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena);
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
 
         player = new Player();
@@ -159,6 +161,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (pixelTexture != null) pixelTexture.dispose();
         if (whitePixel != null) whitePixel.dispose();
         if (pauseButtonTexture != null) pauseButtonTexture.dispose();
+        if (BGArena != null) BGArena.dispose();
         mapRenderer.dispose();
         font.dispose();
     }
