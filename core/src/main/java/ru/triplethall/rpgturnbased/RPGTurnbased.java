@@ -18,6 +18,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private SpriteBatch batch;
     private CameraControl cameraControl;
     private MapRenderer mapRenderer;
+    private Inventory inventory;
     private PauseMenu pauseMenu;
     private com.badlogic.gdx.graphics.Texture whitePixel;
     private boolean isPaused = false;
@@ -82,6 +83,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap);
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
+        inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         player = new Player();
         player.spawnOnShore(gameMap);
@@ -108,6 +110,9 @@ public class RPGTurnbased extends ApplicationAdapter {
         batch.begin();
         mapRenderer.render(batch, player);
         player.render(batch, font, CELL_SIZE, CELL_GAP);
+        inventory.handleInput(player);
+        inventory.render(batch, whitePixel, player);
+
         batch.end();
 
         // UI камера для интерфейса

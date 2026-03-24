@@ -141,6 +141,36 @@ enum class PlayerClasses(
         baseMageDamage = 21,
         baseLuck = 0.01,
         baseCritChance = 0.02
+    ),
+
+    SWORDMASTER(
+        displayName = "Мастер меча",
+        description = "Владыка мечей, Силён и быстр",
+        baseDamage = 20,
+        baseMaxHealth = 130,
+        baseDefense = 0.02,
+        baseMaxMana = 45,
+        baseAttackSpeed = 1.8,
+        baseAccuracy = 0.91,
+        baseWill = 0.01,
+        baseMageDamage = 8,
+        baseLuck = 0.0,
+        baseCritChance = 0.05
+    ),
+
+    MONARCH(
+        displayName = "Монах",
+        description = "Силён духом, силён телом",
+        baseDamage = 25,
+        baseMaxHealth = 220,
+        baseDefense = 0.07,
+        baseMaxMana = 60,
+        baseAttackSpeed = 1.2,
+        baseAccuracy = 0.89,
+        baseWill = 0.1,
+        baseMageDamage = 20,
+        baseLuck = 0.0,
+        baseCritChance = 0.01
     );
 
 
