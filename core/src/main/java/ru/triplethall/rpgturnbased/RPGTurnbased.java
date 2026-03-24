@@ -87,6 +87,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         player = new Player();
         player.spawnOnShore(gameMap);
+        battleScene.setPlayer(player);
     }
 
     @Override
