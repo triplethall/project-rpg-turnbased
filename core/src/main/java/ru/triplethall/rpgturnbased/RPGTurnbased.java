@@ -98,7 +98,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         // Обработка ввода для сцены битвы
         if (battleScene.isActive()) {
-            battleScene.handleInput();
+            battleScene.handleInput(player);
         } else if (!isPaused && !menuClicked) {
             handlePlayerInput();
         }
