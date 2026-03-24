@@ -2,7 +2,7 @@ package ru.triplethall.rpgturnbased
 
 class VisibilityManager(private val gameMap: GameMap) {
     private var visibleTiles: Set<Pair<Int, Int>> = emptySet()
-    private val viewRadius = 3.0 // Радиус обзора в клетках
+    private val viewRadius = 7.0 // Радиус обзора в клетках
 
     fun updateVisibility(playerPosition: Pair<Int, Int>) {
         val px = playerPosition.first
@@ -32,4 +32,6 @@ class VisibilityManager(private val gameMap: GameMap) {
     }
 
     fun isVisible(x: Int, y: Int): Boolean = visibleTiles.contains(Pair(x, y))
+
+
 }

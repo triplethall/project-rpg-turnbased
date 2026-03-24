@@ -18,6 +18,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private SpriteBatch batch;
     private CameraControl cameraControl;
     private MapRenderer mapRenderer;
+    private Inventory inventory;
     private PauseMenu pauseMenu;
     private com.badlogic.gdx.graphics.Texture whitePixel;
     private boolean isPaused = false;
@@ -34,12 +35,19 @@ public class RPGTurnbased extends ApplicationAdapter {
     private float mapWidthPixels;
     private float mapHeightPixels;
     private BattleScene battleScene;
+    private ChestMenu chestMenu;
+    private Texture chestClosed;
+    private Texture chestOpen;
 
     @Override
     public void create() {
+        chestClosed = new Texture("bg/chest_closed.png");
+        chestOpen = new Texture("bg/chest_open.png");
+        font = new BitmapFont();
+        chestMenu = new ChestMenu(font);
         batch = new SpriteBatch();
 
-        gameMap = new GameMap(21, 21);
+        gameMap = new GameMap(21, 21,chestMenu);
         gameMap.generate(1,1);
 
 
@@ -67,7 +75,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         camera.update();
         cameraControl = new CameraControl(camera, mapWidthPixels, mapHeightPixels);
 
-        mapRenderer = new MapRenderer(gameMap, CELL_SIZE, CELL_GAP);
+        mapRenderer = new MapRenderer(gameMap, CELL_SIZE, CELL_GAP, chestClosed, chestOpen);
 
         font = new BitmapFont();
         font.setColor(Color.YELLOW);
@@ -84,6 +92,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena);
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
+        inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         player = new Player();
         player.spawnOnShore(gameMap);
@@ -92,18 +101,20 @@ public class RPGTurnbased extends ApplicationAdapter {
 
     @Override
     public void render() {
+
         boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
+        boolean chestClicked = chestMenu.handleInput(); // Обработка клика по EXIT
 
-        // Обработка ввода для сцены битвы
+        // Решаем, может ли игрок ходить
         if (battleScene.isActive()) {
             battleScene.handleInput();
-        } else if (!isPaused && !menuClicked) {
+        } else if (!isPaused && !menuClicked && !chestMenu.isVisible()) {
             handlePlayerInput();
         }
 
-        ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
 
+        ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
         cameraControl.update();
         mapRenderer.update(Gdx.graphics.getDeltaTime());
 
@@ -111,25 +122,40 @@ public class RPGTurnbased extends ApplicationAdapter {
         batch.begin();
         mapRenderer.render(batch, player);
         player.render(batch, font, CELL_SIZE, CELL_GAP);
+
+        inventory.render(batch, whitePixel, player);
         batch.end();
 
-        // UI камера для интерфейса
-        OrthographicCamera uiCamera = new OrthographicCamera();
+
+        uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
 
-        // Сначала рендерим паузу
+        // Рисуем меню сундука поверх всего
+        chestMenu.render(batch, whitePixel);
+
         pauseMenu.render(batch, whitePixel, player);
 
-        // Потом рендерим битву поверх, если активна
         if (battleScene.isActive()) {
             battleScene.render(batch, whitePixel, player);
         }
-
         batch.end();
+
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+
+        chestMenu.render(batch, whitePixel);
+        pauseMenu.render(batch, whitePixel, player);
+
+        if (battleScene.isActive()) {
+            battleScene.render(batch, whitePixel, player);
+        }
+        batch.end();
+
     }
+
 
     private Vector3 screenToGrid(float screenX, float screenY) {
         Vector3 world = cameraControl.getCamera().unproject(new Vector3(screenX, screenY, 0));
@@ -140,17 +166,20 @@ public class RPGTurnbased extends ApplicationAdapter {
 
     private void handlePlayerInput() {
         if (Gdx.input.justTouched() && !cameraControl.isDragging()) {
-            float touchX = Gdx.input.getX();
-            float touchY = Gdx.input.getY();
-
-            Vector3 grid = screenToGrid(touchX, touchY);
+            Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
             int targetX = (int)grid.x;
             int targetY = (int)grid.y;
 
-            boolean moved = player.tryMoveTo(targetX, targetY, gameMap);
+            // Если игрок успешно сходил
+            if (player.tryMoveTo(targetX, targetY, gameMap)) {
 
-            if (moved && gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
-                battleScene.startBattle(targetX, targetY);
+                if (gameMap.collectChest(targetX, targetY)) {
+                    chestMenu.show();
+                }
+
+                if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
+                    battleScene.startBattle(targetX, targetY);
+                }
             }
         }
     }

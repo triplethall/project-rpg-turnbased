@@ -15,7 +15,6 @@ class Player(
     // Базовые характеристики
     var damage: Int = 15                    // Урон
     var defense: Double = 0.0               // Защита (процентная)
-    var mana: Int = 50                      // Мана
     var attackSpeed: Double = 1.0           // Скорость (атаки)
     var accuracy: Double = 0.8              // Точность (шанс попадания по врагу)
     var will: Double = 0.5                  // Воля (сопротивление дебафам)
@@ -75,7 +74,7 @@ class Player(
         damage += 2
         defense += 0.02
         maxMana += 5
-        mana = maxMana  // восстановление маны за ур
+        currentMana = maxMana  // восстановление маны за ур
         maxHealth += 10
         currentHealth = maxHealth
         attackSpeed += 0.05

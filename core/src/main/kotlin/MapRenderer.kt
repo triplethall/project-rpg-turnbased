@@ -14,7 +14,9 @@ const val MAX_RADIUS = 5.0f // Радиус видимости
 class MapRenderer (
     private val gameMap: GameMap,
     cellSize: Int = 32,
-    cellGap: Int = 4
+    cellGap: Int = 4,
+    private val chestClosed: Texture,
+    private val chestOpen: Texture
 ){
     private val pixelTexture: Texture
 
@@ -61,9 +63,9 @@ class MapRenderer (
 
 
 
-val visibilityManager = VisibilityManager(gameMap)
+    val visibilityManager = VisibilityManager(gameMap)
     fun render(batch: SpriteBatch, player: Player) {
-
+        //фон
         val currentWaterTex = waterTextures[waterFrameIndex] ?: return
         batch.color = Color.WHITE
 
@@ -73,15 +75,13 @@ val visibilityManager = VisibilityManager(gameMap)
         val cols = (mapWidthPx / bgTileSize).toInt() + 2
         val rows = (mapHeightPx / bgTileSize).toInt() + 2
 
-        for (x in -3 until cols) {
-            for (y in -3 until rows) {
-                val posX = x * bgTileSize
-                val posY = y * bgTileSize
-                batch.draw(currentWaterTex, posX, posY, bgTileSize, bgTileSize)
+        for (tx in -3 until cols) {
+            for (ty in -3 until rows) {
+                val pX = tx * bgTileSize
+                val pY = ty * bgTileSize
+                batch.draw(currentWaterTex, pX, pY, bgTileSize, bgTileSize)
             }
         }
-
-
 
         visibilityManager.updateVisibility(Pair(player.x, player.y))
 
@@ -100,6 +100,7 @@ val visibilityManager = VisibilityManager(gameMap)
                 val light = (1.0f - (distance / MAX_RADIUS)).coerceIn(0.2f, 1.0f)
 
                 val terrain = gameMap.getTerrain(x, y)
+
                 if (!gameMap.isExplored(x, y) && terrain != TerrainType.WATER) {
                     batch.color = Color.DARK_GRAY // Незнакомые клетки остаются тёмными
 
@@ -107,7 +108,21 @@ val visibilityManager = VisibilityManager(gameMap)
                     continue
                 }
 
-                batch.color = when (gameMap.getTerrain(x, y)) {
+                if (terrain == TerrainType.Chest || terrain == TerrainType.OpenedChest) {
+                    // сначала рисуем подложку земли (зеленый квадрат)
+                    batch.color = Color.GREEN.cpy().mul(light, light, light, 1f) // Применяем то же освещение
+                    batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+
+                    // рисуем саму текстуру сундука
+                    val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
+                    batch.color = Color(light, light, light, 1f)
+                    batch.draw(tex, posX - 4f, posY - 2f, cellSize + 8f, cellSize + 8f)
+
+                    continue
+                }
+
+
+                batch.color = when (terrain) {
                     TerrainType.WATER -> continue     // Вода (фон)
                     TerrainType.LAND -> Color.GREEN      // Земля
                     TerrainType.MOUNTAIN -> Color.BLACK  // Горы
@@ -116,8 +131,9 @@ val visibilityManager = VisibilityManager(gameMap)
                     TerrainType.TRAP -> Color.GRAY      // Ловушки
                     TerrainType.UPGRADE -> Color.ORANGE // Улучшения
                     TerrainType.OUTPOST -> Color.CORAL  // Аванпосты
-                    TerrainType.Chest -> Color.GOLD     // Сундуки
+                    else -> Color.WHITE
                 }
+
                 val c = batch.color
                 batch.setColor(c.r * light, c.g * light, c.b * light, 1f)
 
