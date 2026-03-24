@@ -32,4 +32,6 @@ class VisibilityManager(private val gameMap: GameMap) {
     }
 
     fun isVisible(x: Int, y: Int): Boolean = visibleTiles.contains(Pair(x, y))
+
+
 }
