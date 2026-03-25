@@ -108,7 +108,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         // Решаем, может ли игрок ходить
         if (battleScene.isActive()) {
-            battleScene.handleInput();
+            battleScene.handleInput(player);
         } else if (!isPaused && !menuClicked && !chestMenu.isVisible()) {
             handlePlayerInput();
         }
