@@ -32,6 +32,13 @@ class BattleScene(
     private var enemyX = 0
     private var enemyY = 0
     private var madeMoveThisTurn = false
+
+    // Бары игрока
+    private lateinit var playerHealthBar: StatBar
+    private lateinit var playerManaBar: StatBar
+
+    // Список баров врагов (синхронизируется с enemies)
+    private val enemyBars = mutableListOf<StatBar>()
     fun startBattle(enemyCellX: Int, enemyCellY: Int, enemyCount: Int) {
         this.enemyX = enemyCellX
         this.enemyY = enemyCellY
@@ -39,12 +46,37 @@ class BattleScene(
         isActive = true
         madeMoveThisTurn = false
         enemyIndex = 0
+
+        // Создаём бары игрока (они статичны)
+        val playerBarX = 20f
+        val playerHealthY = screenHeight * 0.9f
+        val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
+
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color.RED)
+        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 20f, Color.BLUE)
+
+        // Создаём бары для врагов на основе текущих позиций
+        updateEnemyBars()
     }
     // PEREGRUZKA METODA
     fun startBattle(enemyCellX: Int, enemyCellY: Int)
     {
         val randomCount = (1..3).random()
         startBattle(enemyCellX, enemyCellY, randomCount)
+    }
+    private fun updateEnemyBars() {
+        enemyBars.clear()
+        val rectHeight = 150f
+        val rectWidth = 100f
+        val space = screenWidth * 0.1f
+        val enemyStartX = screenWidth - rectWidth - space
+        val enemySpacing = 20f
+        val rectY = (screenHeight - rectHeight) / 2
+
+        enemies.forEachIndexed { index, enemy ->
+            val barY = rectY + (index * (rectHeight + enemySpacing)) + rectHeight + 5f // под врагом
+            enemyBars.add(StatBar(enemyStartX, barY, rectWidth, 10f, Color.RED))
+        }
     }
     fun handleInput(player: Player): Boolean {
         if (!isActive) {
@@ -115,6 +147,7 @@ class BattleScene(
             // IF ENEMY DEFEATED THEN REMOVE HIM FROM THE LIST
             println("${target.name} is defeated")
             enemies.removeAt(enemyIndex)
+            updateEnemyBars()
             if (enemies.isEmpty())
             {
                 // IF NO ENEMY LEFT THEN GGEZ
@@ -235,6 +268,16 @@ class BattleScene(
                 batch.color = Color.YELLOW
                 batch.draw(whitePixel, enemyStartX - 5f, enemyY - 5f, rectWidth + 10f, rectHeight + 10f)
             }
+            // Бары игрока
+            playerHealthBar.render(batch, whitePixel, player.currentHealth, player.maxHealth)
+            playerManaBar.render(batch, whitePixel, player.currentMana, player.maxMana)
+
+            // Бары врагов
+            enemies.forEachIndexed { index, enemy ->
+                if (index < enemyBars.size) {
+                    enemyBars[index].render(batch, whitePixel, enemy.currentHealth, enemy.maxHealth)
+                }
+            }
         }
 
         // BUTTONS
@@ -271,62 +314,16 @@ class BattleScene(
         batch.color = Color.WHITE // button text
 
 
-        // Указываем стартовую позицию для верхнего бара
-        val startY = screenHeight * 0.9f
-        // Первый бар (Здоровье)
-        drawStatBar(whitePixel, batch, player.currentHealth, player.maxHealth, 20f, startY, Color.RED)
-
-        // Второй бар (Мана) — рисуем ниже на (высоту квадрата + отступы + наш gap)
-        val secondBarY = startY - squareSize - (padding * 2) - verticalGap
-        drawStatBar(whitePixel, batch, player.currentMana, player.maxMana, 20f, secondBarY, Color.BLUE)
 
     }
     // --- НАСТРОЙКИ (поменяй здесь одну цифру, и всё изменится) ---
     private val squareSize = 24 * 2f       // Размер одного квадратика
-    private val spacing = 4 * 2f          // Расстояние между ними
+//    private val spacing = 4 * 2f          // Расстояние между ними
     private val padding = 3 * 2f          // Внутренний отступ фона (рамка)
-    private val totalBlocks = 10      // Сколько всего квадратиков
+//    private val totalBlocks = 10      // Сколько всего квадратиков
 
     private val verticalGap = 15f // Отступ между барами
     // -------------------------------------------------------------
-
-    private fun drawStatBar(whitePixel: Texture, batch: SpriteBatch ,current: Int, max: Int, startX: Float, y: Float, baseColor: Color) {
-        // Вычисляем общую ширину всей полоски автоматически
-        val step = squareSize + spacing
-        val totalBarWidth = (step * totalBlocks) - spacing // Убираем лишний отступ в конце
-
-
-        // 1. Рисуем сплошной фон (подложку)
-        batch.color = Color.BLACK // Черная рамка
-        batch.draw(whitePixel,
-            startX - padding,
-            y - padding,
-            totalBarWidth + (padding * 2),
-            squareSize + (padding * 2)
-        )
-
-        val totalPercent = (current.toFloat() / max.toFloat()) * 100f
-
-        // 2. Рисуем квадратики
-        for (i in 0 until totalBlocks) {
-            val lowBound = i * (100f / totalBlocks)
-            val highBound = (i + 1) * (100f / totalBlocks)
-
-            // Логика яркости/прозрачности
-            val factor = when {
-                totalPercent >= highBound -> 1.0f
-                totalPercent <= lowBound -> 0.0f
-                else -> (totalPercent - lowBound) / (100f / totalBlocks)
-            }
-
-            if (factor > 0) {
-                batch.color = baseColor.cpy().mul(factor, factor, factor, 1f)
-                // Координата X теперь зависит от настроек выше
-                batch.draw(whitePixel, startX + (i * step), y, squareSize, squareSize)
-            }
-        }
-        batch.color = Color.WHITE
-    }
 
     private fun getDmg(player: Player, hp: Int = 5) {
         // Отнимаем 10 хп, но не даем упасть ниже 0
@@ -345,3 +342,4 @@ class BattleScene(
     }
 
 }
+
