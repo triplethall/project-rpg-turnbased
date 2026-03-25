@@ -13,11 +13,14 @@ enum class TerrainType {
     TRAP,
     UPGRADE,
     OUTPOST,
+    OpenedChest
+
 }
 
 class GameMap(
     val width: Int = 100,
-    val height: Int = 100
+    val height: Int = 100,
+    var chestMenu: ChestMenu? = null
 ) {
 
     private val terrain = Array(width) { Array(height) { TerrainType.WATER } }
@@ -49,7 +52,8 @@ class GameMap(
             t == TerrainType.TRAP ||
             t == TerrainType.UPGRADE ||
             t == TerrainType.OUTPOST ||
-            t == TerrainType.Chest
+            t == TerrainType.Chest ||
+            t == TerrainType.OpenedChest
     }
 
     fun generate(playerStartX: Int = 1, playerStartY: Int = 1) {
@@ -280,11 +284,12 @@ class GameMap(
             }
         }
     }
-
     fun collectChest(x: Int, y: Int): Boolean {
         if (x !in 0 until width || y !in 0 until height) return false
+
         if (terrain[x][y] == TerrainType.Chest) {
-            terrain[x][y] = TerrainType.LAND
+            terrain[x][y] = TerrainType.OpenedChest // Теперь он открыт
+            chestMenu?.show()
             return true
         }
         return false
