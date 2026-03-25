@@ -23,6 +23,8 @@ class BattleScene(
     {
         this.player = player
     }
+    private var enemies: MutableList<BattleEnemy> = mutableListOf() // ENEMY COUNT IN BATTLE
+    private var enemyIndex = 0 // WHICH ENEMY PLAYER IS ATTACKING
     private val attackButtonRect = Rectangle()
     private val getDmgButtonRect = Rectangle()
     private val nextTurnButtonRect = Rectangle()
@@ -30,10 +32,19 @@ class BattleScene(
     private var enemyX = 0
     private var enemyY = 0
     private var madeMoveThisTurn = false
-    fun startBattle(enemyCellX: Int, enemyCellY: Int) {
+    fun startBattle(enemyCellX: Int, enemyCellY: Int, enemyCount: Int) {
         this.enemyX = enemyCellX
         this.enemyY = enemyCellY
+        this.enemies = BattleEnemy.createRandomEnemies(enemyCount.coerceIn(1, 3))
         isActive = true
+        madeMoveThisTurn = false
+        enemyIndex = 0
+    }
+    // PEREGRUZKA METODA
+    fun startBattle(enemyCellX: Int, enemyCellY: Int)
+    {
+        val randomCount = (1..3).random()
+        startBattle(enemyCellX, enemyCellY, randomCount)
     }
     fun handleInput(player: Player): Boolean {
         if (!isActive) {
@@ -70,24 +81,98 @@ class BattleScene(
         }
         return false
     }
+    private fun victoryScreen()
+    {
+        println("victory")
+        endBattleAndClearEnemy()
+        // TODO: VICTORY SCREEN AND REWARD MOST LIKELY
+    }
+    private fun defeatScreen()
+    {
+        println("defeat")
+        endBattleAndClearEnemy()
+        // TODO: DEFEAT SCREEN + ADD CORRUPTION AND PROBABLY GO BACK TO SPAWN?
+    }
     private fun performAttack()
     {
+        if (enemies.isEmpty())
+        {
+            endBattleAndClearEnemy()
+            return
+        }
+
+        val target = enemies[enemyIndex]
+
         val baseDamage = player.damage
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val totalDamage = (baseDamage * randomMultiplier).toInt()
+
+        val dmgWithDef = (totalDamage * (1 - target.defense)).toInt()
+        target.takeDamage(dmgWithDef)
+        println("dealt $dmgWithDef to ${target.name}")
+        if (!target.isAlive())
+        {
+            // IF ENEMY DEFEATED THEN REMOVE HIM FROM THE LIST
+            println("${target.name} is defeated")
+            enemies.removeAt(enemyIndex)
+            if (enemies.isEmpty())
+            {
+                // IF NO ENEMY LEFT THEN GGEZ
+                println("no enemies left")
+                victoryScreen()
+                return
+            }
+            else
+            {
+                println("${enemies.size} enemies left")
+            }
+            // IF INDEX OUT OF RANGE THEN GO TO START
+            if (enemyIndex >= enemies.size)
+            {
+                enemyIndex = 0
+            }
+        }
         madeMoveThisTurn = true
+    }
+    private fun enemyTurn()
+    {
+        if (enemies.isEmpty())
+        {
+            return
+        }
+        println("enemy turn")
+        enemies.forEach { enemy ->
+            if (enemy.isAlive())
+            {
+                if (enemy.canHit())
+                {
+                    val damage = enemy.calculateDamage()
+                    player.currentHealth = (player.currentHealth - damage)
+                    println("${enemy.name} dealt $damage . player health: ${player.currentHealth}/${player.maxHealth}")
+                }
+                else
+                {
+                    println("enemy missed")
+                }
+            }
+        }
+        if (player.currentHealth<=0)
+        {
+            defeatScreen()
+        }
     }
     private fun nextTurn()
     {
         madeMoveThisTurn = false
+        if (isActive && !enemies.isEmpty() && player.currentHealth > 0)
+        {
+            enemyTurn()
+        }
     }
     private fun flee()
     {
-        if (Random.nextInt(1, 5) <= 1)
-        {
-            endBattleAndClearEnemy()
-        }
         madeMoveThisTurn = true
+        // TODO: ESCAPE WITH 2 TURNS
     }
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player)
     {
@@ -95,54 +180,76 @@ class BattleScene(
         {
             return
         }
-        val rectHeight = 200f
-        val rectWidth = 150f
+        // TODO: BATTLE MESSAGES (PLAYER TURN, DAMAGE DEALT, ETC)
+        // COORDINATES FOR RECTANGLES (PLAYER AND ENEMY)
+        val rectHeight = 150f
+        val rectWidth = 100f
         val space = screenWidth * 0.1f
         val rectY = (screenHeight - rectHeight) / 2
         val rectX = screenWidth - rectWidth - space
         batch.draw(BGArena, 0f, 0f, screenWidth, screenHeight)
-        // размеры кнопок
+        // BUTTON SIZES, SPACING AND COORDINATES
         val buttonWidth = 150f
         val buttonHeight = 70f
         val buttonSpacing = 30f
         val buttonY = 50f
-        // позиции кнопок
+
         val totalWidth = buttonWidth * 3 + buttonSpacing * 2
         val startX = (screenWidth - totalWidth) / 2
         val attackX = startX
         val turnX = startX + buttonWidth + buttonSpacing
         val fleeX = startX + (buttonWidth + buttonSpacing) * 2
-        //
+
         attackButtonRect.set(attackX, buttonY, buttonWidth, buttonHeight)
         nextTurnButtonRect.set(turnX, buttonY, buttonWidth, buttonHeight)
         fleeButtonRect.set(fleeX, buttonY, buttonWidth, buttonHeight)
-
         batch.color = Color.BLUE
+        // DRAWING PLAYER RECTANGLE
         batch.draw(whitePixel, space + 400f, rectY - 100f, rectWidth, rectHeight)
-        font.color = Color.WHITE // player info
 
+        font.color = Color.WHITE
+        // SHOWING INFO ABOUT PLAYER
         font.draw(batch, "PLAYER", space + 430f, rectY - 120f)
         font.draw(batch, "${player.currentHealth}/${player.maxHealth}", space + 430f, rectY + rectHeight - 70f)
-        batch.color = Color.RED // enemy rect
+        val enemyStartX = screenWidth - rectWidth - space
+        val enemySpacing = 20f
+        enemies.forEachIndexed { index, enemy ->
+            val enemyY = rectY + (index * (rectHeight + enemySpacing))
 
-        batch.draw(whitePixel, rectX - 400f, rectY - 100f, rectWidth, rectHeight)
-        font.color = Color.WHITE // enemy info
+            // Если врагов много и они выходят за экран - скроллим
+            if (enemyY + rectHeight > screenHeight) {
+                // Можно уменьшить масштаб или добавить скролл, но пока просто рисуем с отступом
+            }
 
-        font.draw(batch, "ENEMY", rectX - 400f, rectY - 120f)
-        font.draw(batch, "currentHealth/maxHealth", rectX - 400f, rectY + rectHeight - 70f)
-        // Кнопки
-        // Атака
+            // Рамка врага (красная, если живой; серая, если мертвый)
+            batch.color = if (enemy.isAlive()) Color.RED else Color.DARK_GRAY
+            batch.draw(whitePixel, enemyStartX, enemyY, rectWidth, rectHeight)
+
+            font.color = Color.WHITE
+            font.draw(batch, enemy.name, enemyStartX + 30f, enemyY - 20f)
+            font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}",
+                enemyStartX + 30f, enemyY + rectHeight - 50f)
+
+            // Маркер текущей цели (если этот враг выбран для атаки)
+            if (index == enemyIndex && enemy.isAlive()) {
+                batch.color = Color.YELLOW
+                batch.draw(whitePixel, enemyStartX - 5f, enemyY - 5f, rectWidth + 10f, rectHeight + 10f)
+            }
+        }
+
+        // BUTTONS
+        // ATTACK BUTTON
         batch.color = if (!madeMoveThisTurn) Color.GREEN else Color.DARK_GRAY
         batch.draw(whitePixel, attackX, buttonY, buttonWidth, buttonHeight)
         font.color = Color.WHITE
         font.draw(batch, "ATTACK", attackX + 45f, buttonY + 42f)
 
-        // Следующий ход
+        // NEXT TURN BUTTON
         batch.color = if (madeMoveThisTurn) Color.ORANGE else Color.DARK_GRAY
         batch.draw(whitePixel, turnX, buttonY, buttonWidth, buttonHeight)
         font.draw(batch, "NEXT TURN", turnX + 55f, buttonY + 42f)
 
-        // Побег
+        // ESCAPE BUTTON
         batch.color = if (!madeMoveThisTurn) Color.RED else Color.DARK_GRAY
         batch.draw(whitePixel, fleeX, buttonY, buttonWidth, buttonHeight)
         font.draw(batch, "ESCAPE", fleeX + 45f, buttonY + 42f)
@@ -234,6 +341,7 @@ class BattleScene(
         }
         isActive = false
         madeMoveThisTurn = false
+        enemies.clear()
     }
 
 }
