@@ -221,7 +221,7 @@ class BattleScene(
         batch.color = Color.WHITE
     }
 
-    private fun getDmg(player: Player, hp: Int) {
+    private fun getDmg(player: Player, hp: Int = 5) {
         // Отнимаем 10 хп, но не даем упасть ниже 0
         player.currentHealth = (player.currentHealth - hp).coerceAtLeast(0)
 
