@@ -24,6 +24,7 @@ class BattleScene(
         this.player = player
     }
     private val attackButtonRect = Rectangle()
+    private val getDmgButtonRect = Rectangle()
     private val nextTurnButtonRect = Rectangle()
     private val fleeButtonRect = Rectangle()
     private var enemyX = 0
@@ -53,6 +54,11 @@ class BattleScene(
             // Кнопка перехода хода
             if (madeMoveThisTurn && nextTurnButtonRect.contains(touchX, yInverted)) {
                 nextTurn()
+                return true
+            }
+            // Кнопка получения урона
+            if (getDmgButtonRect.contains(touchX, yInverted)) {
+                getDmg(player, 1)
                 return true
             }
 
@@ -141,23 +147,15 @@ class BattleScene(
         batch.draw(whitePixel, fleeX, buttonY, buttonWidth, buttonHeight)
         font.draw(batch, "ESCAPE", fleeX + 45f, buttonY + 42f)
 
-        val btnX = screenWidth / 2 - 100f
-        val btnY = 100f // leave button
-
-
-        batch.color = Color.GRAY // leave button
-
-        batch.draw(whitePixel, btnX, btnY, 200f, 60f)
-        font.color = Color.WHITE // text color
-
-        font.draw(batch, "LEAVE", btnX + 30f, btnY + 35f)
-        batch.color = Color.WHITE // button text
         // getDamageBtn
         val l_btnX = screenWidth / 2 - 100f
         val l_btnY = 300f // leave button
 
 
         batch.color = Color.GRAY // leave button
+
+        getDmgButtonRect.set(l_btnX, l_btnY, 200f, 60f)
+        batch.color = Color.GRAY // dmg button
 
         batch.draw(whitePixel, l_btnX, l_btnY, 200f, 60f)
         font.color = Color.WHITE // text color
@@ -223,9 +221,9 @@ class BattleScene(
         batch.color = Color.WHITE
     }
 
-    private fun getDmg(player: Player) {
+    private fun getDmg(player: Player, hp: Int) {
         // Отнимаем 10 хп, но не даем упасть ниже 0
-        player.currentHealth = (player.currentHealth - 10).coerceAtLeast(0)
+        player.currentHealth = (player.currentHealth - hp).coerceAtLeast(0)
 
         // Для теста можно выводить в консоль
         println("Упс! У игрока осталось ${player.currentHealth} HP")
