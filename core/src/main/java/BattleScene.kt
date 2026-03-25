@@ -144,7 +144,7 @@ class BattleScene(
         val btnX = screenWidth / 2 - 100f
         val btnY = 100f // leave button
 
-        exitButtonRect.set(btnX, btnY, 200f, 60f)
+
         batch.color = Color.GRAY // leave button
 
         batch.draw(whitePixel, btnX, btnY, 200f, 60f)
@@ -156,7 +156,7 @@ class BattleScene(
         val l_btnX = screenWidth / 2 - 100f
         val l_btnY = 300f // leave button
 
-        getDmgButtonRect.set(l_btnX, l_btnY, 200f, 60f)
+
         batch.color = Color.GRAY // leave button
 
         batch.draw(whitePixel, l_btnX, l_btnY, 200f, 60f)
