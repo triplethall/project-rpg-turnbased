@@ -40,7 +40,6 @@ class PauseMenu(
         val cX = pX + (panelW - btnW) / 2
 
         resumeRect.set(cX, pY + 350f, btnW, btnH)
-        statsRect.set(cX, pY + 200f, btnW, btnH)
         exitRect.set(cX, pY + 50f, btnW, btnH)
     }
 
@@ -82,10 +81,7 @@ class PauseMenu(
                 toggle()
                 return true
             }
-            if (statsRect.contains(touchX, gameY)) {
-                toggleStats()
-                return true
-            }
+
             if (exitRect.contains(touchX, gameY)) {
                 Gdx.app.exit()
                 return true
@@ -101,53 +97,47 @@ class PauseMenu(
         // Рисуем кнопку паузы только когда меню скрыто
         if (!isVisible) {
             batch.color = Color.WHITE
-            batch.draw(
-                pauseButtonTexture,
-                pauseButtonRect.x,
-                pauseButtonRect.y,
-                pauseButtonRect.width,
-                pauseButtonRect.height
-            )
+            batch.draw(pauseButtonTexture, pauseButtonRect.x, pauseButtonRect.y, pauseButtonRect.width, pauseButtonRect.height)
         }
 
-        if (!isVisible) return
+        // Затемнение фона – нужно, если открыто меню ИЛИ открыта статистика
+        if (isVisible || isStatsVisible) {
+            batch.color = Color(0f, 0f, 0f, 0.7f)
+            batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
+        }
 
-        // Затемнение фона
-        batch.color = Color(0f, 0f, 0f, 0.7f)
-        batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
+        // Рисуем панель меню только если меню открыто
+        if (isVisible) {
+            updateMenuRects()
+            batch.color = Color.DARK_GRAY
+            val panelW = 900f
+            val panelH = 600f
+            val pX = (screenWidth - panelW) / 2
+            val pY = (screenHeight - panelH) / 2
+            batch.draw(whitePixel, pX, pY, panelW, panelH)
 
-        updateMenuRects()
+            // Кнопка CONTINUE
+            batch.color = if (isResumePressed) Color.LIGHT_GRAY else Color.GRAY
+            batch.draw(whitePixel, resumeRect.x, resumeRect.y, resumeRect.width, resumeRect.height)
 
-        // Панель меню
-        batch.color = Color.DARK_GRAY
-        val panelW = 900f
-        val panelH = 600f
-        val pX = (screenWidth - panelW) / 2
-        val pY = (screenHeight - panelH) / 2
-        batch.draw(whitePixel, pX, pY, panelW, panelH)
+            // Кнопка EXIT
+            batch.color = if (isExitPressed) Color.LIGHT_GRAY else Color.GRAY
+            batch.draw(whitePixel, exitRect.x, exitRect.y, exitRect.width, exitRect.height)
 
-        // Кнопка CONTINUE
-        batch.color = if (isResumePressed) Color.LIGHT_GRAY else Color.GRAY
-        batch.draw(whitePixel, resumeRect.x, resumeRect.y, resumeRect.width, resumeRect.height)
+            // Текст на кнопках
+            font.color = Color.WHITE
+            font.data.setScale(2f)
+            font.draw(batch, "CONTINUE", resumeRect.x + 60f, resumeRect.y + 70f)
+            font.draw(batch, "EXIT", exitRect.x + 90f, exitRect.y + 70f)
+            font.data.setScale(1f)
+        }
 
-        // Кнопка STATISTICS
-        batch.color = Color.GRAY // пока без изменения цвета при нажатии
-        batch.draw(whitePixel, statsRect.x, statsRect.y, statsRect.width, statsRect.height)
-
-        // Кнопка EXIT
-        batch.color = if (isExitPressed) Color.LIGHT_GRAY else Color.GRAY
-        batch.draw(whitePixel, exitRect.x, exitRect.y, exitRect.width, exitRect.height)
-
-        // Текст на кнопках
-        font.color = Color.WHITE
-        font.data.setScale(2f)
-        font.draw(batch, "CONTINUE", resumeRect.x + 60f, resumeRect.y + 70f)
-        font.draw(batch, "STATISTICS", statsRect.x + 40f, statsRect.y + 70f)
-        font.draw(batch, "EXIT", exitRect.x + 90f, exitRect.y + 70f)
-        font.data.setScale(1f)
-
-        // Отображение статистики
+        // Окно статистики – рисуется если открыто
         if (isStatsVisible && player != null) {
+            val panelW = 900f
+            val panelH = 600f
+            val pX = (screenWidth - panelW) / 2
+            val pY = (screenHeight - panelH) / 2
             renderStats(batch, whitePixel, player, pX, pY, panelW, panelH)
         }
 
