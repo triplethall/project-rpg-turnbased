@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.Rectangle;
 
 import ru.triplethall.rpgturnbased.GameMap;
 import ru.triplethall.rpgturnbased.Player;
@@ -30,6 +31,12 @@ public class RPGTurnbased extends ApplicationAdapter {
     private Texture pixelTexture;
     private Texture pauseButtonTexture;
     private Texture inventoryButtonTexture;
+    private Texture continueButtonTexture;
+    private Texture exitButtonTexture;
+    private Texture statsButtonTexture;
+    private Texture pauseBackgroundTexture;
+    private Texture statsBackgroundTexture;
+    private Rectangle statsButtonRect;  // прямоугольник кнопки статистики
     private Texture BGArena;
     private final int CELL_SIZE = 32;
     private final int CELL_GAP = 4;
@@ -50,7 +57,6 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         gameMap = new GameMap(21, 21,chestMenu);
         gameMap.generate(1,1);
-
 
         // Размер карты в пикселях
         mapWidthPixels = gameMap.getWidth() * (CELL_SIZE + CELL_GAP);
@@ -88,13 +94,37 @@ public class RPGTurnbased extends ApplicationAdapter {
         whitePixel = new com.badlogic.gdx.graphics.Texture(pixmap);
         pauseButtonTexture = new Texture("pauseButton.png");
         inventoryButtonTexture = new Texture("inventorybtn.png");
+        statsButtonTexture = new Texture("statsbtn.png");   // загружаем текстуру для статистики
         BGArena = new Texture("bg/forest_light_arena.png");
+        statsBackgroundTexture = new Texture("menus/bgs/statsmenubg.png");
+        continueButtonTexture = new Texture("menus/buttons/continue.png");
+        exitButtonTexture = new Texture("menus/buttons/exit.png");
+        pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
         pixmap.dispose();
 
+        uiCamera = new OrthographicCamera();
+        uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena);
-        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
-        inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventoryButtonTexture);
+        pauseMenu = new PauseMenu(font,
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            pauseButtonTexture,
+            statsBackgroundTexture,
+            continueButtonTexture,
+            exitButtonTexture,
+            pauseBackgroundTexture);
+
+        inventory = new Inventory(font,
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            inventoryButtonTexture);
+
+        // Создаём прямоугольник для кнопки статистик
+        int margin = 20;
+        float btnSize = 120;
+        float startY = Gdx.graphics.getHeight() - btnSize;
+        statsButtonRect = new Rectangle(2 * btnSize + margin, startY, btnSize, btnSize);
 
         player = new Player();
         player.spawnOnShore(gameMap);
@@ -103,62 +133,62 @@ public class RPGTurnbased extends ApplicationAdapter {
 
     @Override
     public void render() {
-
         boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
-        boolean chestClicked = chestMenu.handleInput(); // Обработка клика по EXIT
+        boolean chestClicked = chestMenu.handleInput();
 
-        // Решаем, может ли игрок ходить
+        // Логика игры (ход игрока, бой, сундук)
         if (battleScene.isActive()) {
             battleScene.handleInput(player);
         } else if (!isPaused && !menuClicked && !chestMenu.isVisible()) {
             handlePlayerInput();
         }
 
-
+        // Очистка экрана
         ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
-        cameraControl.update();
+
+        // Обновляем камеру только если меню паузы НЕ активно
+        if (!isPaused) {
+            cameraControl.update();
+        }
         mapRenderer.update(Gdx.graphics.getDeltaTime());
 
+        // Отрисовка игрового мира (карта, игрок)
         batch.setProjectionMatrix(cameraControl.getCamera().combined);
         batch.begin();
         mapRenderer.render(batch, player);
         player.render(batch, font, CELL_SIZE, CELL_GAP);
-
-
         batch.end();
-        inventory.handleInput(player);
-        // UI камера для интерфейса
-        OrthographicCamera uiCamera = new OrthographicCamera();
-        uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
+        // Обработка инвентаря
+        inventory.handleInput(player);
+
+        // Обработка нажатия на кнопку статистики
+        if (Gdx.input.justTouched()) {
+            float touchX = Gdx.input.getX();
+            float touchY = Gdx.input.getY();
+            float gameY = Gdx.graphics.getHeight() - touchY; // преобразуем в координаты UI (начало снизу)
+            if (statsButtonRect.contains(touchX, gameY)) {
+                pauseMenu.toggleStats();
+            }
+        }
+
+        // Отрисовка интерфейса (меню паузы, сундук, инвентарь, кнопка статистики, бой)
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
 
-        // Рисуем меню сундука поверх всего
         chestMenu.render(batch, whitePixel);
-
         pauseMenu.render(batch, whitePixel, player);
         inventory.render(batch, whitePixel, player);
 
-        if (battleScene.isActive()) {
-            battleScene.render(batch, whitePixel, player);
-        }
-        batch.end();
-
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-
-        chestMenu.render(batch, whitePixel);
-        pauseMenu.render(batch, whitePixel, player);
+        // Рисуем кнопку статистики
+        batch.draw(statsButtonTexture, statsButtonRect.x, statsButtonRect.y, statsButtonRect.width, statsButtonRect.height);
 
         if (battleScene.isActive()) {
             battleScene.render(batch, whitePixel, player);
         }
         batch.end();
-
     }
-
 
     private Vector3 screenToGrid(float screenX, float screenY) {
         Vector3 world = cameraControl.getCamera().unproject(new Vector3(screenX, screenY, 0));
@@ -194,7 +224,12 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (pixelTexture != null) pixelTexture.dispose();
         if (whitePixel != null) whitePixel.dispose();
         if (pauseButtonTexture != null) pauseButtonTexture.dispose();
+        if (statsButtonTexture != null) statsButtonTexture.dispose();
         if (BGArena != null) BGArena.dispose();
+        if (statsBackgroundTexture != null) statsBackgroundTexture.dispose();
+        if (continueButtonTexture != null) continueButtonTexture.dispose();
+        if (exitButtonTexture != null) exitButtonTexture.dispose();
+        if (pauseBackgroundTexture != null) pauseBackgroundTexture.dispose();
         mapRenderer.dispose();
         font.dispose();
     }
