@@ -42,6 +42,11 @@ class BattleScene(
     // PEREGRUZKA METODA
     fun startBattle(enemyCellX: Int, enemyCellY: Int)
     {
+        if (player.currentHealth <= 0)
+        {
+            println("player is DEAD LMAO")
+            return
+        }
         val randomCount = (1..3).random()
         startBattle(enemyCellX, enemyCellY, randomCount)
     }
@@ -55,6 +60,16 @@ class BattleScene(
         val yInverted = screenHeight - touchY
 
         if (Gdx.input.justTouched()) {
+            // CLICKING ENEMY CHANGES TARGET TO HIM
+            if (!madeMoveThisTurn)
+            {
+                val clickedIndex = getEnemyPos(touchX, yInverted)
+                if (clickedIndex != -1 && enemies.getOrNull(clickedIndex)?.isAlive() == true)
+                {
+                    enemyIndex = clickedIndex
+                    return true
+                }
+            }
             // Кнопка атаки
             if (!madeMoveThisTurn && attackButtonRect.contains(touchX, yInverted)) {
                 performAttack()
@@ -75,6 +90,63 @@ class BattleScene(
         }
         return false
     }
+    fun getEnemyPos(x: Float, y: Float): Int
+    {
+        val rectHeight = 150f
+        val rectWidth = 100f
+        val space = screenWidth * 0.1f
+        val rectY = (screenHeight - rectHeight) / 2
+        val rectX = screenWidth - rectWidth - space
+        val enemyStartX = rectX - 400f
+
+        when (enemies.size) {
+            1 -> {
+                val enemyY = rectY - 100f
+                val rect = Rectangle(enemyStartX, enemyY, rectWidth, rectHeight)
+                if (rect.contains(x, y))
+                {
+                    return 0
+                }
+            }
+            2 -> {
+                val offsetY = 90f
+                val enemyY1 = rectY - 100f - offsetY  // Верхний
+                val enemyY2 = rectY - 100f + offsetY  // Нижний
+                val rect1 = Rectangle(enemyStartX, enemyY1, rectWidth, rectHeight)
+                val rect2 = Rectangle(enemyStartX - 100f, enemyY2, rectWidth, rectHeight)
+                if (rect1.contains(x,y))
+                {
+                    return 0
+                }
+                else if (rect2.contains(x, y))
+                {
+                    return 1
+                }
+            }
+            3 -> {
+                val offsetY = 100f
+                val enemyY1 = rectY - 100f - offsetY  // Верхний
+                val enemyY2 = rectY - 100f           // Центральный
+                val enemyY3 = rectY - 100f + offsetY  // Нижний
+                val rect1 = Rectangle(enemyStartX - 100f, enemyY1 - 50f, rectWidth, rectHeight)
+                val rect2 = Rectangle(enemyStartX, enemyY2, rectWidth, rectHeight)
+                val rect3 = Rectangle(enemyStartX - 85f, enemyY3 + 50f, rectWidth, rectHeight)
+                if (rect1.contains(x,y))
+                {
+                    return 0
+                }
+                else if (rect2.contains(x,y))
+                {
+                    return 1
+                }
+                else if (rect3.contains(x,y))
+                {
+                    return 2
+                }
+            }
+        }
+        return -1
+    }
     private fun victoryScreen()
     {
         println("victory")
@@ -84,6 +156,10 @@ class BattleScene(
     private fun defeatScreen()
     {
         println("defeat")
+        if (player.currentHealth <= 0)
+        {
+            player.currentHealth = 1
+        }
         endBattleAndClearEnemy()
         // TODO: DEFEAT SCREEN + ADD CORRUPTION AND PROBABLY GO BACK TO SPAWN?
     }
@@ -94,6 +170,7 @@ class BattleScene(
             endBattleAndClearEnemy()
             return
         }
+
 
         val target = enemies[enemyIndex]
 
@@ -134,9 +211,15 @@ class BattleScene(
         {
             return
         }
+
+        if (player.currentHealth <= 0)
+        {
+            defeatScreen()
+            return
+        }
         println("enemy turn")
         enemies.forEach { enemy ->
-            if (enemy.isAlive())
+            if (enemy.isAlive() && player.currentHealth > 0)
             {
                 if (enemy.canHit())
                 {
@@ -150,7 +233,7 @@ class BattleScene(
                 }
             }
         }
-        if (player.currentHealth<=0)
+        if (player.currentHealth <= 0)
         {
             defeatScreen()
         }
@@ -205,30 +288,42 @@ class BattleScene(
         // SHOWING INFO ABOUT PLAYER
         font.draw(batch, "PLAYER", space + 430f, rectY - 120f)
         font.draw(batch, "${player.currentHealth}/${player.maxHealth}", space + 430f, rectY + rectHeight - 70f)
-        val enemyStartX = screenWidth - rectWidth - space
-        val enemySpacing = 20f
-        enemies.forEachIndexed { index, enemy ->
-            val enemyY = rectY + (index * (rectHeight + enemySpacing))
+        if (enemies.isNotEmpty()) {
+            val enemyStartX = rectX - 400f
 
-            // Если врагов много и они выходят за экран - скроллим
-            if (enemyY + rectHeight > screenHeight) {
-                // Можно уменьшить масштаб или добавить скролл, но пока просто рисуем с отступом
+            when (enemies.size) {
+                1 -> {
+                    // один враг
+                    val enemyY = rectY - 100f
+                    drawEnemy(batch, whitePixel, enemies[0], enemyStartX, enemyY, rectWidth, rectHeight, enemyIndex == 0)
+                }
+                2 -> {
+                    // Два врага
+                    val offsetY = 90f
+                    val enemyY1 = rectY - 100f - offsetY  // Верхний
+                    val enemyY2 = rectY - 100f + offsetY  // Нижний
+                    drawEnemy(batch, whitePixel, enemies[0], enemyStartX, enemyY1, rectWidth, rectHeight, enemyIndex == 0)
+                    drawEnemy(batch, whitePixel, enemies[1], enemyStartX - 100f, enemyY2, rectWidth, rectHeight, enemyIndex == 1)
+                }
+                3 -> {
+                    // Три врага
+                    val offsetY = 100f
+                    val enemyY1 = rectY - 100f - offsetY  // Верхний
+                    val enemyY2 = rectY - 100f           // Центральный
+                    val enemyY3 = rectY - 100f + offsetY  // Нижний
+                    drawEnemy(batch, whitePixel, enemies[0], enemyStartX - 100f, enemyY1 - 50f, rectWidth, rectHeight, enemyIndex == 0)
+                    drawEnemy(batch, whitePixel, enemies[1], enemyStartX, enemyY2, rectWidth, rectHeight, enemyIndex == 1)
+                    drawEnemy(batch, whitePixel, enemies[2], enemyStartX - 85f, enemyY3 + 50f, rectWidth, rectHeight, enemyIndex == 2)
+                }
+                else -> {
+                    println("idk")
+                    return
+                }
             }
 
-            // Рамка врага (красная, если живой; серая, если мертвый)
-            batch.color = if (enemy.isAlive()) Color.RED else Color.DARK_GRAY
-            batch.draw(whitePixel, enemyStartX, enemyY, rectWidth, rectHeight)
-
+            // Отображаем количество врагов
             font.color = Color.WHITE
-            font.draw(batch, enemy.name, enemyStartX + 30f, enemyY - 20f)
-            font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}",
-                enemyStartX + 30f, enemyY + rectHeight - 50f)
-
-            // Маркер текущей цели (если этот враг выбран для атаки)
-            if (index == enemyIndex && enemy.isAlive()) {
-                batch.color = Color.YELLOW
-                batch.draw(whitePixel, enemyStartX - 5f, enemyY - 5f, rectWidth + 10f, rectHeight + 10f)
-            }
+            font.draw(batch, "enemies: ${enemies.size}", screenWidth - 150f, screenHeight - 30f)
         }
 
         // BUTTONS
@@ -313,5 +408,21 @@ class BattleScene(
         madeMoveThisTurn = false
         enemies.clear()
     }
+    private fun drawEnemy(batch: SpriteBatch, whitePixel: Texture, enemy: BattleEnemy, x: Float, y: Float, width: Float, height: Float, isSelected: Boolean) {
+        // Если враг мертв — рисуем серым
+        batch.color = if (enemy.isAlive()) Color.RED else Color.DARK_GRAY
+        batch.draw(whitePixel, x, y, width, height)
+
+        // Если это выбранный враг — подсвечиваем желтой рамкой
+        if (isSelected && enemy.isAlive()) {
+            batch.color = Color.YELLOW
+            batch.draw(whitePixel, x - 5f, y - 5f, width + 10f, height + 10f)
+        }
+
+        font.color = Color.WHITE
+        font.draw(batch, enemy.name, x + 20f, y - 20f)
+        font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)
+    }
+
 
 }
