@@ -7,7 +7,7 @@ import kotlin.Double
 enum class PlayerClasses(
     val displayName: String,                     // название класса
     val description: String,                     // описание класса
-    val baseDamage: Int = 15,                    // Урон
+    val baseDamage: Int = 20,                    // Урон
     val baseMageDamage: Int = 10,                // урон магии
     val baseMaxHealth: Int = 100,                // хп
     val baseDefense: Double = 0.0,               // Защита (процентная)
@@ -21,7 +21,7 @@ enum class PlayerClasses(
     ADVENTURIST(
         displayName = "Авантюрист",
         description = "Новичок который только начал своё приключение",
-        baseDamage = 15,
+        baseDamage = 20,
         baseMaxHealth = 100,
         baseDefense = 0.0,
         baseMaxMana = 50,
@@ -35,7 +35,7 @@ enum class PlayerClasses(
     KNIGHT(
         displayName = "Рыцарь",
         description = "Рассудительный, с повышенной живучесть и урон",
-        baseDamage = 20,
+        baseDamage = 25,
         baseDefense = 0.08,
         baseMaxHealth = 150,
         baseAttackSpeed = 0.9,
@@ -59,7 +59,7 @@ enum class PlayerClasses(
     ASSASSIN(
         displayName = "Ассасин",
         description = "Мастер убийств, Тренировался скрытности",
-        baseDamage = 18,
+        baseDamage = 23,
         baseDefense = 0.00,
         baseMaxHealth = 110,
         baseAttackSpeed = 1.4,
@@ -71,7 +71,7 @@ enum class PlayerClasses(
     ARCHER(
         displayName = "Лучник",
         description = "Зоркий глаз, хорошее владение луком",
-        baseDamage = 16,
+        baseDamage = 22,
         baseMaxHealth = 95,
         baseDefense = 0.01,
         baseMaxMana = 60,
@@ -86,7 +86,7 @@ enum class PlayerClasses(
     PRIEST(
         displayName = "Священник",
         description = "Великий святой, умеет искусно залечивать раны",
-        baseDamage = 7,
+        baseDamage = 15,
         baseMaxHealth = 105,
         baseDefense = 0.0,
         baseMaxMana = 140,
@@ -101,7 +101,7 @@ enum class PlayerClasses(
     JOKER(
         displayName = "Джокер",
         description = "Глупец, что вечно полагается на удачу",
-        baseDamage = 13,
+        baseDamage = 19,
         baseMaxHealth = 110,
         baseDefense = 0.01,
         baseMaxMana = 70,
@@ -116,7 +116,7 @@ enum class PlayerClasses(
     BERSERK(
         displayName = "Берсерк",
         description = "Жажда крови, Лишь на грани смерти он чувствует запах крови",
-        baseDamage = 23,
+        baseDamage = 26,
         baseMaxHealth = 200,
         baseDefense = 0.04,
         baseMaxMana = 25,
@@ -131,7 +131,7 @@ enum class PlayerClasses(
     SHAMAN(
         displayName = "Шаман",
         description = "Мастер проклятий, изучал тёмные таинства",
-        baseDamage = 7,
+        baseDamage = 15,
         baseMaxHealth = 180,
         baseDefense = 0.00,
         baseMaxMana = 145,
@@ -146,7 +146,7 @@ enum class PlayerClasses(
     SWORDMASTER(
         displayName = "Мастер меча",
         description = "Владыка мечей, Силён и быстр",
-        baseDamage = 20,
+        baseDamage = 28,
         baseMaxHealth = 130,
         baseDefense = 0.02,
         baseMaxMana = 45,
@@ -161,7 +161,7 @@ enum class PlayerClasses(
     MONARCH(
         displayName = "Монах",
         description = "Силён духом, силён телом",
-        baseDamage = 25,
+        baseDamage = 28,
         baseMaxHealth = 220,
         baseDefense = 0.07,
         baseMaxMana = 60,

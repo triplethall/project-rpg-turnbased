@@ -9,7 +9,6 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 
-const val MAX_RADIUS = 5.0f // Радиус видимости
 
 class MapRenderer (
     private val gameMap: GameMap,
@@ -97,7 +96,17 @@ class MapRenderer (
 
                 // 2. Считаем яркость: 1.0 (рядом) -> 0.2 (на границе видимости)
                 // Используем 0.2f как минимальную яркость для уже исследованных клеток
-                val light = (1.0f - (distance / MAX_RADIUS)).coerceIn(0.2f, 1.0f)
+                val fullLightRadius = 4.0f  // До 4-й клетки всё горит ярко
+                val maxVisibleRadius = 8.0f // На 8-й клетке наступает тьма
+                val light = when {
+                    distance <= fullLightRadius -> 1.0f // В центре яркость максимальна
+                    distance >= maxVisibleRadius -> 0.4f // Дальше лимита — минимальная яркость
+                    else -> {
+                        // Плавно уменьшаем от 1.0 до 0.2 в промежутке между 4 и 8 клетками
+                        val ratio = (distance - fullLightRadius) / (maxVisibleRadius - fullLightRadius)
+                        1.0f - (ratio * (1.0f - 0.4f))
+                    }
+                }
 
                 val terrain = gameMap.getTerrain(x, y)
 
