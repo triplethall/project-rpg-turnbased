@@ -144,6 +144,9 @@ data class EquipmentItem(
 }
 class PlayerEquipment
 {
+    private val runes = arrayOfNulls<EquipmentItem>(2)
+    fun getRune(slot: Int): EquipmentItem? = runes.getOrNull(slot)
+
     private val equipped = mutableMapOf<EquipmentType, EquipmentItem>()
     // получить данные о предмете по типу
     fun getEquipped(type: EquipmentType): EquipmentItem? = equipped[type]
@@ -174,6 +177,24 @@ class PlayerEquipment
         player?.let { applyItemBonuses(item, it, false) }
         return true
     }
+
+
+    fun equipRune(rune: EquipmentItem, slot: Int, player: Player): Boolean {
+        if (slot !in 0..1) return false
+        if (runes[slot] != null) return false
+        runes[slot] = rune
+        applyItemBonuses(rune, player, true)
+        return true
+    }
+
+    fun unequipRune(slot: Int, player: Player): Boolean {
+        val rune = runes[slot] ?: return false
+        runes[slot] = null
+        applyItemBonuses(rune, player, false)
+        return true
+    }
+
+
     private fun applyItemBonuses(item: EquipmentItem, player: Player, apply: Boolean)
     {
         val multiplier = if (apply) 1 else -1
@@ -255,15 +276,15 @@ object EquipmentDatabase
         level = 10
     )
     val RAILBLADE = EquipmentItem(
-    id = "greatsword_02",
-    name = "Railblade",
-    type = EquipmentType.WEAPON,
-    weaponType = WeaponType.GREATSWORD,
-    allowedClasses = listOf(PlayerClasses.KNIGHT),
-    //bonus
-    description = "This ancient blade holds the power of demonslayers.",
-    level = 70
-)
+        id = "greatsword_02",
+        name = "Railblade",
+        type = EquipmentType.WEAPON,
+        weaponType = WeaponType.GREATSWORD,
+        allowedClasses = listOf(PlayerClasses.KNIGHT),
+        //bonus
+        description = "This ancient blade holds the power of demonslayers.",
+        level = 70
+    )
     // Axes
     val LUMBER_AXE = EquipmentItem(
         id = "axe_01",

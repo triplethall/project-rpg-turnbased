@@ -18,9 +18,9 @@ enum class Enemy(
 ) {
     GREEN_SLIME(
         displayEnemyName = "Green Slime",
-        baseEnemyDamage = 20,                    // Урон
+        baseEnemyDamage = 10,                    // Урон
         baseEnemyMageDamage = 10,                // урон магии
-        baseEnemyMaxHealth = 350,                // хп
+        baseEnemyMaxHealth = 70,                // хп
         baseEnemyDefense = 0.0,                  // Защита (процентная)
         baseEnemyAttackSpeed = 1.0,              // Скорость (атаки)
         baseEnemyAccuracy = 0.8,                 // Точность (шанс попадания по персонажу)
@@ -30,9 +30,9 @@ enum class Enemy(
 
     RED_SLIME(
         displayEnemyName = "Red Slime",
-        baseEnemyDamage = 40,                    // Урон
+        baseEnemyDamage = 25,                    // Урон
         baseEnemyMageDamage = 10,                // урон магии
-        baseEnemyMaxHealth = 200,                // хп
+        baseEnemyMaxHealth = 40,                // хп
         baseEnemyDefense = 0.0,                  // Защита (процентная)
         baseEnemyAttackSpeed = 1.0,              // Скорость (атаки)
         baseEnemyAccuracy = 0.8,                 // Точность (шанс попадания по персонажу)
@@ -42,9 +42,9 @@ enum class Enemy(
 
     BLUE_SLIME(
         displayEnemyName = "Blue Slime",
-        baseEnemyDamage = 20,                    // Урон
+        baseEnemyDamage = 10,                    // Урон
         baseEnemyMageDamage = 10,                // урон магии
-        baseEnemyMaxHealth = 200,                // хп
+        baseEnemyMaxHealth = 50,                // хп
         baseEnemyDefense = 0.1,                  // Защита (процентная)
         baseEnemyAttackSpeed = 1.0,              // Скорость (атаки)
         baseEnemyAccuracy = 0.8,                 // Точность (шанс попадания по персонажу)
