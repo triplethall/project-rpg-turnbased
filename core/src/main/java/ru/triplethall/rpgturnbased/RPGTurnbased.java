@@ -31,7 +31,11 @@ public class RPGTurnbased extends ApplicationAdapter {
     private Texture pixelTexture;
     private Texture pauseButtonTexture;
     private Texture inventoryButtonTexture;
+    private Texture continueButtonTexture;
+    private Texture exitButtonTexture;
     private Texture statsButtonTexture;
+    private Texture pauseBackgroundTexture;
+    private Texture statsBackgroundTexture;
     private Rectangle statsButtonRect;  // прямоугольник кнопки статистики
     private Texture BGArena;
     private final int CELL_SIZE = 32;
@@ -53,7 +57,6 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         gameMap = new GameMap(21, 21,chestMenu);
         gameMap.generate(1,1);
-
 
         // Размер карты в пикселях
         mapWidthPixels = gameMap.getWidth() * (CELL_SIZE + CELL_GAP);
@@ -93,19 +96,35 @@ public class RPGTurnbased extends ApplicationAdapter {
         inventoryButtonTexture = new Texture("inventorybtn.png");
         statsButtonTexture = new Texture("statsbtn.png");   // загружаем текстуру для статистики
         BGArena = new Texture("bg/forest_light_arena.png");
+        statsBackgroundTexture = new Texture("menus/bgs/statsmenubg.png");
+        continueButtonTexture = new Texture("menus/buttons/continue.png");
+        exitButtonTexture = new Texture("menus/buttons/exit.png");
+        pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
         pixmap.dispose();
 
         uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena);
-        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
-        inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventoryButtonTexture);
+        pauseMenu = new PauseMenu(font,
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            pauseButtonTexture,
+            statsBackgroundTexture,
+            continueButtonTexture,
+            exitButtonTexture,
+            pauseBackgroundTexture);
 
-        // Создаём прямоугольник для кнопки статистики (в левом верхнем углу, третья по счёту)
-        float btnSize = 120f;
+        inventory = new Inventory(font,
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            inventoryButtonTexture);
+
+        // Создаём прямоугольник для кнопки статистик
+        int margin = 20;
+        float btnSize = 120;
         float startY = Gdx.graphics.getHeight() - btnSize;
-        statsButtonRect = new Rectangle(2 * btnSize, startY, btnSize, btnSize);
+        statsButtonRect = new Rectangle(2 * btnSize + margin, startY, btnSize, btnSize);
 
         player = new Player();
         player.spawnOnShore(gameMap);
@@ -207,6 +226,10 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (pauseButtonTexture != null) pauseButtonTexture.dispose();
         if (statsButtonTexture != null) statsButtonTexture.dispose();
         if (BGArena != null) BGArena.dispose();
+        if (statsBackgroundTexture != null) statsBackgroundTexture.dispose();
+        if (continueButtonTexture != null) continueButtonTexture.dispose();
+        if (exitButtonTexture != null) exitButtonTexture.dispose();
+        if (pauseBackgroundTexture != null) pauseBackgroundTexture.dispose();
         mapRenderer.dispose();
         font.dispose();
     }
