@@ -363,15 +363,7 @@ class BattleScene(
             // Отображаем количество врагов
             font.color = Color.WHITE
             font.draw(batch, "enemies: ${enemies.size}", screenWidth - 150f, screenHeight - 30f)
-            font.draw(batch, enemy.name, enemyStartX + 30f, enemyY - 20f)
-            font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}",
-                enemyStartX + 30f, enemyY + rectHeight - 50f)
 
-            // Маркер текущей цели (если этот враг выбран для атаки)
-            if (index == enemyIndex && enemy.isAlive()) {
-                batch.color = Color.YELLOW
-                batch.draw(whitePixel, enemyStartX - 5f, enemyY - 5f, rectWidth + 10f, rectHeight + 10f)
-            }
             // Бары игрока
             playerHealthBar.render(batch, whitePixel, player.currentHealth, player.maxHealth)
             playerManaBar.render(batch, whitePixel, player.currentMana, player.maxMana)

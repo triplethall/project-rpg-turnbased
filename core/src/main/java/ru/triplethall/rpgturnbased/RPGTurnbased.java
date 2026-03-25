@@ -4,10 +4,12 @@ import static java.lang.Math.random;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.graphics.Color;
@@ -48,14 +50,20 @@ public class RPGTurnbased extends ApplicationAdapter {
     private ChestMenu chestMenu;
     private Texture chestClosed;
     private Texture chestOpen;
+    private ShapeRenderer shapeRenderer;
+    private MainMenu mainMenu;
+    private boolean gameStarted = false;
 
     @Override
     public void create() {
+        font = new BitmapFont();
+        font.setColor(Color.YELLOW);
+        font.getData().setScale(1.5f);
         chestClosed = new Texture("bg/chest_closed.png");
         chestOpen = new Texture("bg/chest_open.png");
-        font = new BitmapFont();
         chestMenu = new ChestMenu(font);
         batch = new SpriteBatch();
+        shapeRenderer = new ShapeRenderer();
 
         gameMap = new GameMap(21, 21,chestMenu);
         gameMap.generate(1,1);
@@ -86,9 +94,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         mapRenderer = new MapRenderer(gameMap, CELL_SIZE, CELL_GAP, chestClosed, chestOpen);
 
-        font = new BitmapFont();
-        font.setColor(Color.YELLOW);
-        font.getData().setScale(1.5f);
+
 
         com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
         pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
@@ -122,6 +128,11 @@ public class RPGTurnbased extends ApplicationAdapter {
             Gdx.graphics.getHeight(),
             inventoryButtonTexture);
 
+        mainMenu = new MainMenu(font,
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            this);
+
         // Создаём прямоугольник для кнопки статистик
         int margin = 20;
         float btnSize = 120;
@@ -131,10 +142,19 @@ public class RPGTurnbased extends ApplicationAdapter {
         player = new Player();
         player.spawnOnShore(gameMap);
         battleScene.setPlayer(player);
+        gameStarted = false;
     }
 
     @Override
     public void render() {
+        if (!gameStarted) {
+            mainMenu.handleInput();
+            ScreenUtils.clear(0.05f, 0.05f, 0.1f, 1f);
+            batch.setProjectionMatrix(uiCamera.combined);
+            mainMenu.render(batch, shapeRenderer);
+            return;
+        }
+
         boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
         boolean chestClicked = chestMenu.handleInput();
@@ -217,6 +237,11 @@ public class RPGTurnbased extends ApplicationAdapter {
             }
         }
     }
+    public void startGame()
+    {
+        gameStarted = true;
+        mainMenu.hide();
+    }
 
     @Override
     public void dispose() {
@@ -231,6 +256,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (continueButtonTexture != null) continueButtonTexture.dispose();
         if (exitButtonTexture != null) exitButtonTexture.dispose();
         if (pauseBackgroundTexture != null) pauseBackgroundTexture.dispose();
+        if (mainMenu != null) mainMenu.dispose();
         mapRenderer.dispose();
         font.dispose();
     }
