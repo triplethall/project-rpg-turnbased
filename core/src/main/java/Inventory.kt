@@ -19,10 +19,14 @@ data class Item(
 class Inventory(
     private val font: BitmapFont,
     private val screenWidth: Float,
-    private val screenHeight: Float
+    private val screenHeight: Float,
+    private var invbutt: Texture
 ) {
     var isVisible = false
         private set
+
+
+
 
     private var isItemDetailsVisible = false
 
@@ -79,11 +83,11 @@ class Inventory(
     fun handleInput(player: Player) {
         val touchX = Gdx.input.x.toFloat()
         val touchY = Gdx.input.y.toFloat()
-        val yInverted = screenHeight - touchY
+        val invertedY = screenHeight - touchY
 
         if (!isVisible) {
             // Обработка кнопки открытия инвентаря
-            if (Gdx.input.justTouched() && inventoryButtonRect.contains(touchX, touchY)) {
+            if (Gdx.input.justTouched() && inventoryButtonRect.contains(touchX, invertedY)) {
                 toggle()
             }
             return
@@ -93,7 +97,7 @@ class Inventory(
         // Инвентарь открыт
         if (Gdx.input.justTouched()) {
             // Проверяем кнопку закрытия
-            if (closeButtonRect.contains(touchX, yInverted)) {
+            if (closeButtonRect.contains(touchX, invertedY)) {
                 toggle()
                 return
             }
@@ -102,15 +106,15 @@ class Inventory(
             // Если детали предмета открыты
             if (isItemDetailsVisible && selectedItem != null) {
                 // Проверяем кнопки действий с предметом
-                if (equipButtonRect.contains(touchX, yInverted) && selectedItem!!.isEquippable) {
+                if (equipButtonRect.contains(touchX, invertedY) && selectedItem!!.isEquippable) {
                     handleEquipItem(selectedItem!!, player)
                     return
                 }
-                if (useButtonRect.contains(touchX, yInverted) && !selectedItem!!.isEquippable) {
+                if (useButtonRect.contains(touchX, invertedY) && !selectedItem!!.isEquippable) {
                     handleUseItem(selectedItem!!, player)
                     return
                 }
-                if (dropButtonRect.contains(touchX, yInverted)) {
+                if (dropButtonRect.contains(touchX, invertedY)) {
                     handleDropItem(selectedItem!!)
                     return
                 }
@@ -119,7 +123,7 @@ class Inventory(
 
             // Проверяем клик по предметам
             itemRects.forEachIndexed { index, rect ->
-                if (index < items.size && rect.contains(touchX, yInverted)) {
+                if (index < items.size && rect.contains(touchX, invertedY)) {
                     selectedItem = items[index]
                     selectedItemIndex = index
                     isItemDetailsVisible = true
@@ -183,14 +187,8 @@ class Inventory(
 
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player) {
         // Рисуем кнопку инвентаря
-        batch.color = Color.BLUE
-        batch.draw(whitePixel, inventoryButtonRect.x, inventoryButtonRect.y,
+        batch.draw(invbutt, inventoryButtonRect.x, inventoryButtonRect.y,
             inventoryButtonRect.width, inventoryButtonRect.height)
-
-
-        font.color = Color.WHITE
-        font.data.setScale(1.2f)
-        font.draw(batch, "INV", inventoryButtonRect.x + 20f, inventoryButtonRect.y + 28f)
 
 
         if (!isVisible) return

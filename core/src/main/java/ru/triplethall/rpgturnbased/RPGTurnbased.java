@@ -29,6 +29,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private BitmapFont font;
     private Texture pixelTexture;
     private Texture pauseButtonTexture;
+    private Texture inventoryButtonTexture;
     private Texture BGArena;
     private final int CELL_SIZE = 32;
     private final int CELL_GAP = 4;
@@ -86,13 +87,14 @@ public class RPGTurnbased extends ApplicationAdapter {
         pixmap.fill();
         whitePixel = new com.badlogic.gdx.graphics.Texture(pixmap);
         pauseButtonTexture = new Texture("pauseButton.png");
+        inventoryButtonTexture = new Texture("inventorybtn.png");
         BGArena = new Texture("bg/forest_light_arena.png");
         pixmap.dispose();
 
 
         battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena);
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), pauseButtonTexture);
-        inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventoryButtonTexture);
 
         player = new Player();
         player.spawnOnShore(gameMap);
@@ -123,11 +125,11 @@ public class RPGTurnbased extends ApplicationAdapter {
         mapRenderer.render(batch, player);
         player.render(batch, font, CELL_SIZE, CELL_GAP);
 
-        inventory.render(batch, whitePixel, player);
+
         batch.end();
-
-
-        uiCamera = new OrthographicCamera();
+        inventory.handleInput(player);
+        // UI камера для интерфейса
+        OrthographicCamera uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         batch.setProjectionMatrix(uiCamera.combined);
@@ -137,6 +139,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         chestMenu.render(batch, whitePixel);
 
         pauseMenu.render(batch, whitePixel, player);
+        inventory.render(batch, whitePixel, player);
 
         if (battleScene.isActive()) {
             battleScene.render(batch, whitePixel, player);

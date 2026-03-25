@@ -14,16 +14,16 @@ class Player(
 ) {
     // Базовые характеристики
     var damage: Int = 15                    // Урон
+    var mageDamage: Int = 10                // урон магии
     var defense: Double = 0.0               // Защита (процентная)
     var attackSpeed: Double = 1.0           // Скорость (атаки)
     var accuracy: Double = 0.8              // Точность (шанс попадания по врагу)
     var will: Double = 0.5                  // Воля (сопротивление дебафам)
     var corruption: Int = 0                 // Скверна
+    var luck: Double = 0.00                 // Удача
+    var critChance: Double = 0.01           // крит шанс
     var level: Int = 1                      // Уровень
     var experience: Int = 0                 // Опыт
-    var mageDamage: Int = 10                // урон магии
-    var luck: Double = 0.01                  // Удача
-    var critChance: Double = 0.01           // крит шанс
 
     // Максимальные значения
     var maxMana: Int = 50

@@ -8,14 +8,14 @@ enum class PlayerClasses(
     val displayName: String,                     // название класса
     val description: String,                     // описание класса
     val baseDamage: Int = 15,                    // Урон
+    val baseMageDamage: Int = 10,                // урон магии
     val baseMaxHealth: Int = 100,                // хп
     val baseDefense: Double = 0.0,               // Защита (процентная)
     val baseMaxMana: Int = 50,                   // Мана
     val baseAttackSpeed: Double = 1.0,           // Скорость (атаки)
     val baseAccuracy: Double = 0.8,              // Точность (шанс попадания по врагу)
     val baseWill: Double = 0.0,                  // Воля (сопротивление дебафам)
-    val baseMageDamage: Int = 10,                // урон магии
-    val baseLuck: Double = 0.01,                 // Удача
+    val baseLuck: Double = 0.00,                 // Удача
     val baseCritChance: Double = 0.01            // крит шанс
 ) {
     ADVENTURIST(
@@ -29,7 +29,7 @@ enum class PlayerClasses(
         baseAccuracy = 0.8,
         baseWill = 0.0,
         baseMageDamage = 10,
-        baseLuck = 0.01,
+        baseLuck = 0.00,
         baseCritChance = 0.01
     ),
     KNIGHT(
@@ -79,7 +79,7 @@ enum class PlayerClasses(
         baseAccuracy = 0.72,
         baseWill = 0.09,
         baseMageDamage = 5,
-        baseLuck = 0.04,
+        baseLuck = 0.00,
         baseCritChance = 0.09
     ),
 
@@ -94,7 +94,7 @@ enum class PlayerClasses(
         baseAccuracy = 0.83,
         baseWill = 0.76,
         baseMageDamage = 22,
-        baseLuck = 0.01,
+        baseLuck = 0.00,
         baseCritChance = 0.01
     ),
 
@@ -124,7 +124,7 @@ enum class PlayerClasses(
         baseAccuracy = 0.87,
         baseWill = 0.04,
         baseMageDamage = 16,
-        baseLuck = 0.01,
+        baseLuck = 0.00,
         baseCritChance = 0.07
     ),
 
@@ -139,7 +139,7 @@ enum class PlayerClasses(
         baseAccuracy = 0.85,
         baseWill = 0.07,
         baseMageDamage = 21,
-        baseLuck = 0.01,
+        baseLuck = 0.00,
         baseCritChance = 0.02
     ),
 
