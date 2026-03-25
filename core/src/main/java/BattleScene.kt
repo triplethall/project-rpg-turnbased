@@ -165,7 +165,7 @@ class BattleScene(
 
 
         // Указываем стартовую позицию для верхнего бара
-        val startY = 600f
+        val startY = screenHeight * 0.9f
         // Первый бар (Здоровье)
         drawStatBar(whitePixel, batch, player.currentHealth, player.maxHealth, 20f, startY, Color.RED)
 
