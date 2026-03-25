@@ -69,6 +69,7 @@ class GameMap(
         placeTraps(3, playerStartX, playerStartY)
         placeUpgrade()
         placeOutpost()
+        ensureStartAreaIsLand(playerStartX, playerStartY)
     }
 
     // --- Логика генерации ---
@@ -630,53 +631,127 @@ class GameMap(
         val dy = kotlin.math.abs(y - playerStartY)
         val distance = kotlin.math.sqrt((dx * dx + dy * dy).toDouble())
         return distance < minDistance
+
+
     }
-    private fun placeEnemies(count: Int = 10, playerStartX: Int, playerStartY: Int)
-    {
+    private fun placeEnemies(count: Int = 10, playerStartX: Int, playerStartY: Int) {
         val random = Random
         var placed = 0
-        // Сначала собираем все возможные позиции
-        val availablePositions = mutableListOf<Pair<Int, Int>>()
-        for (x in 0 until width)
-        {
-            for (y in 0 until height)
-            {
-                if (canPlaceEnemy(x, y, playerStartX, playerStartY))
-                {
-                    availablePositions.add(Pair(x, y))
+
+        // Сначала спавним врагов около сундуков
+        val chestPositions = mutableListOf<Pair<Int, Int>>()
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.Chest) {
+                    chestPositions.add(Pair(x, y))
                 }
             }
         }
 
-        // Перемешиваем и берем нужное количество
-        if (availablePositions.isNotEmpty()) {
-            val shuffled = availablePositions.shuffled(random)
-            val toPlace = minOf(count, shuffled.size)
+        val usedPositions = mutableSetOf<Pair<Int, Int>>()
 
-            for (i in 0 until toPlace)
-            {
-                val (x, y) = shuffled[i]
-                terrain[x][y] = TerrainType.ENEMY
-                placed++
+        // Для каждого сундука спавним 1-2 врага рядом
+        for ((chestX, chestY) in chestPositions) {
+            val enemiesPerChest = random.nextInt(1, 3) // 1 или 2 врага
+
+            for (i in 0 until enemiesPerChest) {
+                // Ищем подходящую клетку вокруг сундука (радиус 1)
+                var found = false
+                for (attempt in 0 until 20) { // 20 попыток найти место
+                    val dx = random.nextInt(-1, 2) // -1, 0, 1
+                    val dy = random.nextInt(-1, 2)
+
+                    if (dx == 0 && dy == 0) continue // пропускаем сам сундук
+
+                    val enemyX = chestX + dx
+                    val enemyY = chestY + dy
+                    val enemyPos = Pair(enemyX, enemyY)
+
+                    // Проверяем, можно ли поставить врага
+                    if (enemyX in 0 until width && enemyY in 0 until height &&
+                        terrain[enemyX][enemyY] == TerrainType.LAND && // только на землю
+                        !usedPositions.contains(enemyPos) &&
+                        !isPlayerStartPosition(enemyX, enemyY, playerStartX, playerStartY, 5) &&
+                        isWalkable(enemyX, enemyY) // проверка на проходимость
+                    ) {
+                        terrain[enemyX][enemyY] = TerrainType.ENEMY
+                        usedPositions.add(enemyPos)
+                        placed++
+                        found = true
+                        break
+                    }
+                }
+
+                // Если не нашли место с первой попытки, пробуем радиус 2
+                if (!found) {
+                    for (attempt in 0 until 20) {
+                        val dx = random.nextInt(-2, 3)
+                        val dy = random.nextInt(-2, 3)
+
+                        if (dx == 0 && dy == 0) continue
+
+                        val enemyX = chestX + dx
+                        val enemyY = chestY + dy
+                        val enemyPos = Pair(enemyX, enemyY)
+
+                        if (enemyX in 0 until width && enemyY in 0 until height &&
+                            terrain[enemyX][enemyY] == TerrainType.LAND &&
+                            !usedPositions.contains(enemyPos) &&
+                            !isPlayerStartPosition(enemyX, enemyY, playerStartX, playerStartY, 5) &&
+                            isWalkable(enemyX, enemyY)
+                        ) {
+                            terrain[enemyX][enemyY] = TerrainType.ENEMY
+                            usedPositions.add(enemyPos)
+                            placed++
+                            break
+                        }
+                    }
+                }
             }
         }
-        // если все еще не хватает врагов, пробуем с увеличенным радиусом
-        if (placed < count)
-        {
-            var relaxedAttempts = 0
-            while (placed < count && relaxedAttempts < 1000)
-            {
-                relaxedAttempts++
-                val x = random.nextInt(0, width)
-                val y = random.nextInt(0, height)
-                if (terrain[x][y] == TerrainType.LAND && !isPlayerStartPosition(x, y, playerStartX, playerStartY, 3))
-                {
+
+        // Если нужно больше врагов, добиваем рандомными
+        if (placed < count) {
+            // Собираем все возможные позиции
+            val availablePositions = mutableListOf<Pair<Int, Int>>()
+            for (x in 0 until width) {
+                for (y in 0 until height) {
+                    if (canPlaceEnemy(x, y, playerStartX, playerStartY) &&
+                        !usedPositions.contains(Pair(x, y))) {
+                        availablePositions.add(Pair(x, y))
+                    }
+                }
+            }
+
+            // Перемешиваем и берем нужное количество
+            if (availablePositions.isNotEmpty()) {
+                val shuffled = availablePositions.shuffled(random)
+                val toPlace = minOf(count - placed, shuffled.size)
+
+                for (i in 0 until toPlace) {
+                    val (x, y) = shuffled[i]
                     terrain[x][y] = TerrainType.ENEMY
                     placed++
                 }
             }
-        }
 
+            // Если всё ещё не хватает врагов, пробуем с увеличенным радиусом
+            if (placed < count) {
+                var relaxedAttempts = 0
+                while (placed < count && relaxedAttempts < 1000) {
+                    relaxedAttempts++
+                    val x = random.nextInt(0, width)
+                    val y = random.nextInt(0, height)
+                    val pos = Pair(x, y)
+                    if (terrain[x][y] == TerrainType.LAND &&
+                        !isPlayerStartPosition(x, y, playerStartX, playerStartY, 3) &&
+                        !usedPositions.contains(pos)) {
+                        terrain[x][y] = TerrainType.ENEMY
+                        placed++
+                    }
+                }
+            }
+        }
     }
     private fun canPlaceEnemy(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean
     {
@@ -868,7 +943,27 @@ class GameMap(
     }
 
 
+    private fun ensureStartAreaIsLand(playerStartX: Int, playerStartY: Int) {
+        // Делаем область 3x3 вокруг игрока землёй
+        for (x in (playerStartX - 1)..(playerStartX + 1)) {
+            for (y in (playerStartY - 1)..(playerStartY + 1)) {
+                if (x in 0 until width && y in 0 until height) {
+                    // Если это не гора и не сундук (чтобы не затереть важные объекты)
+                    if (terrain[x][y] != TerrainType.MOUNTAIN &&
+                        terrain[x][y] != TerrainType.Chest &&
+                        terrain[x][y] != TerrainType.ENEMY &&
+                        terrain[x][y] != TerrainType.WATER) {
+                        terrain[x][y] = TerrainType.LAND
+                    }
+                }
+            }
+        }
 
+        // Дополнительно проверяем, что сама позиция игрока точно земля
+        if (playerStartX in 0 until width && playerStartY in 0 until height) {
+            terrain[playerStartX][playerStartY] = TerrainType.LAND
+        }
+    }
 
 
 }
