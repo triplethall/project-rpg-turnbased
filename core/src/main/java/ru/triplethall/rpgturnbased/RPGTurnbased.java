@@ -1,5 +1,7 @@
 package ru.triplethall.rpgturnbased;
 
+import static java.lang.Math.random;
+
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -179,7 +181,6 @@ public class RPGTurnbased extends ApplicationAdapter {
                 if (gameMap.collectChest(targetX, targetY)) {
                     chestMenu.show();
                 }
-
                 if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
                     battleScene.startBattle(targetX, targetY);
                 }
