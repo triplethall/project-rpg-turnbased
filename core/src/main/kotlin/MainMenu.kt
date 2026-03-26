@@ -23,6 +23,7 @@ class MainMenu(
     private var optionsVisible = false
     private var creditsVisible = false
     private var visible = true
+    private var audioEnabled = true
     private var titleFont: BitmapFont = BitmapFont()
     private val titleScale = 2.5f
     private var textFont: BitmapFont = BitmapFont()
@@ -30,6 +31,9 @@ class MainMenu(
     // Кнопки
     private data class Button(val rect: Rectangle, val texture: Texture, val action: () -> Unit)
     private val buttons = mutableListOf<Button>()
+    private var soundButton = Rectangle()
+    private var closeSettingsRect = Rectangle()
+
 
     // Камера для UI
     private val uiCamera = OrthographicCamera().apply {
@@ -95,6 +99,17 @@ class MainMenu(
             )
         )
     }
+    private fun initSettingsRects()
+    {
+        val menuRect = getMenuRect()
+        val buttonWidth = 200f
+        val buttonHeight = 60f
+        val centerX = menuRect.x + menuRect.width / 2f - buttonWidth / 2f
+        val centerY = menuRect.y + menuRect.height / 2f
+
+        soundButton = Rectangle(centerX, centerY, buttonWidth, buttonHeight)
+        closeSettingsRect = getCloseRect()
+    }
 
     private fun startGame() {
         visible = false
@@ -106,6 +121,7 @@ class MainMenu(
     }
     private fun openSettings() {
         optionsVisible = true
+        initSettingsRects()
     }
 
     private fun openCredits() {
@@ -118,6 +134,19 @@ class MainMenu(
 
     private fun closeCredits() {
         creditsVisible = false
+    }
+
+    private fun toggleAudio()
+    {
+        audioEnabled = !audioEnabled
+        if (audioEnabled)
+        {
+            Gdx.app.log("Sound", "Sound ON")
+        }
+        else
+        {
+            Gdx.app.log("Sound", "Sound OFF")
+        }
     }
 
     fun handleInput(): Boolean {
@@ -162,8 +191,12 @@ class MainMenu(
             val touchPos = Vector3(Gdx.input.x.toFloat(),Gdx.input.y.toFloat(),0f)
             uiCamera.unproject(touchPos)
 
-            val closeRect = getCloseRect()
-            if (closeRect.contains(touchPos.x, touchPos.y))
+            if (soundButton.contains(touchPos.x, touchPos.y))
+            {
+                toggleAudio()
+                return true
+            }
+            if (closeSettingsRect.contains(touchPos.x, touchPos.y))
             {
                 closeSettings()
                 return true
@@ -251,7 +284,32 @@ class MainMenu(
             menuRect.x + menuRect.width / 2f - 50f,
             menuRect.y + menuRect.height - 30f)
 
+        textFont.color = Color.WHITE
+        textFont.data.setScale(1.5f)
+        textFont.draw(batch,
+            "Sound: ",
+            menuRect.x + 50f,
+            menuRect.y + 275f)
+
+        batch.end()
+
+        // кнопка звука
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(Color(0.6f, 0.6f, 0.6f, 1f))
+        shapeRenderer.rect(soundButton.x - 30f, soundButton.y + 40f, soundButton.width - 100f, soundButton.height)
+        shapeRenderer.end()
+
+        batch.begin()
+        val buttonText = if (audioEnabled) "ON" else "OFF"
+        textFont.color = if (audioEnabled) Color.GREEN else Color.RED
+        textFont.data.setScale(1.8f)
+        textFont.draw(batch,
+            buttonText,
+            soundButton.x,
+            soundButton.y + 75f)
+
         // TODO: ADD OPTION TO DISABLE/ENABLE AUDIO
+
 
         // Кнопка закрытия
         val closeRect = getCloseRect()
