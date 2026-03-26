@@ -128,7 +128,7 @@ public class RPGTurnbased extends ApplicationAdapter {
             Gdx.graphics.getHeight(),
             inventoryButtonTexture);
 
-        mainMenu = new MainMenu(font,
+        mainMenu = new MainMenu(
             Gdx.graphics.getWidth(),
             Gdx.graphics.getHeight(),
             this);
