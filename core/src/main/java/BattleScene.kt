@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.Sprite
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.Rectangle
 import kotlin.random.Random
@@ -32,6 +33,9 @@ class BattleScene(
     private var enemyX = 0
     private var enemyY = 0
     private var madeMoveThisTurn = false
+    private var showVictoryScreen = false
+    private var showDefeatScreen = false
+    private val exitButton = Rectangle()
 
     // Бары игрока
     private lateinit var playerHealthBar: StatBar
@@ -91,6 +95,19 @@ class BattleScene(
         val touchX = Gdx.input.x.toFloat()
         val touchY = Gdx.input.y.toFloat()
         val yInverted = screenHeight - touchY
+
+
+        if (showVictoryScreen || showDefeatScreen) // если экран победы/проигрыша активен
+        {
+            if (Gdx.input.justTouched() && exitButton.contains(touchX, yInverted))
+            {
+                showVictoryScreen = false
+                showDefeatScreen = false
+                endBattleAndClearEnemy()
+                return true
+            }
+            return true // блокировать остальные клики
+        }
 
         if (Gdx.input.justTouched()) {
             // CLICKING ENEMY CHANGES TARGET TO HIM
@@ -188,8 +205,8 @@ class BattleScene(
     private fun victoryScreen()
     {
         println("victory")
-        endBattleAndClearEnemy()
-        // TODO: VICTORY SCREEN AND REWARD MOST LIKELY
+        showVictoryScreen = true
+        // TODO: ADD REWARD
     }
     private fun defeatScreen()
     {
@@ -198,18 +215,67 @@ class BattleScene(
         {
             player.currentHealth = 1
         }
-        endBattleAndClearEnemy()
-        // TODO: DEFEAT SCREEN + ADD CORRUPTION AND PROBABLY GO BACK TO SPAWN?
+        showDefeatScreen = true
+        // TODO: ADD CORRUPTION AND PROBABLY GO BACK TO SPAWN?
     }
+    // метод отрисовки победного экрана
+    private fun drawVictoryScreen(batch: SpriteBatch, whitePixel: Texture)
+    {
+        // фон
+        batch.color = Color(0f,0f,0f,0.5f)
+        batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
+
+        // текст победы
+        font.color = Color.GOLD
+        font.data.setScale(2f)
+        font.draw(batch, "VICTORY", screenWidth / 2 - 65f, screenHeight / 2 + 100f)
+        font.data.setScale(1f)
+
+        // кнопка выхода
+        val buttonWidth = 200f
+        val buttonHeight = 60f
+        val buttonX = screenWidth / 2 - buttonWidth / 2
+        val buttonY = screenHeight / 2 - 50f
+
+        exitButton.set(buttonX, buttonY, buttonWidth, buttonHeight)
+        batch.color = Color.RED
+        batch.draw(whitePixel, buttonX, buttonY, buttonWidth, buttonHeight)
+        // tekst na knopke
+        font.color = Color.WHITE
+        font.draw(batch, "EXIT", buttonX + 75f, buttonY + 40f)
+
+        batch.color = Color.WHITE
+    }
+    // метод отрисовки проигрышного экрана
+    private fun drawDefeatScreen(batch: SpriteBatch, whitePixel: Texture) {
+        // фон
+        batch.color = Color(0f,0f,0f,0.5f)
+        batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
+
+        // текст проигрыша
+        font.color = Color.ORANGE
+        font.data.setScale(2f)
+        font.draw(batch, "DEFEAT", screenWidth / 2 - 65f, screenHeight / 2 + 100f)
+        font.data.setScale(1f)
+
+        // кнопка выхода
+        val buttonWidth = 200f
+        val buttonHeight = 60f
+        val buttonX = screenWidth / 2 - buttonWidth / 2
+        val buttonY = screenHeight / 2 - 50f
+
+        exitButton.set(buttonX, buttonY, buttonWidth, buttonHeight)
+        batch.color = Color.RED
+        batch.draw(whitePixel, buttonX, buttonY, buttonWidth, buttonHeight)
+        // tekst na knopke
+        font.color = Color.WHITE
+        font.draw(batch, "EXIT", buttonX + 75f, buttonY + 40f)
+
+        batch.color = Color.WHITE
+    }
+    fun isShowingEndScreen(): Boolean = showVictoryScreen || showDefeatScreen
     private fun performAttack()
     {
-        if (enemies.isEmpty())
-        {
-            endBattleAndClearEnemy()
-            return
-        }
-
-
         val target = enemies[enemyIndex]
 
         val baseDamage = player.damage
@@ -292,6 +358,16 @@ class BattleScene(
     }
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player)
     {
+        if (showVictoryScreen)
+        {
+            drawVictoryScreen(batch, whitePixel)
+            return
+        }
+        if (showDefeatScreen)
+        {
+            drawDefeatScreen(batch, whitePixel)
+            return
+        }
         if (!isActive)
         {
             return

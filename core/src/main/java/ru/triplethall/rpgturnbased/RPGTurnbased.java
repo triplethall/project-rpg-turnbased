@@ -155,12 +155,14 @@ public class RPGTurnbased extends ApplicationAdapter {
         }
         mapRenderer.update(Gdx.graphics.getDeltaTime());
 
-        // Отрисовка игрового мира (карта, игрок)
-        batch.setProjectionMatrix(cameraControl.getCamera().combined);
-        batch.begin();
-        mapRenderer.render(batch, player);
-        player.render(batch, font, CELL_SIZE, CELL_GAP);
-        batch.end();
+        // Отрисовка игрового мира (карта, игрок) только когда не показывается экран окончания боя
+        if (!battleScene.isShowingEndScreen()) {
+            batch.setProjectionMatrix(cameraControl.getCamera().combined);
+            batch.begin();
+            mapRenderer.render(batch, player);
+            player.render(batch, font, CELL_SIZE, CELL_GAP);
+            batch.end();
+        }
 
         // Обработка инвентаря
         inventory.handleInput(player);
