@@ -300,6 +300,7 @@ class MainMenu(
         shapeRenderer.end()
 
         batch.begin()
+        // текст в кнопке
         val buttonText = if (audioEnabled) "ON" else "OFF"
         textFont.color = if (audioEnabled) Color.GREEN else Color.RED
         textFont.data.setScale(1.8f)
@@ -307,9 +308,6 @@ class MainMenu(
             buttonText,
             soundButton.x,
             soundButton.y + 75f)
-
-        // TODO: ADD OPTION TO DISABLE/ENABLE AUDIO
-
 
         // Кнопка закрытия
         val closeRect = getCloseRect()
