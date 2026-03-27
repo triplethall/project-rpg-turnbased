@@ -4,15 +4,18 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
+import kotlin.math.pow
 
 class BattleMessage(
     val text: String,
     val color: Color = Color.WHITE,
-    val duration: Float = 2f,
+    val duration: Float = 4f,
     var x: Float = 0f,
     var y: Float = 0f
 )
 {
+    private val layout = GlyphLayout()
     var lifetime: Float = duration
 
     fun update(delta: Float): Boolean
@@ -23,13 +26,18 @@ class BattleMessage(
 
     fun render(batch: SpriteBatch, font: BitmapFont, whitePixel: Texture)
     {
-        val alpha = lifetime / duration
-        val textWidth = font.getRegion().regionWidth.toFloat() * 0.6f
-        val textHeight = font.getLineHeight()
+        val alpha = (lifetime / duration).pow(2)
+        layout.setText(font, text)
+        val textWidth = layout.width
+        val textHeight = layout.height
+        val oldBatch = batch.color.cpy()
         batch.color = Color(0f, 0f, 0f, 0.7f * alpha)
         batch.draw(whitePixel, x - 5f, y - textHeight + 5f, textWidth + 10f, textHeight + 5f)
-        font.color = color.cpy().mul(0f,0f,0f,alpha)
+        batch.color = oldBatch
+        val oldColor = font.color.cpy()
+        font.color = Color(color.r, color.g, color.b, alpha)
         font.draw(batch, text, x, y)
+        font.color = oldColor
     }
 }
 class BattleMessageSystem(
