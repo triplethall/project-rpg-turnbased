@@ -107,7 +107,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena);
+        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena, whitePixel);
         pauseMenu = new PauseMenu(font,
             Gdx.graphics.getWidth(),
             Gdx.graphics.getHeight(),
@@ -141,7 +141,12 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         // Логика игры (ход игрока, бой, сундук)
         if (battleScene.isActive()) {
+            battleScene.update(Gdx.graphics.getDeltaTime());
             battleScene.handleInput(player);
+            batch.begin();
+            System.out.println("Calling battleScene.render, batch.isDrawing = " + batch.isDrawing());
+            battleScene.render(batch, whitePixel, player);
+            batch.end();
         } else if (!isPaused && !menuClicked && !chestMenu.isVisible()) {
             handlePlayerInput();
         }

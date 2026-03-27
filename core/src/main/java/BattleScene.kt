@@ -15,7 +15,8 @@ class BattleScene(
     private val screenWidth: Float,
     private val screenHeight: Float,
     private val gameMap: GameMap,
-    private val BGArena: Texture
+    private val BGArena: Texture,
+    private val whitePixel: Texture
 ) {
     var isActive = false
         private set
@@ -36,14 +37,15 @@ class BattleScene(
     private var showVictoryScreen = false
     private var showDefeatScreen = false
     private val exitButton = Rectangle()
-
     // Бары игрока
     private lateinit var playerHealthBar: StatBar
     private lateinit var playerManaBar: StatBar
-
+    private lateinit var messageSystem: BattleMessageSystem
     // Список баров врагов (синхронизируется с enemies)
     private val enemyBars = mutableListOf<StatBar>()
     fun startBattle(enemyCellX: Int, enemyCellY: Int, enemyCount: Int) {
+        messageSystem = BattleMessageSystem(font, screenWidth,screenHeight, whitePixel)
+        messageSystem.addMessage("start", Color.YELLOW)
         this.enemyX = enemyCellX
         this.enemyY = enemyCellY
         this.enemies = BattleEnemy.createRandomEnemies(enemyCount.coerceIn(1, 3))
@@ -284,23 +286,23 @@ class BattleScene(
 
         val dmgWithDef = (totalDamage * (1 - target.defense)).toInt()
         target.takeDamage(dmgWithDef)
-        println("dealt $dmgWithDef to ${target.name}")
+        messageSystem.addMessage("dealt $dmgWithDef dmg to ${target.name}", Color.GREEN)
         if (!target.isAlive())
         {
             // IF ENEMY DEFEATED THEN REMOVE HIM FROM THE LIST
-            println("${target.name} is defeated")
+            messageSystem.addMessage("${target.name} is ded", Color.ORANGE)
             enemies.removeAt(enemyIndex)
             updateEnemyBars()
             if (enemies.isEmpty())
             {
                 // IF NO ENEMY LEFT THEN GGEZ
-                println("no enemies left")
+                messageSystem.addMessage("victory🕺")
                 victoryScreen()
                 return
             }
             else
             {
-                println("${enemies.size} enemies left")
+                messageSystem.addMessage("${enemies.size} enemies left")
             }
             // IF INDEX OUT OF RANGE THEN GO TO START
             if (enemyIndex >= enemies.size)
@@ -322,7 +324,7 @@ class BattleScene(
             defeatScreen()
             return
         }
-        println("enemy turn")
+        messageSystem.addMessage("enemy turn", Color.ORANGE)
         enemies.forEach { enemy ->
             if (enemy.isAlive() && player.currentHealth > 0)
             {
@@ -330,16 +332,17 @@ class BattleScene(
                 {
                     val damage = enemy.calculateDamage()
                     player.currentHealth = (player.currentHealth - damage)
-                    println("${enemy.name} dealt $damage . player health: ${player.currentHealth}/${player.maxHealth}")
+                    messageSystem.addMessage("${enemy.name} dealt you $damage dmg", Color.RED)
                 }
                 else
                 {
-                    println("enemy missed")
+                    messageSystem.addMessage("${enemy.name} missed", Color.YELLOW)
                 }
             }
         }
         if (player.currentHealth <= 0)
         {
+            messageSystem.addMessage("бро тебе нужно больше тренироваться", Color.RED)
             defeatScreen()
         }
     }
@@ -355,6 +358,14 @@ class BattleScene(
     {
         madeMoveThisTurn = true
         // TODO: ESCAPE WITH 2 TURNS
+    }
+    fun update(delta: Float)
+    {
+        if (!isActive) return
+        if (::messageSystem.isInitialized)
+        {
+            messageSystem.update(delta)
+        }
     }
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player)
     {
@@ -373,6 +384,7 @@ class BattleScene(
             return
         }
         // TODO: BATTLE MESSAGES (PLAYER TURN, DAMAGE DEALT, ETC)
+        // TODO: ADD BACKGROUND TO BATTLE MESSAGES
         // COORDINATES FOR RECTANGLES (PLAYER AND ENEMY)
         val rectHeight = 150f
         val rectWidth = 100f
@@ -493,7 +505,10 @@ class BattleScene(
         font.draw(batch, "getDmg", l_btnX + 30f, l_btnY + 35f)
         batch.color = Color.WHITE // button text
 
-
+        if (::messageSystem.isInitialized)
+        {
+            messageSystem.render(batch)
+        }
 
     }
     // --- НАСТРОЙКИ (поменяй здесь одну цифру, и всё изменится) ---
