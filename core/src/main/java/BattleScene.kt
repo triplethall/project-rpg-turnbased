@@ -4,7 +4,6 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
-import com.badlogic.gdx.graphics.g2d.Sprite
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.Rectangle
 import kotlin.random.Random
@@ -28,8 +27,11 @@ class BattleScene(
     private var enemies: MutableList<BattleEnemy> = mutableListOf() // ENEMY COUNT IN BATTLE
     private var enemyIndex = 0 // WHICH ENEMY PLAYER IS ATTACKING
     private val attackButtonRect = Rectangle()
+    private var isFleeing = false // if ESCAPE is clicked, it's true
+    private var fleeTurnsLeft = 0 // how many turns have left for player to escape
     private val getDmgButtonRect = Rectangle()
     private val nextTurnButtonRect = Rectangle()
+    private val skipButtonRect = Rectangle()
     private val fleeButtonRect = Rectangle()
     private var enemyX = 0
     private var enemyY = 0
@@ -40,6 +42,7 @@ class BattleScene(
     // Бары игрока
     private lateinit var playerHealthBar: StatBar
     private lateinit var playerManaBar: StatBar
+    // MESSAGES THAT ARE DISPLAYED IN BATTLE. USE 'messageSystem.addMessage("Hello world!", Color.WHITE)' TO ADD A MESSAGE
     private lateinit var messageSystem: BattleMessageSystem
     // Список баров врагов (синхронизируется с enemies)
     private val enemyBars = mutableListOf<StatBar>()
@@ -133,6 +136,14 @@ class BattleScene(
                 nextTurn()
                 return true
             }
+
+            // SKIP TURN BUTTON
+            if (!madeMoveThisTurn && skipButtonRect.contains(touchX, yInverted))
+            {
+                skipTurn()
+                return true
+            }
+
             // Кнопка получения урона
             if (getDmgButtonRect.contains(touchX, yInverted)) {
                 getDmg(player, 1)
@@ -208,17 +219,21 @@ class BattleScene(
     {
         println("victory")
         showVictoryScreen = true
-        // TODO: ADD REWARD
     }
     private fun defeatScreen()
     {
         println("defeat")
+        val lostExp = (player.experience * 0.2).toInt().coerceAtLeast(1)
+        println("lostExp = $lostExp")
+        player.experience = (player.experience - lostExp).coerceAtLeast(0)
+        println("player exp = ${player.experience}")
+        player.corruption++
+        println("player corr = ${player.corruption}")
         if (player.currentHealth <= 0)
         {
             player.currentHealth = 1
         }
         showDefeatScreen = true
-        // TODO: ADD CORRUPTION AND PROBABLY GO BACK TO SPAWN?
     }
     // метод отрисовки победного экрана
     private fun drawVictoryScreen(batch: SpriteBatch, whitePixel: Texture)
@@ -278,6 +293,11 @@ class BattleScene(
     fun isShowingEndScreen(): Boolean = showVictoryScreen || showDefeatScreen
     private fun performAttack()
     {
+        if (isFleeing)
+        {
+            messageSystem.addMessage("trying to escape! can't attack!", Color.RED)
+            return
+        }
         val target = enemies[enemyIndex]
 
         val baseDamage = player.damage
@@ -291,6 +311,12 @@ class BattleScene(
         {
             // IF ENEMY DEFEATED THEN REMOVE HIM FROM THE LIST
             messageSystem.addMessage("${target.name} is ded", Color.ORANGE)
+            // ...BUT BEFORE THAT, GIVE PLAYER EXP FROM HIM
+            val gainExp = (target.maxHealth / 5 + target.damage / 10).coerceAtLeast(10)
+            println("gainExp = $gainExp")
+            player.addExperience(gainExp)
+            println("player exp = ${player.experience}")
+            messageSystem.addMessage("got $gainExp from ${target.name}", Color.GOLD)
             enemies.removeAt(enemyIndex)
             updateEnemyBars()
             if (enemies.isEmpty())
@@ -321,6 +347,7 @@ class BattleScene(
 
         if (player.currentHealth <= 0)
         {
+            isFleeing = false
             defeatScreen()
             return
         }
@@ -344,20 +371,53 @@ class BattleScene(
         {
             messageSystem.addMessage("бро тебе нужно больше тренироваться", Color.RED)
             defeatScreen()
+            return
+        }
+
+        // Проверка побега ПОСЛЕ хода врагов
+        if (isFleeing)
+        {
+            fleeTurnsLeft--
+            if (fleeTurnsLeft <= 0)
+            {
+                endBattleAndClearEnemy()
+                isFleeing = false
+                return
+            }
+            else
+            {
+                messageSystem.addMessage("$fleeTurnsLeft more turns until escape", Color.CYAN)
+            }
         }
     }
+
     private fun nextTurn()
     {
         madeMoveThisTurn = false
-        if (isActive && !enemies.isEmpty() && player.currentHealth > 0)
-        {
+        if (isActive && !enemies.isEmpty() && player.currentHealth > 0) {
             enemyTurn()
         }
     }
     private fun flee()
     {
+        if (isFleeing)
+        {
+            // cancel escape, turn is wasted :troll:
+            isFleeing = false
+            fleeTurnsLeft = 0
+            madeMoveThisTurn = true
+            messageSystem.addMessage("canceling attempt of escaping. TURN IS WASTED BTWWWW", Color.CORAL)
+            return
+        }
+        isFleeing = true
+        fleeTurnsLeft = 2
         madeMoveThisTurn = true
-        // TODO: ESCAPE WITH 2 TURNS
+        messageSystem.addMessage("player is escaping! $fleeTurnsLeft turns left till escape!", Color.CYAN)
+    }
+    private fun skipTurn()
+    {
+        madeMoveThisTurn = true
+        messageSystem.addMessage("skipped a turn", Color.FIREBRICK)
     }
     fun update(delta: Float)
     {
@@ -383,8 +443,6 @@ class BattleScene(
         {
             return
         }
-        // TODO: BATTLE MESSAGES (PLAYER TURN, DAMAGE DEALT, ETC)
-        // TODO: ADD BACKGROUND TO BATTLE MESSAGES
         // COORDINATES FOR RECTANGLES (PLAYER AND ENEMY)
         val rectHeight = 150f
         val rectWidth = 100f
@@ -398,14 +456,18 @@ class BattleScene(
         val buttonSpacing = 30f
         val buttonY = 50f
 
-        val totalWidth = buttonWidth * 3 + buttonSpacing * 2
+        val totalWidth = buttonWidth * 4 + buttonSpacing * 3
+        // !! IF U ADD MORE BUTTONS, CHANGE THIS ^ TO: !!
+        // !! buttonWidth * (BUTTON COUNT) + buttonSpacing * (BUTTON COUNT - 1) !!
         val startX = (screenWidth - totalWidth) / 2
         val attackX = startX
         val turnX = startX + buttonWidth + buttonSpacing
-        val fleeX = startX + (buttonWidth + buttonSpacing) * 2
+        val skipX = startX + (buttonWidth + buttonSpacing) * 2
+        val fleeX = startX + (buttonWidth + buttonSpacing) * 3
 
         attackButtonRect.set(attackX, buttonY, buttonWidth, buttonHeight)
         nextTurnButtonRect.set(turnX, buttonY, buttonWidth, buttonHeight)
+        skipButtonRect.set(skipX, buttonY, buttonWidth, buttonHeight)
         fleeButtonRect.set(fleeX, buttonY, buttonWidth, buttonHeight)
         batch.color = Color.BLUE
         // DRAWING PLAYER RECTANGLE
@@ -477,17 +539,27 @@ class BattleScene(
         batch.color = if (!madeMoveThisTurn) Color.GREEN else Color.DARK_GRAY
         batch.draw(whitePixel, attackX, buttonY, buttonWidth, buttonHeight)
         font.color = Color.WHITE
-        font.draw(batch, "ATTACK", attackX + 45f, buttonY + 42f)
+        font.draw(batch, "ATTACK", attackX + 35f, buttonY + 42f)
 
         // NEXT TURN BUTTON
         batch.color = if (madeMoveThisTurn) Color.ORANGE else Color.DARK_GRAY
         batch.draw(whitePixel, turnX, buttonY, buttonWidth, buttonHeight)
-        font.draw(batch, "NEXT TURN", turnX + 55f, buttonY + 42f)
+        font.draw(batch, "NEXT TURN", turnX + 15f, buttonY + 42f)
 
-        // ESCAPE BUTTON
-        batch.color = if (!madeMoveThisTurn) Color.RED else Color.DARK_GRAY
+        // SKIP TURN BUTTON
+        batch.color = if (!madeMoveThisTurn) Color.GRAY else Color.DARK_GRAY
+        batch.draw(whitePixel, skipX, buttonY, buttonWidth, buttonHeight)
+        font.draw(batch, "SKIP TURN", skipX + 17f, buttonY + 42f)
+
+        // ESCAPE/CANCEL BUTTON
+        batch.color = when
+        {
+            madeMoveThisTurn -> Color.DARK_GRAY
+            isFleeing -> Color.YELLOW
+            else -> Color.RED
+        }
         batch.draw(whitePixel, fleeX, buttonY, buttonWidth, buttonHeight)
-        font.draw(batch, "ESCAPE", fleeX + 45f, buttonY + 42f)
+        font.draw(batch, if (!isFleeing) "ESCAPE" else "CANCEL", fleeX + 35f, buttonY + 42f)
 
         // getDamageBtn
         val l_btnX = screenWidth / 2 - 100f
@@ -527,14 +599,7 @@ class BattleScene(
         // Для теста можно выводить в консоль
         println("Упс! У игрока осталось ${player.currentHealth} HP")
     }
-    fun endBattleAndClearEnemy() {
-        if (enemyX in 0 until gameMap.width && enemyY in 0 until gameMap.height) {
-            gameMap.setTerrain(enemyX, enemyY, TerrainType.LAND)
-        }
-        isActive = false
-        madeMoveThisTurn = false
-        enemies.clear()
-    }
+
     private fun drawEnemy(batch: SpriteBatch, whitePixel: Texture, enemy: BattleEnemy, x: Float, y: Float, width: Float, height: Float, isSelected: Boolean) {
         // Если враг мертв — рисуем серым
         batch.color = if (enemy.isAlive()) Color.RED else Color.DARK_GRAY
@@ -550,7 +615,16 @@ class BattleScene(
         font.draw(batch, enemy.name, x + 20f, y - 20f)
         font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)
     }
-
+    fun endBattleAndClearEnemy() {
+        if (enemyX in 0 until gameMap.width && enemyY in 0 until gameMap.height) {
+            gameMap.setTerrain(enemyX, enemyY, TerrainType.LAND)
+        }
+        isActive = false
+        madeMoveThisTurn = false
+        isFleeing = false
+        fleeTurnsLeft = 0
+        enemies.clear()
+    }
 
 }
 

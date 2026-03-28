@@ -143,10 +143,6 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (battleScene.isActive()) {
             battleScene.update(Gdx.graphics.getDeltaTime());
             battleScene.handleInput(player);
-            batch.begin();
-            System.out.println("Calling battleScene.render, batch.isDrawing = " + batch.isDrawing());
-            battleScene.render(batch, whitePixel, player);
-            batch.end();
         } else if (!isPaused && !menuClicked && !chestMenu.isVisible()) {
             handlePlayerInput();
         }

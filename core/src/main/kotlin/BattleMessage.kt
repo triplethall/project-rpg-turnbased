@@ -10,7 +10,8 @@ import kotlin.math.pow
 class BattleMessage(
     val text: String,
     val color: Color = Color.WHITE,
-    val duration: Float = 4f,
+    val duration: Float = 5f,
+    val fadeStart: Float = 2f,
     var x: Float = 0f,
     var y: Float = 0f
 )
@@ -26,7 +27,7 @@ class BattleMessage(
 
     fun render(batch: SpriteBatch, font: BitmapFont, whitePixel: Texture)
     {
-        val alpha = (lifetime / duration).pow(2)
+        val alpha = if (lifetime >= fadeStart) 1f else (lifetime / fadeStart).coerceIn(0f, 1f).pow(2)
         layout.setText(font, text)
         val textWidth = layout.width
         val textHeight = layout.height
@@ -53,9 +54,9 @@ class BattleMessageSystem(
     private val startX = 20f
     private var startY = screenHeight * 0.35f
 
-    fun addMessage(text: String, color: Color = Color.WHITE, duration: Float = 2f)
+    fun addMessage(text: String, color: Color = Color.WHITE, duration: Float = 5f, fadeStart: Float = 2f)
     {
-        messages.add(BattleMessage(text, color, duration))
+        messages.add(BattleMessage(text, color, duration, fadeStart))
         while (messages.size > maxMsg)
         {
             messages.removeAt(0)
