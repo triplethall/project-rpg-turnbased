@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g3d.particles.influencers.RegionInfluencer
 import com.badlogic.gdx.math.Rectangle
 import kotlin.random.Random
 
@@ -300,10 +301,12 @@ class BattleScene(
         }
         val target = enemies[enemyIndex]
 
+        // Простой расчет урона без типов
         val baseDamage = player.damage
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val totalDamage = (baseDamage * randomMultiplier).toInt()
 
+        // Учитываем защиту врага
         val dmgWithDef = (totalDamage * (1 - target.defense)).toInt()
         target.takeDamage(dmgWithDef)
         messageSystem.addMessage("dealt $dmgWithDef dmg to ${target.name}", Color.GREEN)
@@ -610,6 +613,23 @@ class BattleScene(
             batch.color = Color.YELLOW
             batch.draw(whitePixel, x - 5f, y - 5f, width + 10f, height + 10f)
         }
+
+        // Рисуем имя врага с типом в скобках
+        font.color = Color.WHITE
+        val typeShort = when (enemy.enemyType) {
+            EnemyType.NO_TYPE -> ""
+            EnemyType.FIRE -> " [Fire]"
+            EnemyType.WATER -> " [Water]"
+            EnemyType.WIND -> " [Wind]"
+            EnemyType.EARTH -> " [Earth]"
+            EnemyType.ICE -> " [Ice]"
+            EnemyType.CRYSTAL -> " [Crystal]"
+            EnemyType.CURSED -> " [Cursed]"
+            EnemyType.ELECTRIC -> " [Electric]"
+            EnemyType.POISON -> " [Poison]"
+            EnemyType.HOLY -> " [Holy]"
+        }
+        font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
 
         font.color = Color.WHITE
         font.draw(batch, enemy.name, x + 20f, y - 20f)

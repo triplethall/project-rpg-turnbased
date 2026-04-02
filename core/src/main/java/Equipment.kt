@@ -1,3 +1,4 @@
+@file:Suppress("unused")
 package ru.triplethall.rpgturnbased
 
 import kotlin.collections.joinToString
@@ -716,7 +717,7 @@ object EquipmentDatabase
     val ARCHER_CHESTPLATE = EquipmentItem(
         id = "chestplate_04",
         name = "Archer's coat",
-        type = EquipmentType.HELMET,
+        type = EquipmentType.CHESTPLATE,
         allowedClasses = listOf(PlayerClasses.ARCHER),
         accuracyBonus = 0.05,
         defenseBonus = -0.10,
@@ -727,7 +728,7 @@ object EquipmentDatabase
     val ARCHER_BOOTS = EquipmentItem(
         id = "boots_04",
         name = "Archer's boots",
-        type = EquipmentType.HELMET,
+        type = EquipmentType.BOOTS,
         allowedClasses = listOf(PlayerClasses.ARCHER),
         defenseBonus = -0.05,
         attackSpeedBonus = 0.15,

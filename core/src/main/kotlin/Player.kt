@@ -18,17 +18,17 @@ class Player(
     var defense: Double = 0.0               // Защита (процентная)
     var attackSpeed: Double = 1.0           // Скорость (атаки)
     var accuracy: Double = 0.8              // Точность (шанс попадания по врагу)
-    var will: Double = 0.5                  // Воля (сопротивление дебафам)
+    var will: Double = 0.1                  // Воля (сопротивление дебафам)
     var corruption: Int = 0                 // Скверна
     var luck: Double = 0.00                 // Удача
-    var critChance: Double = 0.01           // крит шанс
+    var critChance: Double = 0.05           // крит шанс
     var level: Int = 1                      // Уровень
     var experience: Int = 0                 // Опыт
 
     // Максимальные значения
     var maxMana: Int = 50
-    var maxHealth: Int = 100
-    var currentHealth: Int = 100
+    var maxHealth: Int = 200
+    var currentHealth: Int = 200
     var currentMana: Int = 50
 
     val equipment = PlayerEquipment()
@@ -36,7 +36,11 @@ class Player(
     // формула для расчета опыта
     companion object {
         private const val BASE_EXP = 100
-        private const val EXP_GROWTH_FACTOR = 1.5
+        private const val EXP_GROWTH_FACTOR = 1.4
+    }
+
+    fun defenseWork(){
+
     }
 
 
@@ -72,35 +76,36 @@ class Player(
         println("!!!LEVEL UP!!!")
         // Stats up за уровень
         damage += 2
-        defense += 0.02
+        defense += 0.01
         maxMana += 5
         currentMana = maxMana  // восстановление маны за ур
-        maxHealth += 10
+        maxHealth += 8
         currentHealth = maxHealth
-        attackSpeed += 0.05
-        accuracy += 0.02
-        will = 0.02
-        mageDamage += 4
-        luck += 0.02
-        critChance += 0.01
+        attackSpeed += 0.02
+        accuracy += 0.01
+        will += 0.02
+        mageDamage += 2
+        luck += 0.01
+        critChance += 0.005
     }
 
 
     // Скверна модификаторы
     fun getCorruptionHealthModifier(): Double {
-        return 1.0 - (corruption * 0.09)
+        return (1.0 - (corruption * 0.05)).coerceAtLeast(0.5)  // Максимум -50% здоровья
     }
     fun getCorruptionDamageModifier(): Double {
-        return 1.0 + (corruption * 0.07)
+        return (1.0 + (corruption * 0.05)).coerceAtMost(1.5)    // Максимум +50% урона
     }
     fun getCorruptionMageDamageModifier(): Double {
-        return 1.0 + (corruption * 0.04)
+        return (1.0 + (corruption * 0.04)).coerceAtMost(1.4)    // Максимум +40% маг. урона
     }
 
 
     // скверна при смерти
     fun applyCorruptionOnDeath() {
         corruption++
+        println("total crpt: $corruption")
     }
 
 
