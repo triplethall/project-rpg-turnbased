@@ -7,9 +7,9 @@ import kotlin.Double
 enum class PlayerClasses(
     val displayName: String,                     // название класса
     val description: String,                     // описание класса
-    val baseDamage: Int = 20,                    // Урон
+    val baseDamage: Int = 25,                    // Урон
     val baseMageDamage: Int = 10,                // урон магии
-    val baseMaxHealth: Int = 100,                // хп
+    val baseMaxHealth: Int = 200,                // хп
     val baseDefense: Double = 0.0,               // Защита (процентная)
     val baseMaxMana: Int = 50,                   // Мана
     val baseAttackSpeed: Double = 1.0,           // Скорость (атаки)
@@ -21,8 +21,8 @@ enum class PlayerClasses(
     ADVENTURIST(
         displayName = "Авантюрист",
         description = "Новичок который только начал своё приключение",
-        baseDamage = 20,
-        baseMaxHealth = 100,
+        baseDamage = 25,
+        baseMaxHealth = 200,
         baseDefense = 0.0,
         baseMaxMana = 50,
         baseAttackSpeed = 1.0,
@@ -35,65 +35,71 @@ enum class PlayerClasses(
     KNIGHT(
         displayName = "Рыцарь",
         description = "Рассудительный, с повышенной живучесть и урон",
-        baseDamage = 25,
-        baseDefense = 0.08,
-        baseMaxHealth = 150,
-        baseAttackSpeed = 0.9,
-        baseWill = 0.3,
-        baseAccuracy = 0.86
+        baseDamage = 30,
+        baseDefense = 0.15,
+        baseMaxHealth = 250,
+        baseAttackSpeed = 0.85,
+        baseAccuracy = 0.86,
+        baseMaxMana = 40,
+        baseMageDamage = 5,
+        baseCritChance = 0.03,
+        baseWill = 0.25
     ),
 
     MAGE(
         displayName = "Волшебник",
         description = "Умнейший с повышенным уроном магии",
-        baseDamage = 5,
-        baseMageDamage = 20,
+        baseDamage = 13,
+        baseMageDamage = 28,
         baseMaxMana = 150,
-        baseDefense = 0.00,
-        baseMaxHealth = 80,
+        baseDefense = 0.02,
+        baseMaxHealth = 180,
         baseAttackSpeed = 1.0,
-        baseWill = 0.5,
-        baseAccuracy = 0.88
+        baseWill = 0.35,
+        baseAccuracy = 0.85,
+        baseCritChance = 0.04
     ),
 
     ASSASSIN(
         displayName = "Ассасин",
         description = "Мастер убийств, Тренировался скрытности",
-        baseDamage = 23,
-        baseDefense = 0.00,
-        baseMaxHealth = 110,
-        baseAttackSpeed = 1.4,
-        baseWill = 0.07,
-        baseAccuracy = 0.94,
-        baseCritChance = 0.11
+        baseDamage = 29,
+        baseDefense = 0.05,
+        baseMaxHealth = 195,
+        baseAttackSpeed = 1.5,
+        baseWill = 0.10,
+        baseAccuracy = 0.92,
+        baseCritChance = 0.15,
+        baseMaxMana = 45,
+        baseMageDamage = 0
     ),
 
     ARCHER(
         displayName = "Лучник",
         description = "Зоркий глаз, хорошее владение луком",
-        baseDamage = 22,
-        baseMaxHealth = 95,
-        baseDefense = 0.01,
-        baseMaxMana = 60,
-        baseAttackSpeed = 1.2,
-        baseAccuracy = 0.72,
+        baseDamage = 28,
+        baseMaxHealth = 195,
+        baseDefense = 0.03,
+        baseMaxMana = 55,
+        baseAttackSpeed = 1.3,
+        baseAccuracy = 0.88,
         baseWill = 0.09,
         baseMageDamage = 5,
         baseLuck = 0.00,
-        baseCritChance = 0.09
+        baseCritChance = 0.12
     ),
 
     PRIEST(
         displayName = "Священник",
         description = "Великий святой, умеет искусно залечивать раны",
-        baseDamage = 15,
-        baseMaxHealth = 105,
-        baseDefense = 0.0,
+        baseDamage = 17,
+        baseMaxHealth = 200,
+        baseDefense = 0.05,
         baseMaxMana = 140,
-        baseAttackSpeed = 1.0,
-        baseAccuracy = 0.83,
-        baseWill = 0.76,
-        baseMageDamage = 22,
+        baseAttackSpeed = 0.95,
+        baseAccuracy = 0.85,
+        baseWill = 0.50,
+        baseMageDamage = 24,
         baseLuck = 0.00,
         baseCritChance = 0.01
     ),
@@ -101,29 +107,29 @@ enum class PlayerClasses(
     JOKER(
         displayName = "Джокер",
         description = "Глупец, что вечно полагается на удачу",
-        baseDamage = 19,
-        baseMaxHealth = 110,
-        baseDefense = 0.01,
+        baseDamage = 23,
+        baseMaxHealth = 205,
+        baseDefense = 0.02,
         baseMaxMana = 70,
-        baseAttackSpeed = 1.0,
-        baseAccuracy = 0.85,
-        baseWill = 0.01,
-        baseMageDamage = 15,
-        baseLuck = 0.1,
-        baseCritChance = 0.05
+        baseAttackSpeed = 1.1,
+        baseAccuracy = 0.82,
+        baseWill = 0.05,
+        baseMageDamage = 14,
+        baseLuck = 0.15,
+        baseCritChance = 0.08
     ),
 
     BERSERK(
         displayName = "Берсерк",
         description = "Жажда крови, Лишь на грани смерти он чувствует запах крови",
-        baseDamage = 26,
-        baseMaxHealth = 200,
-        baseDefense = 0.04,
+        baseDamage = 33,
+        baseMaxHealth = 280,
+        baseDefense = 0.08,
         baseMaxMana = 25,
-        baseAttackSpeed = 1.3,
-        baseAccuracy = 0.87,
-        baseWill = 0.04,
-        baseMageDamage = 16,
+        baseAttackSpeed = 1.2,
+        baseAccuracy = 0.82,
+        baseWill = 0.08,
+        baseMageDamage = 8,
         baseLuck = 0.00,
         baseCritChance = 0.07
     ),
@@ -131,46 +137,46 @@ enum class PlayerClasses(
     SHAMAN(
         displayName = "Шаман",
         description = "Мастер проклятий, изучал тёмные таинства",
-        baseDamage = 15,
-        baseMaxHealth = 180,
-        baseDefense = 0.00,
+        baseDamage = 19,
+        baseMaxHealth = 210,
+        baseDefense = 0.04,
         baseMaxMana = 145,
         baseAttackSpeed = 1.0,
-        baseAccuracy = 0.85,
-        baseWill = 0.07,
-        baseMageDamage = 21,
+        baseAccuracy = 0.84,
+        baseWill = 0.20,
+        baseMageDamage = 23,
         baseLuck = 0.00,
-        baseCritChance = 0.02
+        baseCritChance = 0.05
     ),
 
     SWORDMASTER(
         displayName = "Мастер меча",
         description = "Владыка мечей, Силён и быстр",
-        baseDamage = 28,
-        baseMaxHealth = 130,
-        baseDefense = 0.02,
+        baseDamage = 31,
+        baseMaxHealth = 225,
+        baseDefense = 0.08,
         baseMaxMana = 45,
-        baseAttackSpeed = 1.8,
-        baseAccuracy = 0.91,
-        baseWill = 0.01,
+        baseAttackSpeed = 1.6,
+        baseAccuracy = 0.90,
+        baseWill = 0.4,
         baseMageDamage = 8,
         baseLuck = 0.0,
-        baseCritChance = 0.05
+        baseCritChance = 0.10
     ),
 
     MONARCH(
         displayName = "Монах",
         description = "Силён духом, силён телом",
-        baseDamage = 28,
-        baseMaxHealth = 220,
-        baseDefense = 0.07,
-        baseMaxMana = 60,
-        baseAttackSpeed = 1.2,
-        baseAccuracy = 0.89,
-        baseWill = 0.1,
+        baseDamage = 29,
+        baseMaxHealth = 260,
+        baseDefense = 0.12,
+        baseMaxMana = 55,
+        baseAttackSpeed = 1.25,
+        baseAccuracy = 0.88,
+        baseWill = 0.22,
         baseMageDamage = 20,
         baseLuck = 0.0,
-        baseCritChance = 0.01
+        baseCritChance = 0.06
     );
 
 

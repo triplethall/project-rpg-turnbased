@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g3d.particles.influencers.RegionInfluencer
 import com.badlogic.gdx.math.Rectangle
 import kotlin.random.Random
 
@@ -198,47 +199,39 @@ class BattleScene(
         {
             player.currentHealth = 1
         }
+        player.applyCorruptionOnDeath()
         endBattleAndClearEnemy()
         // TODO: DEFEAT SCREEN + ADD CORRUPTION AND PROBABLY GO BACK TO SPAWN?
     }
-    private fun performAttack()
-    {
-        if (enemies.isEmpty())
-        {
+    private fun performAttack() {
+        if (enemies.isEmpty()) {
             endBattleAndClearEnemy()
             return
         }
 
-
         val target = enemies[enemyIndex]
 
+        // Простой расчет урона без типов
         val baseDamage = player.damage
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val totalDamage = (baseDamage * randomMultiplier).toInt()
 
+        // Учитываем защиту врага
         val dmgWithDef = (totalDamage * (1 - target.defense)).toInt()
         target.takeDamage(dmgWithDef)
-        println("dealt $dmgWithDef to ${target.name}")
-        if (!target.isAlive())
-        {
-            // IF ENEMY DEFEATED THEN REMOVE HIM FROM THE LIST
+
+        println("dealt $dmgWithDef to ${target.name} (${target.enemyType.displayName})")
+
+        if (!target.isAlive()) {
             println("${target.name} is defeated")
             enemies.removeAt(enemyIndex)
             updateEnemyBars()
-            if (enemies.isEmpty())
-            {
-                // IF NO ENEMY LEFT THEN GGEZ
-                println("no enemies left")
+
+            if (enemies.isEmpty()) {
                 victoryScreen()
                 return
             }
-            else
-            {
-                println("${enemies.size} enemies left")
-            }
-            // IF INDEX OUT OF RANGE THEN GO TO START
-            if (enemyIndex >= enemies.size)
-            {
+            if (enemyIndex >= enemies.size) {
                 enemyIndex = 0
             }
         }
@@ -263,8 +256,9 @@ class BattleScene(
                 if (enemy.canHit())
                 {
                     val damage = enemy.calculateDamage()
-                    player.currentHealth = (player.currentHealth - damage)
-                    println("${enemy.name} dealt $damage . player health: ${player.currentHealth}/${player.maxHealth}")
+                    val dmgWithDef = (damage * (1 - player.defense)).toInt()
+                    player.currentHealth -= dmgWithDef
+                    println("${enemy.name} dealt $dmgWithDef . player health: ${player.currentHealth}/${player.maxHealth}")
                 }
                 else
                 {
@@ -455,11 +449,26 @@ class BattleScene(
             batch.draw(whitePixel, x - 5f, y - 5f, width + 10f, height + 10f)
         }
 
+        // Рисуем имя врага с типом в скобках
+        font.color = Color.WHITE
+        val typeShort = when (enemy.enemyType) {
+            EnemyType.NO_TYPE -> ""
+            EnemyType.FIRE -> " [Fire]"
+            EnemyType.WATER -> " [Water]"
+            EnemyType.WIND -> " [Wind]"
+            EnemyType.EARTH -> " [Earth]"
+            EnemyType.ICE -> " [Ice]"
+            EnemyType.CRYSTAL -> " [Crystal]"
+            EnemyType.CURSED -> " [Cursed]"
+            EnemyType.ELECTRIC -> " [Electric]"
+            EnemyType.POISON -> " [Poison]"
+            EnemyType.HOLY -> " [Holy]"
+        }
+        font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
+
         font.color = Color.WHITE
         font.draw(batch, enemy.name, x + 20f, y - 20f)
         font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)
     }
-
-
 }
 
