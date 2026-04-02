@@ -114,7 +114,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena);
+        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena, whitePixel);
         pauseMenu = new PauseMenu(font,
             Gdx.graphics.getWidth(),
             Gdx.graphics.getHeight(),
@@ -162,6 +162,7 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         // Логика игры (ход игрока, бой, сундук)
         if (battleScene.isActive()) {
+            battleScene.update(Gdx.graphics.getDeltaTime());
             battleScene.handleInput(player);
         } else if (!isPaused && !menuClicked && !chestMenu.isVisible()) {
             handlePlayerInput();
@@ -176,12 +177,14 @@ public class RPGTurnbased extends ApplicationAdapter {
         }
         mapRenderer.update(Gdx.graphics.getDeltaTime());
 
-        // Отрисовка игрового мира (карта, игрок)
-        batch.setProjectionMatrix(cameraControl.getCamera().combined);
-        batch.begin();
-        mapRenderer.render(batch, player);
-        player.render(batch, font, CELL_SIZE, CELL_GAP);
-        batch.end();
+        // Отрисовка игрового мира (карта, игрок) только когда не показывается экран окончания боя
+        if (!battleScene.isShowingEndScreen()) {
+            batch.setProjectionMatrix(cameraControl.getCamera().combined);
+            batch.begin();
+            mapRenderer.render(batch, player);
+            player.render(batch, font, CELL_SIZE, CELL_GAP);
+            batch.end();
+        }
 
         // Обработка инвентаря
         inventory.handleInput(player);

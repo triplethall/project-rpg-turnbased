@@ -13,7 +13,7 @@ class Player(
     var playerClass : PlayerClasses = PlayerClasses.ADVENTURIST // класс по умолчанию
 ) {
     // Базовые характеристики
-    var damage: Int = 25                    // Урон
+    var damage: Int = 60                    // Урон
     var mageDamage: Int = 10                // урон магии
     var defense: Double = 0.0               // Защита (процентная)
     var attackSpeed: Double = 1.0           // Скорость (атаки)
@@ -73,7 +73,7 @@ class Player(
         val expNeeded = getExpForNextLevel()
         experience -= expNeeded
         level++
-
+        println("!!!LEVEL UP!!!")
         // Stats up за уровень
         damage += 2
         defense += 0.01
