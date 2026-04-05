@@ -47,7 +47,6 @@ class GameMap(
         val t = getTerrain(x, y)
 
         return t == TerrainType.LAND ||
-            t == TerrainType.CITY ||
             t == TerrainType.ENEMY ||
             t == TerrainType.TRAP ||
             t == TerrainType.UPGRADE ||
