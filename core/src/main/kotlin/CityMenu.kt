@@ -73,14 +73,14 @@ class CityMenu(
         shapeRenderer.setColor(0.2f,0.2f,0.2f,1f)
         shapeRenderer.rect(window.x, window.y, window.width, window.height)
 
-        shapeRenderer.set(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.setColor(1f,0.5f,0f,1f)
-        shapeRenderer.rect(window.x,window.y,window.width,window.height)
         shapeRenderer.end()
         batch.begin()
-        font.color = Color.GOLD
+        font.color = Color.WHITE
         font.data.setScale(1.5f)
-        font.draw(batch, "CITY MENU", window.x + 30f, window.y + window.height - 40f)
+
+        val textX = window.x + (window.width / 2) - 70f
+        val textY = window.y + window.height - 40f
+        font.draw(batch, "CITY MENU", textX, textY)
         updCloseBtn()
         batch.end()
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
