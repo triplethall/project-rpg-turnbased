@@ -18,6 +18,10 @@ class MapRenderer (
     private val chestOpen: Texture
 ){
     private val pixelTexture: Texture
+    private val sandTexture: Texture
+    private val dirtTexture: Texture
+    private val grassTexture: Texture
+    private val cloud1Texture: Texture
 
     //фон
     private val waterTextures = arrayOfNulls<Texture>(4)
@@ -27,7 +31,10 @@ class MapRenderer (
     private val bgTileSize = 1024f
     private val cellSize = cellSize.toFloat()
     private val cellGap = cellGap.toFloat()
-
+    private var jitterOffset = Pair(0f, 0f)
+    private var lastJitterTime = 0f
+    private val jitterInterval = 0.25f // смена направления 4 раза в секунду
+    private val jitterRadius = 1f
 
 
     init{
@@ -42,6 +49,11 @@ class MapRenderer (
         waterTextures[1] = Texture("bg/water_01_02.png")
         waterTextures[2] = Texture("bg/water_01_03.png")
         waterTextures[3] = Texture("bg/water_01_04.png")
+
+        dirtTexture = Texture("map_layers/dirt.png")
+        grassTexture = Texture("map_layers/light_grass_tile.png")
+        sandTexture = Texture("map_layers/sand_back_tile.png")
+        cloud1Texture = Texture("map_layers/clouds1.png")
     }
 
     fun dispose() {
@@ -49,6 +61,10 @@ class MapRenderer (
         for (t in waterTextures) {
             t?.dispose()
         }
+        sandTexture.dispose()
+        dirtTexture.dispose()
+        grassTexture.dispose()
+        cloud1Texture.dispose()
     }
 
     fun update(delta: Float) {
@@ -63,6 +79,13 @@ class MapRenderer (
 
 
     val visibilityManager = VisibilityManager(gameMap)
+
+    private fun getTileJitter(x: Int, y: Int, time: Float): Pair<Float, Float> {
+        val jitterX = (Math.sin(x * 0.7 + time * 12) + Math.cos(y * 0.4 + time * 9)) * jitterRadius * 0.35f
+        val jitterY = (Math.cos(x * 0.4 + time * 10) + Math.sin(y * 0.7 + time * 7)) * jitterRadius * 0.35f
+        return Pair(jitterX.toFloat(), jitterY.toFloat())
+    }
+
     fun render(batch: SpriteBatch, player: Player) {
         //фон
         val currentWaterTex = waterTextures[waterFrameIndex] ?: return
@@ -110,12 +133,7 @@ class MapRenderer (
 
                 val terrain = gameMap.getTerrain(x, y)
 
-                if (!gameMap.isExplored(x, y) && terrain != TerrainType.WATER) {
-                    batch.color = Color.DARK_GRAY // Незнакомые клетки остаются тёмными
 
-                    batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
-                    continue
-                }
 
                 if (terrain == TerrainType.Chest || terrain == TerrainType.OpenedChest) {
                     // сначала рисуем подложку земли (зеленый квадрат)
@@ -131,22 +149,53 @@ class MapRenderer (
                 }
 
 
-                batch.color = when (terrain) {
-                    TerrainType.WATER -> continue     // Вода (фон)
-                    TerrainType.LAND -> Color.GREEN      // Земля
-                    TerrainType.MOUNTAIN -> Color.BLACK  // Горы
-                    TerrainType.CITY -> Color.BROWN     // Город
-                    TerrainType.ENEMY -> Color.RED      // Враг
-                    TerrainType.TRAP -> Color.GRAY      // Ловушки
-                    TerrainType.UPGRADE -> Color.ORANGE // Улучшения
-                    TerrainType.OUTPOST -> Color.CORAL  // Аванпосты
-                    else -> Color.WHITE
+                batch.color = Color.WHITE
+                if (gameMap.isExplored(x, y) && terrain != TerrainType.WATER) {
+                    val c = batch.color
+                    batch.setColor(c.r * light, c.g * light, c.b * light, 1f)
+                    batch.draw(
+                        grassTexture,
+                        posX - 8f,
+                        posY - 8f,
+                        cellSize + cellGap * 4,
+                        cellSize + cellGap * 4
+                    )
+                    if (terrain == TerrainType.LAND) {
+                        //batch.draw(sandTexture, posX - 2f, posY - 2f, cellSize + cellGap*3, cellSize + cellGap*3)
+
+
+
+                        batch.draw(dirtTexture, posX, posY, cellSize, cellSize)
+
+                    }
                 }
 
+
+                // Цвет тайла + освещение
+                batch.color = when (terrain) {
+                    TerrainType.WATER -> continue
+                    TerrainType.LAND -> Color.GREEN
+                    TerrainType.MOUNTAIN -> Color.BLACK
+                    TerrainType.CITY -> Color.BROWN
+                    TerrainType.ENEMY -> Color.RED
+                    TerrainType.TRAP -> Color.GRAY
+                    TerrainType.UPGRADE -> Color.ORANGE
+                    TerrainType.OUTPOST -> Color.CORAL
+                    else -> Color.WHITE
+                }
                 val c = batch.color
                 batch.setColor(c.r * light, c.g * light, c.b * light, 1f)
 
-                batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                if (terrain != TerrainType.LAND) {
+                    batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                }
+                if (!gameMap.isExplored(x, y) && terrain != TerrainType.WATER) {
+                    batch.color = Color.LIGHT_GRAY
+                    val (jX, jY) = getTileJitter(x, y, lastFrameTime)
+                    batch.draw(cloud1Texture, posX - 10f + jX, posY - 10f + jY, cellSize + cellGap*5, cellSize + cellGap*5)
+
+                    continue
+                }
             }
         }
         batch.setColor(Color.WHITE)
