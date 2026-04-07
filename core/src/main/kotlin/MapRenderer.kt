@@ -81,8 +81,8 @@ class MapRenderer (
     val visibilityManager = VisibilityManager(gameMap)
 
     private fun getTileJitter(x: Int, y: Int, time: Float): Pair<Float, Float> {
-        val jitterX = (Math.sin(x * 0.7 + time * 12) + Math.cos(y * 0.4 + time * 9)) * jitterRadius * 0.35f
-        val jitterY = (Math.cos(x * 0.4 + time * 10) + Math.sin(y * 0.7 + time * 7)) * jitterRadius * 0.35f
+        val jitterX = (Math.sin(x * 0.7 + time/2 * 12) + Math.cos(y * 0.4 + time/2 * 9)) * jitterRadius * 0.35f
+        val jitterY = (Math.cos(x * 0.4 + time/2 * 10) + Math.sin(y * 0.7 + time/2 * 7)) * jitterRadius * 0.35f
         return Pair(jitterX.toFloat(), jitterY.toFloat())
     }
 
@@ -166,13 +166,14 @@ class MapRenderer (
 
         // === PASS 3: СЕТКА / ОТСТУПЫ (рисуются поверх всех тайлов) ===
         val gapColor = Color(0.15f, 0.35f, 0.15f, 1f)
-        val gapThickness = cellGap * 1.2f  // ~12px вместо 4px
-        val inset = 2f                   // небольшой отступ от края тайла
-        val insetModifier = 1f
+
+        val inset = 1f
+        val lineWider = cellGap + 2*inset
+
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
                 val terrain = gameMap.getTerrain(x, y)
-                if (terrain == TerrainType.WATER) continue  // пропускаем только воду
+                if (terrain == TerrainType.WATER) continue
 
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
@@ -180,13 +181,13 @@ class MapRenderer (
                 batch.color = gapColor
 
                 // Левая граница
-                batch.draw(pixelTexture, posX - inset, posY - gapThickness/2 + inset/2, gapThickness, cellSize + 2*cellGap)
+                batch.draw(pixelTexture, posX - cellGap - inset, posY-cellGap, lineWider, cellSize + 2*cellGap)
                 // Правая граница
-                batch.draw(pixelTexture, posX + cellSize - gapThickness + inset, posY + inset, gapThickness, cellSize - inset * insetModifier)
+                batch.draw(pixelTexture, posX + cellSize - inset , posY-cellGap, lineWider, cellSize + 2*cellGap)
                 // Нижняя граница
-                batch.draw(pixelTexture, posX + inset, posY - inset, cellSize - inset * insetModifier, gapThickness)
+                batch.draw(pixelTexture, posX -cellGap - inset, posY - cellGap - inset, cellSize + 2*cellGap+2*inset, lineWider)
                 // Верхняя граница
-                batch.draw(pixelTexture, posX + inset, posY + cellSize - gapThickness + inset, cellSize - inset * insetModifier, gapThickness)
+                batch.draw(pixelTexture, posX -cellGap - inset, posY + cellSize - inset, cellSize + 2*cellGap+2* inset, lineWider)
             }
         }
 
