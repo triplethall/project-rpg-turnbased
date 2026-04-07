@@ -87,118 +87,141 @@ class MapRenderer (
     }
 
     fun render(batch: SpriteBatch, player: Player) {
-        //фон
-        val currentWaterTex = waterTextures[waterFrameIndex] ?: return
-        batch.color = Color.WHITE
-
+        // === ПРЕ-РАСЧЁТЫ ===
+        visibilityManager.updateVisibility(Pair(player.x, player.y))
         val mapWidthPx = gameMap.width * (cellSize + cellGap)
         val mapHeightPx = gameMap.height * (cellSize + cellGap)
 
+        // === PASS 0: ФОН (вода) ===
+        val currentWaterTex = waterTextures[waterFrameIndex] ?: return
+        batch.color = Color.WHITE
         val cols = (mapWidthPx / bgTileSize).toInt() + 2
         val rows = (mapHeightPx / bgTileSize).toInt() + 2
-
         for (tx in -3 until cols) {
             for (ty in -3 until rows) {
-                val pX = tx * bgTileSize
-                val pY = ty * bgTileSize
-                batch.draw(currentWaterTex, pX, pY, bgTileSize, bgTileSize)
+                batch.draw(currentWaterTex, tx * bgTileSize, ty * bgTileSize, bgTileSize, bgTileSize)
             }
         }
 
-        visibilityManager.updateVisibility(Pair(player.x, player.y))
-
+        // === PASS 1: БАЗОВЫЙ РЕЛЬЕФ (земля/песок для всех тайлов) ===
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
-                val posX = (x * (cellSize + cellGap))
-                val posY = (y * (cellSize + cellGap))
-
-                // 1. Считаем дистанцию до игрока
-                val dx = (x - player.x).toDouble()
-                val dy = (y - player.y).toDouble()
-                val distance = sqrt(dx * dx + dy * dy).toFloat()
-
-                // 2. Считаем яркость: 1.0 (рядом) -> 0.2 (на границе видимости)
-                // Используем 0.2f как минимальную яркость для уже исследованных клеток
-                val fullLightRadius = 4.0f  // До 4-й клетки всё горит ярко
-                val maxVisibleRadius = 8.0f // На 8-й клетке наступает тьма
-                val light = when {
-                    distance <= fullLightRadius -> 1.0f // В центре яркость максимальна
-                    distance >= maxVisibleRadius -> 0.4f // Дальше лимита — минимальная яркость
-                    else -> {
-                        // Плавно уменьшаем от 1.0 до 0.2 в промежутке между 4 и 8 клетками
-                        val ratio = (distance - fullLightRadius) / (maxVisibleRadius - fullLightRadius)
-                        1.0f - (ratio * (1.0f - 0.4f))
-                    }
-                }
+                if (!gameMap.isExplored(x, y)) continue
 
                 val terrain = gameMap.getTerrain(x, y)
+                if (terrain == TerrainType.WATER) continue
 
+                val posX = x * (cellSize + cellGap)
+                val posY = y * (cellSize + cellGap)
+                val light = calculateLight(x, y, player) // вынеси расчёт в отдельную функцию
 
-
-                if (terrain == TerrainType.Chest || terrain == TerrainType.OpenedChest) {
-                    // сначала рисуем подложку земли (зеленый квадрат)
-                    batch.color = Color.GREEN.cpy().mul(light, light, light, 1f) // Применяем то же освещение
-                    batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
-
-                    // рисуем саму текстуру сундука
-                    val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
-                    batch.color = Color(light, light, light, 1f)
-                    batch.draw(tex, posX - 4f, posY - 2f, cellSize + 8f, cellSize + 8f)
-
-                    continue
-                }
-
-
-                batch.color = Color.WHITE
-                if (gameMap.isExplored(x, y) && terrain != TerrainType.WATER) {
-                    val c = batch.color
-                    batch.setColor(c.r * light, c.g * light, c.b * light, 1f)
-                    batch.draw(
-                        grassTexture,
-                        posX - 8f,
-                        posY - 8f,
-                        cellSize + cellGap * 4,
-                        cellSize + cellGap * 4
-                    )
-                    if (terrain == TerrainType.LAND) {
-                        //batch.draw(sandTexture, posX - 2f, posY - 2f, cellSize + cellGap*3, cellSize + cellGap*3)
-
-
-
+                // Рисуем подложку
+                when (terrain) {
+                    TerrainType.LAND, TerrainType.OpenedChest, TerrainType.Chest -> {
+                        batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                         batch.draw(dirtTexture, posX, posY, cellSize, cellSize)
-
                     }
-                }
 
-
-                // Цвет тайла + освещение
-                batch.color = when (terrain) {
-                    TerrainType.WATER -> continue
-                    TerrainType.LAND -> Color.GREEN
-                    TerrainType.MOUNTAIN -> Color.BLACK
-                    TerrainType.CITY -> Color.BROWN
-                    TerrainType.ENEMY -> Color.RED
-                    TerrainType.TRAP -> Color.GRAY
-                    TerrainType.UPGRADE -> Color.ORANGE
-                    TerrainType.OUTPOST -> Color.CORAL
-                    else -> Color.WHITE
-                }
-                val c = batch.color
-                batch.setColor(c.r * light, c.g * light, c.b * light, 1f)
-
-                if (terrain != TerrainType.LAND) {
-                    batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
-                }
-                if (!gameMap.isExplored(x, y) && terrain != TerrainType.WATER) {
-                    batch.color = Color.LIGHT_GRAY
-                    val (jX, jY) = getTileJitter(x, y, lastFrameTime)
-                    batch.draw(cloud1Texture, posX - 10f + jX, posY - 10f + jY, cellSize + cellGap*5, cellSize + cellGap*5)
-
-                    continue
+                    else -> {
+                        batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
+                        batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                    }
                 }
             }
         }
-        batch.setColor(Color.WHITE)
+
+        // === PASS 2: ДЕКОР И ОБЪЕКТЫ (горы, города, враги, сундуки) ===
+        for (x in 0 until gameMap.width) {
+            for (y in 0 until gameMap.height) {
+                if (!gameMap.isExplored(x, y)) continue
+                val terrain = gameMap.getTerrain(x, y)
+                if (terrain == TerrainType.WATER || terrain == TerrainType.LAND) continue
+
+                val posX = x * (cellSize + cellGap)
+                val posY = y * (cellSize + cellGap)
+                val light = calculateLight(x, y, player)
+
+                when (terrain) {
+                    TerrainType.Chest, TerrainType.OpenedChest -> {
+                        val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
+                        batch.color = Color(light, light, light, 1f)
+                        batch.draw(tex, posX - 4f, posY - 2f, cellSize + 8f, cellSize + 8f)
+                    }
+                    else -> {
+                        val color = when (terrain) {
+                            TerrainType.MOUNTAIN -> Color.BLACK
+                            TerrainType.CITY -> Color.BROWN
+                            TerrainType.ENEMY -> Color.RED
+                            TerrainType.TRAP -> Color.GRAY
+                            TerrainType.UPGRADE -> Color.ORANGE
+                            TerrainType.OUTPOST -> Color.CORAL
+                            else -> Color.WHITE
+                        }
+                        batch.color = color.cpy().mul(light, light, light, 1f)
+                        batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                    }
+                }
+            }
+        }
+
+        // === PASS 3: СЕТКА / ОТСТУПЫ (рисуются поверх всех тайлов) ===
+        val gapColor = Color(0.15f, 0.35f, 0.15f, 1f)
+        val gapThickness = cellGap * 1.2f  // ~12px вместо 4px
+        val inset = 2f                   // небольшой отступ от края тайла
+        val insetModifier = 1f
+        for (x in 0 until gameMap.width) {
+            for (y in 0 until gameMap.height) {
+                val terrain = gameMap.getTerrain(x, y)
+                if (terrain == TerrainType.WATER) continue  // пропускаем только воду
+
+                val posX = x * (cellSize + cellGap)
+                val posY = y * (cellSize + cellGap)
+
+                batch.color = gapColor
+
+                // Левая граница
+                batch.draw(pixelTexture, posX - inset, posY - gapThickness/2 + inset/2, gapThickness, cellSize - inset * insetModifier + gapThickness*1f)
+                // Правая граница
+                batch.draw(pixelTexture, posX + cellSize - gapThickness + inset, posY + inset, gapThickness, cellSize - inset * insetModifier)
+                // Нижняя граница
+                batch.draw(pixelTexture, posX + inset, posY - inset, cellSize - inset * insetModifier, gapThickness)
+                // Верхняя граница
+                batch.draw(pixelTexture, posX + inset, posY + cellSize - gapThickness + inset, cellSize - inset * insetModifier, gapThickness)
+            }
+        }
+
+        // === PASS 4: ТУМАН ВОЙНЫ (неисследованное) ===
+        for (x in 0 until gameMap.width) {
+            for (y in 0 until gameMap.height) {
+                if (gameMap.isExplored(x, y) || gameMap.getTerrain(x, y) == TerrainType.WATER) continue
+
+                val posX = x * (cellSize + cellGap)
+                val posY = y * (cellSize + cellGap)
+                val (jX, jY) = getTileJitter(x, y, lastFrameTime)
+
+                batch.color = Color.WHITE
+                batch.draw(cloud1Texture, posX - 10f + jX, posY - 10f + jY, cellSize + cellGap * 5, cellSize + cellGap * 5)
+            }
+        }
+
+        batch.color = Color.WHITE // сброс цвета
     }
+
+    // Вынесенный расчёт освещения для чистоты кода
+    private fun calculateLight(x: Int, y: Int, player: Player): Float {
+        val dx = (x - player.x).toDouble()
+        val dy = (y - player.y).toDouble()
+        val distance = sqrt(dx * dx + dy * dy).toFloat()
+
+        return when {
+            distance <= 4.0f -> 1.0f
+            distance >= 8.0f -> 0.4f
+            else -> {
+                val ratio = (distance - 4.0f) / 4.0f
+                1.0f - (ratio * 0.6f)
+            }
+        }
+    }
+
 
 }
