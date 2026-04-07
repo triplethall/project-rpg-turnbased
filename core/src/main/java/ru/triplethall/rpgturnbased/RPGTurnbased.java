@@ -19,6 +19,7 @@ import com.badlogic.gdx.math.Rectangle;
 import ru.triplethall.rpgturnbased.GameMap;
 import ru.triplethall.rpgturnbased.Player;
 import ru.triplethall.rpgturnbased.PauseMenu;
+import ru.triplethall.rpgturnbased.SoundManager;
 
 public class RPGTurnbased extends ApplicationAdapter {
     private SpriteBatch batch;
@@ -54,6 +55,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private ShapeRenderer shapeRenderer;
     private MainMenu mainMenu;
     private boolean gameStarted = false;
+    private CityMenu cityMenu;
 
     @Override
     public void create() {
@@ -63,6 +65,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         chestClosed = new Texture("bg/chest_closed.png");
         chestOpen = new Texture("bg/chest_open.png");
         chestMenu = new ChestMenu(font);
+        cityMenu = new CityMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
 
@@ -109,6 +112,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         continueButtonTexture = new Texture("menus/buttons/continue.png");
         exitButtonTexture = new Texture("menus/buttons/exit.png");
         pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
+        SoundManager.playMusic("music/main_menu.mp3");
         pixmap.dispose();
 
         uiCamera = new OrthographicCamera();
@@ -166,12 +170,13 @@ public class RPGTurnbased extends ApplicationAdapter {
         boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
         boolean chestClicked = chestMenu.handleInput();
+        boolean cityMenuClicked = cityMenu.handleInput();
 
         // Логика игры (ход игрока, бой, сундук)
         if (battleScene.isActive()) {
             battleScene.update(Gdx.graphics.getDeltaTime());
             battleScene.handleInput(player);
-        } else if (!isPaused && !menuClicked && !chestMenu.isVisible()) {
+        } else if (!isPaused && !menuClicked && !chestMenu.isVisible() && !cityMenu.isVisible()) {
             handlePlayerInput();
         }
 
@@ -220,6 +225,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (battleScene.isActive()) {
             battleScene.render(batch, whitePixel, player);
         }
+        cityMenu.render(batch, shapeRenderer);
         batch.end();
     }
 
@@ -236,6 +242,19 @@ public class RPGTurnbased extends ApplicationAdapter {
             int targetX = (int)grid.x;
             int targetY = (int)grid.y;
 
+            // check if stepped on city
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY)
+            {
+                // check if city is near player
+                int dx = Math.abs(player.getX() - targetX);
+                int dy = Math.abs(player.getY() - targetY);
+                boolean isNear = (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
+                if (isNear)
+                {
+                    cityMenu.show();
+                }
+                return;
+            }
             // Если игрок успешно сходил
             if (player.tryMoveTo(targetX, targetY, gameMap)) {
 

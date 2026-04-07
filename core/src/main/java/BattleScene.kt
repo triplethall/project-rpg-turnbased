@@ -540,7 +540,7 @@ class BattleScene(
 
         // BUTTONS
         // ATTACK BUTTON
-        batch.color = if (!madeMoveThisTurn) Color.GREEN else Color.DARK_GRAY
+        batch.color = if (!madeMoveThisTurn && !isFleeing) Color.GREEN else Color.DARK_GRAY
         batch.draw(whitePixel, attackX, buttonY, buttonWidth, buttonHeight)
         font.color = Color.WHITE
         font.draw(batch, "ATTACK", attackX + 35f, buttonY + 42f)
