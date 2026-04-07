@@ -19,6 +19,7 @@ import com.badlogic.gdx.math.Rectangle;
 import ru.triplethall.rpgturnbased.GameMap;
 import ru.triplethall.rpgturnbased.Player;
 import ru.triplethall.rpgturnbased.PauseMenu;
+import ru.triplethall.rpgturnbased.SoundManager;
 
 public class RPGTurnbased extends ApplicationAdapter {
     private SpriteBatch batch;
@@ -111,6 +112,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         continueButtonTexture = new Texture("menus/buttons/continue.png");
         exitButtonTexture = new Texture("menus/buttons/exit.png");
         pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
+        SoundManager.playMusic("music/main_menu.mp3");
         pixmap.dispose();
 
         uiCamera = new OrthographicCamera();
