@@ -153,7 +153,7 @@ class ShopMenu(
         font.data.setScale(2f)
         font.draw(batch, "SHOP", window.x + (window.width / 2) - 35f, window.y + window.height - 25f)
         font.color = Color.GOLD
-        font.draw(batch, "EXP: ${player.experience}", window.x + window.width - 160f, window.y + 45f)
+        font.draw(batch, "EXP: ${player.experience}", window.width + 60f, window.y + 45f)
 
         font.data.setScale(1.7f)
         font.color = Color.CYAN
