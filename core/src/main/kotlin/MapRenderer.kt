@@ -19,10 +19,7 @@ class MapRenderer (
     private val pixelTexture: Texture
     private val sandTexture: Texture
     private val dirtTexture: Texture
-    private val mapSeed = (Math.random() * Int.MAX_VALUE).toInt()
-    private val cloud1Texture: Texture
-
-    //фон
+    private lateinit var cloudTextures: Array<TextureRegion>
     private val waterTextures = arrayOfNulls<Texture>(4)
     private var waterFrameIndex = 0
     private var lastFrameTime = 0f
@@ -30,8 +27,16 @@ class MapRenderer (
     private val bgTileSize = 1024f
     private val cellSize = cellSize.toFloat()
     private val cellGap = cellGap.toFloat()
-
+    private val cloudIndices = Array(gameMap.width) {
+        Array(gameMap.height) { (0..4).random() } // сразу генерируем 0-4
+    }
     private val jitterRadius = 1f
+    private val grassIndices = Array(gameMap.width) {
+        Array(gameMap.height) { IntArray(4) { 0 } }
+    }
+    private val grassMirrors = Array(gameMap.width) {
+        Array(gameMap.height) { BooleanArray(4) { false } }
+    }
     private lateinit var grassSpoilers: Array<TextureRegion>
 
 
@@ -51,11 +56,13 @@ class MapRenderer (
         dirtTexture = Texture("map_layers/dirt.png")
 
         sandTexture = Texture("map_layers/sand_back_tile.png")
-        cloud1Texture = Texture("map_layers/clouds1.png")
-
+        cloudTextures = Array(5) { i ->
+            TextureRegion(Texture("map_layers/clouds/clouds$i.png"))
+        }
         grassSpoilers = Array(10) { i ->
             TextureRegion(Texture("map_layers/grass_spoilers/light_grass$i.png"))
         }
+        generateGrassVariations()
     }
 
     fun dispose() {
@@ -68,7 +75,7 @@ class MapRenderer (
         for (region in grassSpoilers) {
             region.texture.dispose()
         }
-        cloud1Texture.dispose()
+        for (region in cloudTextures) region.texture.dispose()
     }
 
     fun update(delta: Float) {
@@ -79,24 +86,26 @@ class MapRenderer (
         }
     }
 
-
-
-
     val visibilityManager = VisibilityManager(gameMap)
 
-    private fun getTileJitter(x: Int, y: Int, time: Float): Pair<Float, Float> {
-        val jitterX = (Math.sin(x * 0.7 + time/2 * 12) + Math.cos(y * 0.4 + time/2 * 9)) * jitterRadius * 0.35f
-        val jitterY = (Math.cos(x * 0.4 + time/2 * 10) + Math.sin(y * 0.7 + time/2 * 7)) * jitterRadius * 0.35f
-        return Pair(jitterX.toFloat(), jitterY.toFloat())
+    private fun getCloudJitter(x: Int, y: Int, time: Float): Pair<Float, Float> {
+        val steppedTime = (time / 0.2f).toInt()
+        val seed = x * 73856093 + y * 19349663 + steppedTime * 374761393
+        val rng = java.util.Random(seed.toLong())
+
+        return Pair(
+            (rng.nextFloat() * 2 - 1) * jitterRadius,
+            (rng.nextFloat() * 2 - 1) * jitterRadius
+        )
     }
 
     fun render(batch: SpriteBatch, player: Player) {
-        // === ПРЕ-РАСЧЁТЫ ===
+
         visibilityManager.updateVisibility(Pair(player.x, player.y))
         val mapWidthPx = gameMap.width * (cellSize + cellGap)
         val mapHeightPx = gameMap.height * (cellSize + cellGap)
 
-        // === PASS 0: ФОН (вода) ===
+        // 0 слой - вода
         val currentWaterTex = waterTextures[waterFrameIndex] ?: return
         batch.color = Color.WHITE
         val cols = (mapWidthPx / bgTileSize).toInt() + 2
@@ -107,7 +116,7 @@ class MapRenderer (
             }
         }
 
-        // === PASS 1: БАЗОВЫЙ РЕЛЬЕФ (земля/песок для всех тайлов) ===
+        // слой 1 - базовая подложка, земля
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
                 if (!gameMap.isExplored(x, y)) continue
@@ -117,9 +126,8 @@ class MapRenderer (
 
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
-                val light = calculateLight(x, y, player) // вынеси расчёт в отдельную функцию
+                val light = calculateLight(x, y, player)
 
-                // Рисуем подложку
                 when (terrain) {
                     TerrainType.LAND, TerrainType.OpenedChest, TerrainType.Chest -> {
                         batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
@@ -136,7 +144,7 @@ class MapRenderer (
 
 
 
-        // === PASS 3: СЕТКА / ОТСТУПЫ (рисуются поверх всех тайлов) ===
+        // слой 2 - сетка, ассеты травы и оставшийся декор
         val gapColor = Color(0.15f, 0.35f, 0.15f, 1f)
         val inset = 1f
         val lineWider = cellGap + 2*inset
@@ -150,7 +158,7 @@ class MapRenderer (
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
 
-                // 1. Рисуем базовую зелёную подложку (как было)
+                // базовая зеленая сетка
 
                 batch.color = gapColor.cpy().mul(light, light, light, 1f)
                 batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap, lineWider, cellSize + 2*cellGap) // left
@@ -158,41 +166,41 @@ class MapRenderer (
                 batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap - inset, cellSize + 2*cellGap + 2*inset, lineWider) // bottom
                 batch.draw(pixelTexture, posX - cellGap - inset, posY + cellSize - inset, cellSize + 2*cellGap + 2*inset, lineWider) // top
 
-                // 2. Рисуем траву-оверлей поверх (случайная текстура + зеркало)
+                // текстуры травы в клетках
                 batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                 val addition = 3f
-                // Левая сторона (side = 0)
+                // левая сторона
                 run {
                     val side = 0
-                    val texIndex = (seededRandom(x, y, side) * grassSpoilers.size).toInt()
-                    val mirror = seededRandom(x, y, side + 100) < 0.5f
-                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 - addition * 1f, posY + cellSize/2 - addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 0, mirror = mirror)
+                    val texIndex = grassIndices[x][y][side]
+
+                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 - addition * 1f, posY + cellSize/2 - addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 0, mirror = true)
                 }
-                // Правая сторона (side = 1)
+                // правая сторона
                 run {
                     val side = 1
-                    val texIndex = (seededRandom(x, y, side) * grassSpoilers.size).toInt()
-                    val mirror = seededRandom(x, y, side + 100) < 0.5f
-                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 + addition * 1f, posY - cellSize/2- addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 1, mirror = mirror)
+                    val texIndex = grassIndices[x][y][side]
+
+                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 + addition * 1f, posY - cellSize/2- addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 1, mirror = true)
                 }
-                // Нижняя сторона (side = 2)
+                // нижняя сторона
                 run {
                     val side = 2
-                    val texIndex = (seededRandom(x, y, side) * grassSpoilers.size).toInt()
-                    val mirror = seededRandom(x, y, side + 100) < 0.5f
+                    val texIndex = grassIndices[x][y][side]
+                    val mirror = grassMirrors[x][y][side]
                     drawGrassSpoiler(batch, grassSpoilers[texIndex], posX - cellGap, posY + cellSize - cellGap, cellSize+addition*2, cellGap+addition, side = 2, mirror = mirror)
                 }
-                // Верхняя сторона (side = 3)
+                // верхняя сторона
                 run {
                     val side = 3
-                    val texIndex = (seededRandom(x, y, side) * grassSpoilers.size).toInt()
-                    val mirror = seededRandom(x, y, side + 100) < 0.5f
+                    val texIndex = grassIndices[x][y][side]
+                    val mirror = grassMirrors[x][y][side]
                     drawGrassSpoiler(batch, grassSpoilers[texIndex], posX - cellGap, posY + cellGap, cellSize+addition*2, cellGap+addition, side = 3, mirror = mirror)
                 }
             }
         }
 
-        // === PASS 2: ДЕКОР И ОБЪЕКТЫ (горы, города, враги, сундуки) ===
+        // слой 3 - объекты
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
                 if (!gameMap.isExplored(x, y)) continue
@@ -226,24 +234,26 @@ class MapRenderer (
             }
         }
 
-        // === PASS 4: ТУМАН ВОЙНЫ (неисследованное) ===
+        // слой 4 - туман войны
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
                 if (gameMap.isExplored(x, y) || gameMap.getTerrain(x, y) == TerrainType.WATER) continue
 
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
-                val (jX, jY) = getTileJitter(x, y, lastFrameTime)
+
 
                 batch.color = Color.WHITE
-                batch.draw(cloud1Texture, posX - 10f + jX, posY - 10f + jY, cellSize + cellGap * 5, cellSize + cellGap * 5)
+                val cloudIdx = cloudIndices[x][y]
+                val (jX, jY) = getCloudJitter(x, y, lastFrameTime)
+                batch.draw(cloudTextures[cloudIdx], posX - 10f + jX, posY - 10f + jY, cellSize + cellGap * 5, cellSize + cellGap * 5)
             }
         }
 
-        batch.color = Color.WHITE // сброс цвета
+        batch.color = Color.WHITE
     }
 
-    // Вынесенный расчёт освещения для чистоты кода
+
     private fun calculateLight(x: Int, y: Int, player: Player): Float {
         val dx = (x - player.x).toDouble()
         val dy = (y - player.y).toDouble()
@@ -258,7 +268,7 @@ class MapRenderer (
             }
         }
     }
-    // side: 0=left, 1=right, 2=bottom, 3=top
+
     private fun drawGrassSpoiler(
         batch: SpriteBatch,
         region: TextureRegion,
@@ -268,42 +278,45 @@ class MapRenderer (
         mirror: Boolean
     ) {
         val rotation = when (side) {
-            0 -> 90f    // left
-            1 -> -90f   // right
-            2 -> 180f   // bottom
-            else -> 0f  // top
+            0 -> 90f    
+            1 -> -90f
+            2 -> 180f
+            else -> 0f
         }
 
         val scaleX = if (mirror) -1f else 1f
         val scaleY = 1f
 
         when (side) {
-            0, 1 -> { // Вертикальные стороны (левая/правая)
-                // Позиция: центр зазора по X, начало тайла по Y
-                // Origin: центр полоски для вращения
-                // Size: ширина зазора, высота тайла
+            0, 1 -> {
                 batch.draw(region,
-                    posX - cellGap/2, posY,           // x, y
-                    cellGap/2, cellSize/2,            // originX, originY
-                    cellSize, cellGap,                // width, height ✅
-                    scaleX, scaleY,                   // scale
+                    posX - cellGap/2, posY,
+                    cellGap/2, cellSize/2,
+                    cellSize, cellGap,
+                    scaleX, scaleY,
                     rotation
                 )
             }
-            2, 3 -> { // Горизонтальные стороны (низ/верх)
+            2, 3 -> {
                 batch.draw(region,
-                    posX, posY - cellGap/2,           // x, y
-                    cellSize/2, cellGap/2,            // originX, originY
-                    cellSize, cellGap,                // width, height ✅
-                    scaleX, scaleY,                   // scale
+                    posX, posY - cellGap/2,
+                    cellSize/2, cellGap/2,
+                    cellSize, cellGap,
+                    scaleX, scaleY,
                     rotation
                 )
             }
         }
     }
-    private fun seededRandom(x: Int, y: Int, seed: Int = 0): Float {
-        // Сумма с разными простыми множителями: каждый параметр сильно влияет на итог
-        val h = x * 73856093 + y * 19349663 + seed * 374761393 + mapSeed * 668265263
-        return (h * 2.3283064e-10f).coerceIn(0f, 1f)
+
+    private fun generateGrassVariations() {
+        for (x in 0 until gameMap.width) {
+            for (y in 0 until gameMap.height) {
+                for (side in 0..3) {
+                    grassIndices[x][y][side] = (0..9).random()
+                    grassMirrors[x][y][side] = (0..1).random() == 1
+                }
+            }
+        }
     }
 }
