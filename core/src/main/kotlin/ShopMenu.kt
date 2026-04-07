@@ -12,7 +12,8 @@ class ShopMenu(
     private val font: BitmapFont,
     private val screenWidth: Float,
     private val screenHeight: Float,
-    private val inventory: Inventory
+    private val inventory: Inventory,
+    private val player: Player
 ) {
     var isVisible = false
         private set
@@ -151,6 +152,8 @@ class ShopMenu(
         font.color = Color.YELLOW
         font.data.setScale(2f)
         font.draw(batch, "SHOP", window.x + (window.width / 2) - 35f, window.y + window.height - 25f)
+        font.color = Color.GOLD
+        font.draw(batch, "EXP: ${player.experience}", window.x + window.width - 160f, window.y + 45f)
 
         font.data.setScale(1.7f)
         font.color = Color.CYAN
@@ -164,7 +167,7 @@ class ShopMenu(
         shapeRenderer.end()
         batch.begin()
         font.color = Color.WHITE
-        font.data.setScale(1.6f)
+        font.data.setScale(2f)
         font.draw(batch, "X", closeButtonRect.x + 20f, closeButtonRect.y + 40f)
 
         renderShopItems(batch, shapeRenderer, whitePixel)
@@ -210,7 +213,7 @@ class ShopMenu(
                 batch.begin()
             }
 
-            batch.color = Color(0.15f, 0.15f, 0.15f, 1f)
+            batch.color = Color.GRAY
             batch.draw(whitePixel, x, y - itemSize, itemSize, itemSize)
 
             batch.color = when (item.type) {
@@ -259,7 +262,7 @@ class ShopMenu(
                 batch.begin()
             }
 
-            batch.color = if (item.isEquipped) Color(0.4f, 0.3f, 0.15f, 1f) else Color(0.15f, 0.15f, 0.15f, 1f)
+            batch.color = if (item.isEquipped) Color(0.4f, 0.3f, 0.15f, 1f) else Color.GRAY
             batch.draw(whitePixel, x, y - itemSize, itemSize, itemSize)
 
             val eqItem = item.equipmentItem
@@ -284,12 +287,10 @@ class ShopMenu(
         val detailsX = window.x + (window.width - detailsW) / 2
         val detailsY = window.y + 20f
         batch.end()
-        
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(0.05f, 0.05f, 0.1f, 0.95f)
+        shapeRenderer.setColor(0.1f, 0.1f, 0.1f, 0.90f)
         shapeRenderer.rect(detailsX, detailsY, detailsW, detailsH)
-        shapeRenderer.setColor(0.5f, 0.4f, 0.2f, 1f)
-        shapeRenderer.rect(detailsX, detailsY, detailsW, 2f)
         shapeRenderer.end()
 
         batch.begin()

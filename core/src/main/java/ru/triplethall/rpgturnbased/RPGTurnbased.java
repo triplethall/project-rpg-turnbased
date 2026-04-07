@@ -144,9 +144,9 @@ public class RPGTurnbased extends ApplicationAdapter {
         float btnSize = 120;
         float startY = Gdx.graphics.getHeight() - btnSize;
         statsButtonRect = new Rectangle(2 * btnSize + margin, startY, btnSize, btnSize);
-        shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory);
 
         player = new Player();
+        shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
         battleScene.setPlayer(player);
         gameStarted = false;

@@ -432,6 +432,7 @@ class BattleScene(
     }
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player)
     {
+        font.data.setScale(1f)
         if (showVictoryScreen)
         {
             drawVictoryScreen(batch, whitePixel)
@@ -584,7 +585,8 @@ class BattleScene(
         {
             messageSystem.render(batch)
         }
-
+        font.data.setScale(1f)
+        font.color = Color.WHITE
     }
     // --- НАСТРОЙКИ (поменяй здесь одну цифру, и всё изменится) ---
     private val squareSize = 24 * 2f       // Размер одного квадратика
@@ -604,6 +606,10 @@ class BattleScene(
     }
 
     private fun drawEnemy(batch: SpriteBatch, whitePixel: Texture, enemy: BattleEnemy, x: Float, y: Float, width: Float, height: Float, isSelected: Boolean) {
+        // FIXME: когда бой заканчивался то шрифт становился все меньше и меньше.. оказывается это все было из-за того, что тут не сбрасывался размер шрифта
+        // ^^ ЕСЛИ ЧТО НЕ ИСПРАВИЛ ^^
+        val oldScaleX = font.data.scaleX
+        val oldScaleY = font.data.scaleY
         // Если враг мертв — рисуем серым
         batch.color = if (enemy.isAlive()) Color.RED else Color.DARK_GRAY
         batch.draw(whitePixel, x, y, width, height)
@@ -630,10 +636,10 @@ class BattleScene(
             EnemyType.HOLY -> " [Holy]"
         }
         font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
-
-        font.color = Color.WHITE
-        font.draw(batch, enemy.name, x + 20f, y - 20f)
         font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)
+
+        font.data.setScale(oldScaleX, oldScaleY)
+        font.color = Color.WHITE
     }
     fun endBattleAndClearEnemy() {
         if (enemyX in 0 until gameMap.width && enemyY in 0 until gameMap.height) {
