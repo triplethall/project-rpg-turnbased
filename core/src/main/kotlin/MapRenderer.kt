@@ -86,6 +86,24 @@ class MapRenderer (
         }
     }
 
+    private fun isChestInForest(x: Int, y: Int): Boolean {
+        // Проверяем, что сундук окружён лесом со всех 4 сторон
+        val directions = listOf(
+            Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0)
+        )
+        for ((dx, dy) in directions) {
+            val nx = x + dx
+            val ny = y + dy
+            if (nx in 0 until gameMap.width && ny in 0 until gameMap.height) {
+                if (gameMap.getTerrain(nx, ny) != TerrainType.FOREST) {
+                    return false
+                }
+            } else {
+                return false
+            }
+        }
+        return true
+    }
     val visibilityManager = VisibilityManager(gameMap)
 
     private fun getCloudJitter(x: Int, y: Int, time: Float): Pair<Float, Float> {
@@ -159,7 +177,24 @@ class MapRenderer (
                 val posY = y * (cellSize + cellGap)
 
                 // базовая зеленая сетка
+                //TODO
+                if (terrain == TerrainType.Chest || terrain == TerrainType.OpenedChest) {
+                    // Проверяем, нужно ли скрыть сундук в лесу
+                    val shouldHideInForest = (terrain == TerrainType.Chest && isChestInForest(x, y))
 
+                    if (shouldHideInForest) {
+                        // Скрытый сундук в лесу - рисуем просто лес (тёмно-зелёный)
+                        batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
+                        batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                    } else {
+                        // Обычный сундук или открытый - рисуем подложку и текстуру
+                        batch.color = Color.GREEN.cpy().mul(light, light, light, 1f)
+                        batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+
+                        val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
+                        batch.color = Color(light, light, light, 1f)
+                        batch.draw(tex, posX - 4f, posY - 2f, cellSize + 8f, cellSize + 8f)
+                    }
                 batch.color = gapColor.cpy().mul(light, light, light, 1f)
                 batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap, lineWider, cellSize + 2*cellGap) // left
                 batch.draw(pixelTexture, posX + cellSize - inset, posY - cellGap, lineWider, cellSize + 2*cellGap)  // right
@@ -225,6 +260,7 @@ class MapRenderer (
                             TerrainType.TRAP -> Color.GRAY
                             TerrainType.UPGRADE -> Color.ORANGE
                             TerrainType.OUTPOST -> Color.CORAL
+                            TerrainType.FOREST -> Color.FOREST
                             else -> Color.WHITE
                         }
                         batch.color = color.cpy().mul(light, light, light, 1f)
