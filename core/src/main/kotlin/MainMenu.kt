@@ -159,6 +159,7 @@ class MainMenu(
 
             buttons.forEach { button ->
                 if (button.rect.contains(touchPos.x, touchPos.y)) {
+                    SoundManager.playSound("sounds/mainBtnSound.mp3")
                     button.action.invoke()
                     return true
                 }
