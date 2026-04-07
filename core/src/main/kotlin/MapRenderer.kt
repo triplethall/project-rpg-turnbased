@@ -163,26 +163,30 @@ class MapRenderer (
                 val addition = 3f
                 // Левая сторона (side = 0)
                 run {
-                    val texIndex = (seededRandom(x, y, 0) * grassSpoilers.size).toInt()
-                    val mirror = seededRandom(x, y, 10) < 0.5f
+                    val side = 0
+                    val texIndex = (seededRandom(x, y, side) * grassSpoilers.size).toInt()
+                    val mirror = seededRandom(x, y, side + 100) < 0.5f
                     drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 - addition * 1f, posY + cellSize/2 - addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 0, mirror = mirror)
                 }
                 // Правая сторона (side = 1)
                 run {
-                    val texIndex = (seededRandom(x, y, 1) * grassSpoilers.size).toInt()
-                    val mirror = seededRandom(x, y, 11) < 0.5f
+                    val side = 1
+                    val texIndex = (seededRandom(x, y, side) * grassSpoilers.size).toInt()
+                    val mirror = seededRandom(x, y, side + 100) < 0.5f
                     drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 + addition * 1f, posY - cellSize/2- addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 1, mirror = mirror)
                 }
                 // Нижняя сторона (side = 2)
                 run {
-                    val texIndex = (seededRandom(x, y, 2) * grassSpoilers.size).toInt()
-                    val mirror = seededRandom(x, y, 12) < 0.5f
+                    val side = 2
+                    val texIndex = (seededRandom(x, y, side) * grassSpoilers.size).toInt()
+                    val mirror = seededRandom(x, y, side + 100) < 0.5f
                     drawGrassSpoiler(batch, grassSpoilers[texIndex], posX - cellGap, posY + cellSize - cellGap, cellSize+addition*2, cellGap+addition, side = 2, mirror = mirror)
                 }
                 // Верхняя сторона (side = 3)
                 run {
-                    val texIndex = (seededRandom(x, y, 3) * grassSpoilers.size).toInt()
-                    val mirror = seededRandom(x, y, 13) < 0.5f
+                    val side = 3
+                    val texIndex = (seededRandom(x, y, side) * grassSpoilers.size).toInt()
+                    val mirror = seededRandom(x, y, side + 100) < 0.5f
                     drawGrassSpoiler(batch, grassSpoilers[texIndex], posX - cellGap, posY + cellGap, cellSize+addition*2, cellGap+addition, side = 3, mirror = mirror)
                 }
             }
@@ -203,7 +207,7 @@ class MapRenderer (
                     TerrainType.Chest, TerrainType.OpenedChest -> {
                         val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
                         batch.color = Color(light, light, light, 1f)
-                        batch.draw(tex, posX - 4f, posY - 2f, cellSize + 8f, cellSize + 8f)
+                        batch.draw(tex, posX, posY, cellSize - 4f, cellSize - 4f)
                     }
                     else -> {
                         val color = when (terrain) {
@@ -298,9 +302,8 @@ class MapRenderer (
         }
     }
     private fun seededRandom(x: Int, y: Int, seed: Int = 0): Float {
-        // Добавляем mapSeed в хеш
-        val h = (x * 73856093 xor y * 19349663 + seed + mapSeed * 31)
+        // Сумма с разными простыми множителями: каждый параметр сильно влияет на итог
+        val h = x * 73856093 + y * 19349663 + seed * 374761393 + mapSeed * 668265263
         return (h * 2.3283064e-10f).coerceIn(0f, 1f)
     }
-
 }
