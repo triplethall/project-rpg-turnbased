@@ -56,6 +56,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private MainMenu mainMenu;
     private boolean gameStarted = false;
     private CityMenu cityMenu;
+    private ShopMenu shopMenu;
 
     @Override
     public void create() {
@@ -143,6 +144,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         float btnSize = 120;
         float startY = Gdx.graphics.getHeight() - btnSize;
         statsButtonRect = new Rectangle(2 * btnSize + margin, startY, btnSize, btnSize);
+        shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory);
 
         player = new Player();
         player.spawnOnShore(gameMap);
@@ -164,12 +166,24 @@ public class RPGTurnbased extends ApplicationAdapter {
         isPaused = pauseMenu.isVisible();
         boolean chestClicked = chestMenu.handleInput();
         boolean cityMenuClicked = cityMenu.handleInput();
+        boolean shopClicked = false;
+        if (cityMenu.isShopClicked())
+        {
+            shopMenu.show();
+            shopClicked = true;
+        }
+        boolean shopMenuClicked = shopMenu.handleInput();
 
         // Логика игры (ход игрока, бой, сундук)
         if (battleScene.isActive()) {
             battleScene.update(Gdx.graphics.getDeltaTime());
             battleScene.handleInput(player);
-        } else if (!isPaused && !menuClicked && !chestMenu.isVisible() && !cityMenu.isVisible()) {
+        } else if (!isPaused
+            && !menuClicked
+            && !chestMenu.isVisible()
+            && !cityMenu.isVisible()
+            && !shopMenu.isVisible()
+        ) {
             handlePlayerInput();
         }
 
@@ -219,6 +233,7 @@ public class RPGTurnbased extends ApplicationAdapter {
             battleScene.render(batch, whitePixel, player);
         }
         cityMenu.render(batch, shapeRenderer);
+        shopMenu.render(batch, shapeRenderer, whitePixel);
         batch.end();
     }
 
