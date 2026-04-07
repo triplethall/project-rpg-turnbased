@@ -180,7 +180,7 @@ class MapRenderer (
                 batch.color = gapColor
 
                 // Левая граница
-                batch.draw(pixelTexture, posX - inset, posY - gapThickness/2 + inset/2, gapThickness, cellSize - inset * insetModifier + gapThickness*1f)
+                batch.draw(pixelTexture, posX - inset, posY - gapThickness/2 + inset/2, gapThickness, cellSize + 2*cellGap)
                 // Правая граница
                 batch.draw(pixelTexture, posX + cellSize - gapThickness + inset, posY + inset, gapThickness, cellSize - inset * insetModifier)
                 // Нижняя граница
