@@ -142,6 +142,13 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         player = new Player();
         player.spawnOnShore(gameMap);
+        player.setOnEnterForest(new Player.OnEnterForestListener() {
+            @Override
+            public void onEnterForest(int x, int y) {
+                System.out.println("DEBUG JAVA: onEnterForest вызван!"); // Добавьте эту строку
+                battleScene.startBattle(x, y, 1);
+            }
+        });
         battleScene.setPlayer(player);
         gameStarted = false;
     }
