@@ -4,8 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.scenes.scene2d.actions.Actions.color
-import kotlin.math.pow
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import kotlin.math.sqrt
 
 
@@ -20,7 +19,7 @@ class MapRenderer (
     private val pixelTexture: Texture
     private val sandTexture: Texture
     private val dirtTexture: Texture
-    private val grassTexture: Texture
+    private val mapSeed = (Math.random() * Int.MAX_VALUE).toInt()
     private val cloud1Texture: Texture
 
     //фон
@@ -31,10 +30,9 @@ class MapRenderer (
     private val bgTileSize = 1024f
     private val cellSize = cellSize.toFloat()
     private val cellGap = cellGap.toFloat()
-    private var jitterOffset = Pair(0f, 0f)
-    private var lastJitterTime = 0f
-    private val jitterInterval = 0.25f // смена направления 4 раза в секунду
+
     private val jitterRadius = 1f
+    private lateinit var grassSpoilers: Array<TextureRegion>
 
 
     init{
@@ -51,9 +49,13 @@ class MapRenderer (
         waterTextures[3] = Texture("bg/water_01_04.png")
 
         dirtTexture = Texture("map_layers/dirt.png")
-        grassTexture = Texture("map_layers/light_grass_tile.png")
+
         sandTexture = Texture("map_layers/sand_back_tile.png")
         cloud1Texture = Texture("map_layers/clouds1.png")
+
+        grassSpoilers = Array(10) { i ->
+            TextureRegion(Texture("map_layers/grass_spoilers/light_grass$i.png"))
+        }
     }
 
     fun dispose() {
@@ -63,7 +65,9 @@ class MapRenderer (
         }
         sandTexture.dispose()
         dirtTexture.dispose()
-        grassTexture.dispose()
+        for (region in grassSpoilers) {
+            region.texture.dispose()
+        }
         cloud1Texture.dispose()
     }
 
@@ -130,6 +134,60 @@ class MapRenderer (
             }
         }
 
+
+
+        // === PASS 3: СЕТКА / ОТСТУПЫ (рисуются поверх всех тайлов) ===
+        val gapColor = Color(0.15f, 0.35f, 0.15f, 1f)
+        val inset = 1f
+        val lineWider = cellGap + 2*inset
+
+        for (x in 0 until gameMap.width) {
+            for (y in 0 until gameMap.height) {
+                val light = calculateLight(x, y, player)
+                val terrain = gameMap.getTerrain(x, y)
+                if (terrain == TerrainType.WATER) continue
+
+                val posX = x * (cellSize + cellGap)
+                val posY = y * (cellSize + cellGap)
+
+                // 1. Рисуем базовую зелёную подложку (как было)
+
+                batch.color = gapColor.cpy().mul(light, light, light, 1f)
+                batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap, lineWider, cellSize + 2*cellGap) // left
+                batch.draw(pixelTexture, posX + cellSize - inset, posY - cellGap, lineWider, cellSize + 2*cellGap)  // right
+                batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap - inset, cellSize + 2*cellGap + 2*inset, lineWider) // bottom
+                batch.draw(pixelTexture, posX - cellGap - inset, posY + cellSize - inset, cellSize + 2*cellGap + 2*inset, lineWider) // top
+
+                // 2. Рисуем траву-оверлей поверх (случайная текстура + зеркало)
+                batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
+                val addition = 3f
+                // Левая сторона (side = 0)
+                run {
+                    val texIndex = (seededRandom(x, y, 0) * grassSpoilers.size).toInt()
+                    val mirror = seededRandom(x, y, 10) < 0.5f
+                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 - addition * 1f, posY + cellSize/2 - addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 0, mirror = mirror)
+                }
+                // Правая сторона (side = 1)
+                run {
+                    val texIndex = (seededRandom(x, y, 1) * grassSpoilers.size).toInt()
+                    val mirror = seededRandom(x, y, 11) < 0.5f
+                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 + addition * 1f, posY - cellSize/2- addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 1, mirror = mirror)
+                }
+                // Нижняя сторона (side = 2)
+                run {
+                    val texIndex = (seededRandom(x, y, 2) * grassSpoilers.size).toInt()
+                    val mirror = seededRandom(x, y, 12) < 0.5f
+                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX - cellGap, posY + cellSize - cellGap, cellSize+addition*2, cellGap+addition, side = 2, mirror = mirror)
+                }
+                // Верхняя сторона (side = 3)
+                run {
+                    val texIndex = (seededRandom(x, y, 3) * grassSpoilers.size).toInt()
+                    val mirror = seededRandom(x, y, 13) < 0.5f
+                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX - cellGap, posY + cellGap, cellSize+addition*2, cellGap+addition, side = 3, mirror = mirror)
+                }
+            }
+        }
+
         // === PASS 2: ДЕКОР И ОБЪЕКТЫ (горы, города, враги, сундуки) ===
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
@@ -161,33 +219,6 @@ class MapRenderer (
                         batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
                     }
                 }
-            }
-        }
-
-        // === PASS 3: СЕТКА / ОТСТУПЫ (рисуются поверх всех тайлов) ===
-        val gapColor = Color(0.15f, 0.35f, 0.15f, 1f)
-
-        val inset = 1f
-        val lineWider = cellGap + 2*inset
-
-        for (x in 0 until gameMap.width) {
-            for (y in 0 until gameMap.height) {
-                val terrain = gameMap.getTerrain(x, y)
-                if (terrain == TerrainType.WATER) continue
-
-                val posX = x * (cellSize + cellGap)
-                val posY = y * (cellSize + cellGap)
-
-                batch.color = gapColor
-
-                // Левая граница
-                batch.draw(pixelTexture, posX - cellGap - inset, posY-cellGap, lineWider, cellSize + 2*cellGap)
-                // Правая граница
-                batch.draw(pixelTexture, posX + cellSize - inset , posY-cellGap, lineWider, cellSize + 2*cellGap)
-                // Нижняя граница
-                batch.draw(pixelTexture, posX -cellGap - inset, posY - cellGap - inset, cellSize + 2*cellGap+2*inset, lineWider)
-                // Верхняя граница
-                batch.draw(pixelTexture, posX -cellGap - inset, posY + cellSize - inset, cellSize + 2*cellGap+2* inset, lineWider)
             }
         }
 
@@ -223,6 +254,53 @@ class MapRenderer (
             }
         }
     }
+    // side: 0=left, 1=right, 2=bottom, 3=top
+    private fun drawGrassSpoiler(
+        batch: SpriteBatch,
+        region: TextureRegion,
+        posX: Float, posY: Float,
+        cellSize: Float, cellGap: Float,
+        side: Int,
+        mirror: Boolean
+    ) {
+        val rotation = when (side) {
+            0 -> 90f    // left
+            1 -> -90f   // right
+            2 -> 180f   // bottom
+            else -> 0f  // top
+        }
 
+        val scaleX = if (mirror) -1f else 1f
+        val scaleY = 1f
+
+        when (side) {
+            0, 1 -> { // Вертикальные стороны (левая/правая)
+                // Позиция: центр зазора по X, начало тайла по Y
+                // Origin: центр полоски для вращения
+                // Size: ширина зазора, высота тайла
+                batch.draw(region,
+                    posX - cellGap/2, posY,           // x, y
+                    cellGap/2, cellSize/2,            // originX, originY
+                    cellSize, cellGap,                // width, height ✅
+                    scaleX, scaleY,                   // scale
+                    rotation
+                )
+            }
+            2, 3 -> { // Горизонтальные стороны (низ/верх)
+                batch.draw(region,
+                    posX, posY - cellGap/2,           // x, y
+                    cellSize/2, cellGap/2,            // originX, originY
+                    cellSize, cellGap,                // width, height ✅
+                    scaleX, scaleY,                   // scale
+                    rotation
+                )
+            }
+        }
+    }
+    private fun seededRandom(x: Int, y: Int, seed: Int = 0): Float {
+        // Добавляем mapSeed в хеш
+        val h = (x * 73856093 xor y * 19349663 + seed + mapSeed * 31)
+        return (h * 2.3283064e-10f).coerceIn(0f, 1f)
+    }
 
 }
