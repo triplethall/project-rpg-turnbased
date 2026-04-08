@@ -24,6 +24,10 @@ class ChestMenu(private val font: BitmapFont) {
         updateLayout()
     }
 
+    fun hide() {
+        isVisible = false
+    }
+
     private fun updateLayout() {
         val sw = Gdx.graphics.width.toFloat()
         val sh = Gdx.graphics.height.toFloat()

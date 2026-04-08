@@ -15,6 +15,9 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Rectangle;
+import java.util.ArrayList;
+import java.util.List;
+import kotlin.Pair;
 
 import ru.triplethall.rpgturnbased.GameMap;
 import ru.triplethall.rpgturnbased.Player;
@@ -42,6 +45,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private Texture statsButtonTexture;
     private Texture pauseBackgroundTexture;
     private Texture statsBackgroundTexture;
+    private Texture settingsButtonTexture;   // <-- ДОБАВЛЕНО
     private Rectangle statsButtonRect;
     private Texture BGArena;
     private final int CELL_SIZE = 32;
@@ -105,6 +109,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         statsBackgroundTexture = new Texture("menus/bgs/statsmenubg.png");
         continueButtonTexture = new Texture("menus/buttons/continue.png");
         exitButtonTexture = new Texture("menus/buttons/exit.png");
+        settingsButtonTexture = new Texture("menus/buttons/options.png");  // <-- ЗАГРУЗКА
         pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
 
         // Включаем музыку главного меню (она будет играть до старта игры)
@@ -122,7 +127,8 @@ public class RPGTurnbased extends ApplicationAdapter {
             statsBackgroundTexture,
             continueButtonTexture,
             exitButtonTexture,
-            pauseBackgroundTexture);
+            pauseBackgroundTexture,
+            settingsButtonTexture);   
 
         inventory = new Inventory(font,
             Gdx.graphics.getWidth(),
@@ -144,7 +150,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         player.setOnEnterForest(new Player.OnEnterForestListener() {
             @Override
             public void onEnterForest(int x, int y) {
-                System.out.println("DEBUG JAVA: onEnterForest вызван!"); // Добавьте эту строку
+                System.out.println("DEBUG JAVA: onEnterForest вызван!");
                 battleScene.startBattle(x, y, 1);
             }
         });
@@ -243,6 +249,22 @@ public class RPGTurnbased extends ApplicationAdapter {
                 if (gameMap.collectChest(targetX, targetY)) {
                     SoundManager.playSound("sounds/openSunduk.mp3");
                     chestMenu.show();
+
+                    if (gameMap.hasEnemies()) {
+                        // Получаем список координат всех врагов
+                        List<Pair<Integer, Integer>> enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
+                        // Создаём список BattleEnemy (по одному случайному врагу на каждую клетку)
+                        List<BattleEnemy> enemiesList = new ArrayList<>();
+                        for (int i = 0; i < enemyCells.size(); i++) {
+                            // Создаём одного случайного врага
+                            BattleEnemy enemy = BattleEnemy.Companion.createRandomEnemies(1).get(0);
+                            enemiesList.add(enemy);
+                        }
+                        // Запускаем бой со всеми врагами
+                        battleScene.startBattleWithEnemies(enemiesList, enemyCells);
+                        // Закрываем меню сундука, чтобы оно не мешалось во время боя
+                        chestMenu.hide();
+                    }
                 }
                 if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
                     battleScene.startBattle(targetX, targetY);
@@ -256,7 +278,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         mainMenu.hide();
         // Останавливаем музыку главного меню и запускаем плейлист для карты
         SoundManager.stopMusic();
-        SoundManager.startPlaylist(false); // false = без перемешивания, можно true для случайного порядка
+        SoundManager.startPlaylist(false);
     }
 
     @Override
@@ -267,6 +289,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (whitePixel != null) whitePixel.dispose();
         if (pauseButtonTexture != null) pauseButtonTexture.dispose();
         if (statsButtonTexture != null) statsButtonTexture.dispose();
+        if (settingsButtonTexture != null) settingsButtonTexture.dispose();  // <-- ОСВОБОЖДЕНИЕ
         if (BGArena != null) BGArena.dispose();
         if (statsBackgroundTexture != null) statsBackgroundTexture.dispose();
         if (continueButtonTexture != null) continueButtonTexture.dispose();
@@ -275,6 +298,6 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (mainMenu != null) mainMenu.dispose();
         mapRenderer.dispose();
         font.dispose();
-        SoundManager.dispose(); // обязательно освободить ресурсы звуков
+        SoundManager.dispose();
     }
 }
