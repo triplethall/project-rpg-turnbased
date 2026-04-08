@@ -22,6 +22,7 @@ class MapRenderer (
     private lateinit var cloudTextures: Array<TextureRegion>
     private val waterTextures = arrayOfNulls<Texture>(4)
     private var waterFrameIndex = 0
+    private val forestTexture: Texture
     private var lastFrameTime = 0f
     private val frameDuration = 0.5f //частота смены кадров фона
     private val bgTileSize = 1024f
@@ -54,7 +55,7 @@ class MapRenderer (
         waterTextures[3] = Texture("bg/water_01_04.png")
 
         dirtTexture = Texture("map_layers/dirt.png")
-
+        forestTexture = Texture("map_layers/forest.png")
         sandTexture = Texture("map_layers/sand_back_tile.png")
         cloudTextures = Array(5) { i ->
             TextureRegion(Texture("map_layers/clouds/clouds$i.png"))
@@ -70,6 +71,7 @@ class MapRenderer (
         for (t in waterTextures) {
             t?.dispose()
         }
+        forestTexture.dispose()
         sandTexture.dispose()
         dirtTexture.dispose()
         for (region in grassSpoilers) {
@@ -147,7 +149,7 @@ class MapRenderer (
                 val light = calculateLight(x, y, player)
 
                 when (terrain) {
-                    TerrainType.LAND, TerrainType.OpenedChest, TerrainType.Chest -> {
+                    TerrainType.LAND, TerrainType.OpenedChest, TerrainType.Chest, TerrainType.FOREST -> {
                         batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                         batch.draw(dirtTexture, posX, posY, cellSize, cellSize)
                     }
@@ -177,24 +179,6 @@ class MapRenderer (
                 val posY = y * (cellSize + cellGap)
 
                 // базовая зеленая сетка
-                //TODO
-                if (terrain == TerrainType.Chest || terrain == TerrainType.OpenedChest) {
-                    // Проверяем, нужно ли скрыть сундук в лесу
-                    val shouldHideInForest = (terrain == TerrainType.Chest && isChestInForest(x, y))
-
-                    if (shouldHideInForest) {
-                        // Скрытый сундук в лесу - рисуем просто лес (тёмно-зелёный)
-                        batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
-                        batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
-                    } else {
-                        // Обычный сундук или открытый - рисуем подложку и текстуру
-                        batch.color = Color.GREEN.cpy().mul(light, light, light, 1f)
-                        batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
-
-                        val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
-                        batch.color = Color(light, light, light, 1f)
-                        batch.draw(tex, posX - 4f, posY - 2f, cellSize + 8f, cellSize + 8f)
-                    }
                 batch.color = gapColor.cpy().mul(light, light, light, 1f)
                 batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap, lineWider, cellSize + 2*cellGap) // left
                 batch.draw(pixelTexture, posX + cellSize - inset, posY - cellGap, lineWider, cellSize + 2*cellGap)  // right
@@ -246,11 +230,25 @@ class MapRenderer (
                 val posY = y * (cellSize + cellGap)
                 val light = calculateLight(x, y, player)
 
+
                 when (terrain) {
                     TerrainType.Chest, TerrainType.OpenedChest -> {
-                        val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
-                        batch.color = Color(light, light, light, 1f)
-                        batch.draw(tex, posX, posY, cellSize - 4f, cellSize - 4f)
+                        val shouldHideInForest = (terrain == TerrainType.Chest && isChestInForest(x, y))
+                        if (shouldHideInForest) {
+                            // Скрытый сундук в лесу - рисуем просто лес (тёмно-зелёный)
+                            batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
+                            batch.draw(forestTexture, posX - cellSize*0.2f, posY, cellSize*1.4f, cellSize*1.4f)
+                        } else {
+
+                            val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
+                            batch.color = Color(light, light, light, 1f)
+                            batch.draw(tex, posX+3f, posY+3f, cellSize - 4f, cellSize - 4f)
+                        }
+                    }
+
+                    TerrainType.FOREST -> {
+                        batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
+                        batch.draw(forestTexture, posX - cellSize*0.2f, posY, cellSize*1.4f, cellSize*1.4f)
                     }
                     else -> {
                         val color = when (terrain) {
@@ -260,7 +258,7 @@ class MapRenderer (
                             TerrainType.TRAP -> Color.GRAY
                             TerrainType.UPGRADE -> Color.ORANGE
                             TerrainType.OUTPOST -> Color.CORAL
-                            TerrainType.FOREST -> Color.FOREST
+                            TerrainType.FOREST -> continue
                             else -> Color.WHITE
                         }
                         batch.color = color.cpy().mul(light, light, light, 1f)
@@ -290,7 +288,7 @@ class MapRenderer (
     }
 
 
-    private fun calculateLight(x: Int, y: Int, player: Player): Float {
+    fun calculateLight(x: Int, y: Int, player: Player): Float {
         val dx = (x - player.x).toDouble()
         val dy = (y - player.y).toDouble()
         val distance = sqrt(dx * dx + dy * dy).toFloat()
@@ -305,7 +303,7 @@ class MapRenderer (
         }
     }
 
-    private fun drawGrassSpoiler(
+    fun drawGrassSpoiler(
         batch: SpriteBatch,
         region: TextureRegion,
         posX: Float, posY: Float,
@@ -314,7 +312,7 @@ class MapRenderer (
         mirror: Boolean
     ) {
         val rotation = when (side) {
-            0 -> 90f    
+            0 -> 90f
             1 -> -90f
             2 -> 180f
             else -> 0f
@@ -345,7 +343,7 @@ class MapRenderer (
         }
     }
 
-    private fun generateGrassVariations() {
+    fun generateGrassVariations() {
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
                 for (side in 0..3) {
