@@ -13,8 +13,10 @@ class BattleEnemy(
     val defense: Double,
     val accuracy: Double,
     val enemyType: EnemyType
-)
+) : DamageReceiver
 {
+    val debuffManager = DebuffManager()
+    private var skipTurn = false
     // NAME DISPLAY
     val name: String get() = type.displayEnemyName
     // CHECK FOR ALIVE
@@ -33,10 +35,11 @@ class BattleEnemy(
         currentHealth = (currentHealth - amount).coerceAtLeast(0)
     }
     // METHOD FOR CALCULATING DAMAGE
-    fun calculateDamage(targetEnemyType: EnemyType = EnemyType.NO_TYPE, isMagic: Boolean = false): Int {
+    fun calculateDamage(targetEnemyType: EnemyType? = null, isMagic: Boolean): Int {
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val baseDamage = if (isMagic) magicDamage else damage
-        return (baseDamage * randomMultiplier).toInt().coerceAtLeast(1)
+        val damage = (baseDamage * randomMultiplier).toInt().coerceAtLeast(1)
+        return (damage * getDamageMultiplier()).toInt()
     }
 
     // METHOD TO CHECK IF ENEMY HIT
@@ -66,7 +69,6 @@ class BattleEnemy(
                 Enemy.WIND_SLIME,
                 Enemy.EARTH_SLIME,
                 Enemy.ICE_SLIME,
-                Enemy.CRYSTAL_SLIME,
                 Enemy.CURSED_SLIME,
                 Enemy.ELECTRIC_SLIME,
                 Enemy.HOLY_SLIME
@@ -76,6 +78,45 @@ class BattleEnemy(
                 val randomType = enemyTypes.random()
                 BattleEnemy.fromType(randomType)
             }.toMutableList()
+        }
+    }
+
+
+    override fun takeDebuffDamage(amount: Int) {
+        currentHealth = (currentHealth - amount).coerceAtLeast(0)
+        println("${name} получает $amount урона от дебаффа")
+    }
+
+    fun applyDebuff(type: DebuffType, duration: Int, intensity: Double = 1.0, stacks: Int = 1) {
+        debuffManager.addDebuffs(type, duration, intensity, stacks)
+    }
+
+    fun processDebuffs(): Int {
+        val debuffs = debuffManager.getAllDebuff()
+
+        val damage = DebuffApplier.Companion.applyDamageDebuffs(this, debuffs, maxHealth)
+        skipTurn = DebuffApplier.Companion.shouldSkipTurn(debuffs)
+        debuffManager.tick()
+
+        return damage
+    }
+
+    fun shouldSkipTurn(): Boolean = skipTurn
+
+    fun getDamageMultiplier(): Double {
+        val modifiers = DebuffApplier.Companion.getStatModifiers(debuffManager.getAllDebuff())
+        return modifiers.damageMultiplier
+    }
+
+    fun getDefenseMultiplier(): Double {
+        val modifiers = DebuffApplier.Companion.getStatModifiers(debuffManager.getAllDebuff())
+        return modifiers.defenseMultiplier
+    }
+
+    fun tryApplyDebuffOnHit(debuffType: DebuffType, chance: Double, duration: Int, intensity: Double = 1.0) {
+        if (Random.nextDouble() < chance) {
+            // Применяем к игроку через колбэк (нужно передавать ссылку на игрока)
+            println("${name} применяет ${debuffType.name}!")
         }
     }
 }

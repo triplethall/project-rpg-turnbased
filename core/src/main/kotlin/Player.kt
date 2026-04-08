@@ -14,7 +14,7 @@ class Player(
     var playerClass : PlayerClasses = PlayerClasses.ADVENTURIST // класс по умолчанию
 ) {
     // Базовые характеристики
-    var damage: Int = 60                    // Урон
+    var damage: Int = 30                    // Урон
     var mageDamage: Int = 10                // урон магии
     var defense: Double = 0.0               // Защита (процентная)
     var attackSpeed: Double = 1.0           // Скорость (атаки)
@@ -25,6 +25,13 @@ class Player(
     var critChance: Double = 0.05           // крит шанс
     var level: Int = 1                      // Уровень
     var experience: Int = 0                 // Опыт
+
+    fun getLightningDamageModifier(): Double {
+        return if (debuffManager.hasDebuff(DebuffType.WET)) 1.25 else 1.0
+    }
+
+    val debuffManager = DebuffManager()
+    private var skipTurn = false
 
     // Максимальные значения
     var maxMana: Int = 50
@@ -206,14 +213,10 @@ class Player(
 
     }
 
-
-
-
     fun changeClass(newClass: PlayerClasses) {
         playerClass = newClass
         newClass.applyToPlayer(this)
     }
-
 
     fun render(batch: SpriteBatch, font: BitmapFont, cellSize: Int, cellGap: Int) {
         val posX = x * (cellSize + cellGap)
@@ -221,5 +224,53 @@ class Player(
 
         font.color = Color.YELLOW
         font.draw(batch, "P", posX + 10f, posY + cellSize - 5f)
+    }
+
+    fun applyDebuff(type: DebuffType, duration: Int, intensity: Double = 1.0, stacks: Int = 1) {
+        debuffManager.addDebuffs(type, duration, intensity, stacks)
+    }
+
+    fun processDebuffs(): Int {
+        val debuffs = debuffManager.getAllDebuff()
+
+        // Применяем урон от дебаффов
+        val damage = DebuffApplier.Companion.applyDamageDebuffs(
+            object : DamageReceiver {
+                override fun takeDebuffDamage(amount: Int) {
+                    currentHealth = (currentHealth - amount).coerceAtLeast(0)
+                }
+            },
+            debuffs,
+            maxHealth
+        )
+
+        // Проверяем, нужно ли пропустить ход
+        skipTurn = DebuffApplier.Companion.shouldSkipTurn(debuffs)
+
+        // Обновляем длительность дебаффов
+        debuffManager.tick()
+
+        return damage
+    }
+
+    fun shouldSkipTurn(): Boolean = skipTurn
+
+    fun clearDebuffs() {
+        debuffManager.clear()
+        skipTurn = false
+    }
+
+    fun getDamageMultiplier(): Double {
+        val modifiers = DebuffApplier.Companion.getStatModifiers(debuffManager.getAllDebuff())
+        return modifiers.damageMultiplier
+    }
+
+    fun getSpeedMultiplier(): Double {
+        val modifiers = DebuffApplier.Companion.getStatModifiers(debuffManager.getAllDebuff())
+        return modifiers.speedMultiplier
+    }
+
+    fun canUseMagic(): Boolean {
+        return DebuffApplier.Companion.canUseMagic(debuffManager.getAllDebuff())
     }
 }
