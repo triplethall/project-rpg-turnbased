@@ -526,7 +526,7 @@ class BattleScene(
 
     fun endBattleAndClearEnemy() {
         if (enemyX in 0 until gameMap.width && enemyY in 0 until gameMap.height) {
-            gameMap.setTerrain(enemyX, enemyY, TerrainType.LAND)
+            gameMap.restoreAfterBattle(enemyX, enemyY)
         }
         isActive = false
         madeMoveThisTurn = false
