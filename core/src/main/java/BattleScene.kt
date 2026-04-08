@@ -101,6 +101,10 @@ class BattleScene(
     private lateinit var messageSystem: BattleMessageSystem
     private val enemyBars = mutableListOf<StatBar>()
 
+    private val debuffRenderer = DebuffRenderer(font)
+    private var battleLog = mutableListOf<String>()
+    private var lastDebuffDamage = 0
+
     fun startBattle(enemyCellX: Int, enemyCellY: Int, enemyCount: Int) {
         messageSystem = BattleMessageSystem(font, screenWidth, screenHeight, whitePixel)
         messageSystem.addMessage("start", Color.YELLOW)
@@ -384,10 +388,11 @@ class BattleScene(
         }
         val target = enemies[enemyIndex]
 
-        val baseDamage = player.damage
+        val baseDamage = (player.damage * player.getDamageMultiplier()).toInt()
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val totalDamage = (baseDamage * randomMultiplier).toInt()
-        val dmgWithDef = (totalDamage * (1 - target.defense)).toInt()
+        val dmgWithDef = (totalDamage * (1 - target.defense * target.getDefenseMultiplier())).toInt()
+
         target.takeDamage(dmgWithDef)
         SoundManager.playSound("sounds/atack.mp3") // звук атаки
         messageSystem.addMessage("dealt $dmgWithDef dmg to ${target.name}", Color.GREEN)
@@ -400,6 +405,13 @@ class BattleScene(
             println("player exp = ${player.experience}")
             messageSystem.addMessage("got $gainExp from ${target.name}", Color.GOLD)
             enemies.removeAt(enemyIndex)
+
+            // Проклятый враг накладывает проклятие при смерти
+            if (target.enemyType == EnemyType.CURSED) {
+                player.applyDebuff(DebuffType.CURSE, 3, 0.7)
+                messageSystem.addMessage("${target.name} проклинает тебя перед смертью!", Color.PURPLE)
+            }
+
             updateEnemyBars()
             if (enemies.isEmpty()) {
                 messageSystem.addMessage("victory🕺")
@@ -423,17 +435,46 @@ class BattleScene(
             defeatScreen()
             return
         }
+
         messageSystem.addMessage("enemy turn", Color.ORANGE)
+
         enemies.forEach { enemy ->
             if (enemy.isAlive() && player.currentHealth > 0) {
+                val skipEnemyTurn = enemy.shouldSkipTurn()
+
+                if (skipEnemyTurn) {
+                    messageSystem.addMessage("${enemy.name} skips turn! (debuff)")
+                    enemy.processDebuffs()
+                    return@forEach
+                }
+                if (enemy.enemyType == EnemyType.HOLY && enemy.isAlive()) {
+                    val healAmount = (enemy.maxHealth * 0.05).toInt()
+                    enemies.filter { it.isAlive() && it != enemy }.forEach { ally ->
+                        val newHealth = (ally.currentHealth + healAmount).coerceAtMost(ally.maxHealth)
+                        val healed = newHealth - ally.currentHealth
+                        if (healed > 0) {
+                            ally.currentHealth = newHealth
+                            messageSystem.addMessage("${ally.name} восстановил $healed HP от ${enemy.name}", Color.GREEN)
+                        }
+                    }
+                }
                 if (enemy.canHit()) {
-                    val damage = enemy.calculateDamage()
-                    player.currentHealth = (player.currentHealth - damage)
-                    messageSystem.addMessage("${enemy.name} dealt you $damage dmg", Color.RED)
+                    val damage = (enemy.calculateDamage(null, true) * enemy.getDamageMultiplier()).toInt()
+                    val dmgWithDef = (damage * (1 - player.defense)).toInt()
+                    player.currentHealth = (player.currentHealth - dmgWithDef)
+                    messageSystem.addMessage("${enemy.name} dealt you $dmgWithDef dmg", Color.RED)
+                    applyEnemyDebuff(enemy)
                 } else {
                     messageSystem.addMessage("${enemy.name} missed", Color.YELLOW)
                 }
+
+                enemy.processDebuffs()
             }
+        }
+        val debuffDmg = player.processDebuffs()
+        if (debuffDmg > 0)
+        {
+            messageSystem.addMessage("player took $debuffDmg damage!", Color.FIREBRICK)
         }
         if (player.currentHealth <= 0) {
             messageSystem.addMessage("бро тебе нужно больше тренироваться", Color.RED)
@@ -450,6 +491,50 @@ class BattleScene(
             } else {
                 messageSystem.addMessage("$fleeTurnsLeft more turns until escape", Color.CYAN)
             }
+        }
+    }
+
+    private fun applyEnemyDebuff(enemy: BattleEnemy) {
+        val debuffChance = when (enemy.enemyType) {
+            EnemyType.WATER -> 0.20   // 20% на мокроту
+            EnemyType.ICE -> 0.25     // 25% на заморозку
+            EnemyType.ELECTRIC -> 0.20 // 20% на паралич
+            EnemyType.CURSED -> 0.15   // 15% на проклятие (при атаке, но основное при смерти)
+            EnemyType.POISON -> 0.25   // 25% на отравление
+            EnemyType.FIRE -> 0.25     // 25% на горение
+            else -> 0.0
+        }
+
+        // Проверка на сопротивление (воля игрока)
+        val finalChance = debuffChance * (1.0 - player.will)
+        if (Random.nextDouble() >= finalChance) return
+
+        when (enemy.enemyType) {
+            EnemyType.POISON -> {
+                player.applyDebuff(DebuffType.POISON, 3, 1.0, 1)
+                messageSystem.addMessage("Игрок отравлен!", Color.GREEN)
+            }
+            EnemyType.FIRE -> {
+                player.applyDebuff(DebuffType.BURN, 3, 1.0)
+                messageSystem.addMessage("Игрок горит!", Color.FIREBRICK)
+            }
+            EnemyType.ICE -> {
+                player.applyDebuff(DebuffType.FREEZE, 1, 1.0)
+                messageSystem.addMessage("Игрок заморожен!", Color.CYAN)
+            }
+            EnemyType.ELECTRIC -> {
+                player.applyDebuff(DebuffType.PARALYSIS, 2, 0.8)
+                messageSystem.addMessage("Игрок парализован!", Color.YELLOW)
+            }
+            EnemyType.CURSED -> {
+                player.applyDebuff(DebuffType.CURSE, 3, 0.7)
+                messageSystem.addMessage("Проклятие падает на игрока!", Color.PURPLE)
+            }
+            EnemyType.WATER -> {
+                player.applyDebuff(DebuffType.WET, 3, 1.0)
+                messageSystem.addMessage("Игрок промок! (+25% урон от молний)", Color.CYAN)
+            }
+            else -> {}
         }
     }
 
@@ -588,6 +673,36 @@ class BattleScene(
             font.data.setScale(1.0f) // Сброс масштаба
 
 
+
+
+            // Дебаффы врагов
+            enemies.forEachIndexed { index, enemy ->
+                if (!enemy.debuffManager.isEmpty()) {
+                    val rectHeight = 150f
+                    val rectWidth = 100f
+                    val space = screenWidth * 0.1f
+                    val rectY = (screenHeight - rectHeight) / 2
+                    val rectX = screenWidth - rectWidth - space
+                    val enemyStartX = rectX - 400f
+                    val enemyY = when (enemies.size) {
+                        1 -> rectY - 100f
+                        2 -> if (index == 0) rectY - 100f - 90f else rectY - 100f + 90f
+                        else -> when (index) {
+                            0 -> rectY - 100f - 100f - 50f
+                            1 -> rectY - 100f
+                            else -> rectY - 100f + 100f + 50f
+                        }
+                    }
+                    debuffRenderer.renderDebuffs(
+                        batch,
+                        enemy.debuffManager.getAllDebuff(),
+                        enemyStartX + (if (index == 1) -100f else 0f),
+                        enemyY + 100f,
+                        false
+                    )
+                }
+            }
+
             enemies.forEachIndexed { index, enemy ->
                 if (enemy.isAlive()) {
                     enemyBars.getOrNull(index)?.let { bar ->
@@ -623,6 +738,26 @@ class BattleScene(
         batch.draw(whitePixel, fleeX, buttonY, buttonWidth, buttonHeight)
         font.draw(batch, if (!isFleeing) "ESCAPE" else "CANCEL", fleeX + 35f, buttonY + 42f)
 
+        val l_btnX = screenWidth / 2 - 100f
+        val l_btnY = 300f
+        getDmgButtonRect.set(l_btnX, l_btnY, 200f, 60f)
+        batch.color = Color.GRAY
+        batch.draw(whitePixel, l_btnX, l_btnY, 200f, 60f)
+        font.color = Color.WHITE
+        font.draw(batch, "getDmg", l_btnX + 30f, l_btnY + 35f)
+        fun renderDebuffs(batch: SpriteBatch, player: Player) {
+            // Дебаффы игрока
+            if (!player.debuffManager.isEmpty()) {
+                debuffRenderer.renderDebuffs(
+                    batch,
+                    player.debuffManager.getAllDebuff(),
+                    20f,
+                    screenHeight * 0.85f,
+                    true
+                )
+            }
+        }
+        renderDebuffs(batch, player)
 
         if (::messageSystem.isInitialized) {
             messageSystem.render(batch)
@@ -700,6 +835,18 @@ class BattleScene(
             batch.draw(whitePixel, x - 5f, y - 5f, width + 10f, height + 10f)
         }
 
+        font.color = Color.WHITE
+        val typeShort = when (enemy.enemyType) {
+            EnemyType.NO_TYPE -> ""
+            EnemyType.FIRE -> " [Fire]"
+            EnemyType.WATER -> " [Water]"
+            EnemyType.WIND -> " [Wind]"
+            EnemyType.EARTH -> " [Earth]"
+            EnemyType.ICE -> " [Ice]"
+            EnemyType.CURSED -> " [Cursed]"
+            EnemyType.ELECTRIC -> " [Electric]"
+            EnemyType.POISON -> " [Poison]"
+            EnemyType.HOLY -> " [Holy]"
         // 2. Получаем кадр анимации
         batch.color = Color.WHITE
         val currentFrame = slimeIdleAnimation?.getKeyFrame(stateTime)
@@ -749,3 +896,4 @@ class BattleScene(
         SoundManager.resumePlaylist()
     }
 }
+

@@ -39,11 +39,6 @@ enum class EnemyType(
         specialEffect = "Атаки имеют шанс 25% заморозить цель (пропуск хода)"
     ),
 
-    CRYSTAL(
-        displayName = "Кристаллический",
-        specialEffect = "Кристаллизация уменьшает скорость и защиту"
-    ),
-
     CURSED(
         displayName = "Проклятый",
         specialEffect = "При смерти накладывает 'Проклятие' на убийцу (-20% ко всем характеристикам на 3 хода)"
@@ -162,20 +157,6 @@ enum class Enemy(
         baseEnemyWill = 0.08,
         baseEnemyCritChance = 0.05,
         enemyType = EnemyType.ICE
-    ),
-
-    // CRYSTAL тип - Кристаллический слизень
-    CRYSTAL_SLIME(
-        displayEnemyName = "Crystal Slime",
-        baseEnemyDamage = 22,
-        baseEnemyMageDamage = 22,
-        baseEnemyMaxHealth = 80,
-        baseEnemyDefense = 0.15,
-        baseEnemyAttackSpeed = 1.0,
-        baseEnemyAccuracy = 0.88,
-        baseEnemyWill = 0.12,
-        baseEnemyCritChance = 0.1,
-        enemyType = EnemyType.CRYSTAL
     ),
 
     // CURSED тип - Проклятый слизень
