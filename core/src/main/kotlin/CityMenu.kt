@@ -18,22 +18,32 @@ class CityMenu(
         private set
 
     private val windowWidth = 600f
-    private val windowHeight = 400f
+    private val windowHeight = 450f
     private var closeButtonRect = Rectangle()
+    private var shopButtonRect = Rectangle()
     private fun getWindowRect(): Rectangle
     {
         val x = (screenWidth - windowWidth) / 2
         val y = (screenHeight - windowHeight) / 2
         return Rectangle(x, y, windowWidth, windowHeight)
     }
-    private fun updCloseBtn()
+    // метод обновления (всех)кнопок
+    private fun updButtons()
     {
+        // кнопка close
         val window = getWindowRect()
         val closeW = 120f
         val closeH = 50f
         val closeX = window.x + (window.width - closeW) / 2
         val closeY = window.y + 40f
         closeButtonRect.set(closeX, closeY, closeW, closeH)
+
+        // кнопка shop
+        val shopW = 200f
+        val shopH = 60f
+        val shopX = window.x + (window.width - shopW) / 2
+        val shopY = window.y + window.height - 150f
+        shopButtonRect.set(shopX, shopY, shopW, shopH)
     }
     fun show()
     {
@@ -49,10 +59,30 @@ class CityMenu(
         val touchX = Gdx.input.x.toFloat()
         val touchY = Gdx.input.y.toFloat()
         val yInverted = screenHeight - touchY
-        updCloseBtn()
-        if (Gdx.input.justTouched() && closeButtonRect.contains(touchX, yInverted))
+        updButtons()
+        if (Gdx.input.justTouched())
         {
-            hide()
+            if (closeButtonRect.contains(touchX, yInverted))
+            {
+                hide()
+                return true
+            }
+            if (shopButtonRect.contains(touchX, yInverted))
+            {
+                return true
+            }
+        }
+        return false
+    }
+    fun isShopClicked(): Boolean
+    {
+        if (!isVisible) return false
+        val touchX = Gdx.input.x.toFloat()
+        val touchY = Gdx.input.y.toFloat()
+        val yInverted = screenHeight - touchY
+        updButtons()
+        if (Gdx.input.justTouched() && shopButtonRect.contains(touchX, yInverted))
+        {
             return true
         }
         return false
@@ -72,25 +102,39 @@ class CityMenu(
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(0.2f,0.2f,0.2f,1f)
         shapeRenderer.rect(window.x, window.y, window.width, window.height)
-
         shapeRenderer.end()
+
         batch.begin()
         font.color = Color.WHITE
         font.data.setScale(1.5f)
-
         val textX = window.x + (window.width / 2) - 70f
         val textY = window.y + window.height - 40f
         font.draw(batch, "CITY MENU", textX, textY)
-        updCloseBtn()
+
+        updButtons()
+
         batch.end()
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.setColor(1f,0.2f,0.2f,1f)
         shapeRenderer.rect(closeButtonRect.x, closeButtonRect.y, closeButtonRect.width, closeButtonRect.height)
         shapeRenderer.end()
+
         batch.begin()
         font.color = Color.WHITE
         font.data.setScale(1.3f)
         font.draw(batch, "EXIT", closeButtonRect.x + 28f, closeButtonRect.y + 28f)
+        // SHOP BUTTON
+        batch.end()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.setColor(0.2f, 0.5f, 0.8f, 1f)
+        shapeRenderer.rect(shopButtonRect.x, shopButtonRect.y, shopButtonRect.width, shopButtonRect.height)
+        shapeRenderer.end()
+
+        batch.begin()
+        font.color = Color.YELLOW
+        font.data.setScale(1.5f)
+        font.draw(batch, "SHOP", shopButtonRect.x + 65f, shopButtonRect.y + 42f)
+
         font.data.setScale(1.0f)
         batch.color = Color.WHITE
     }
