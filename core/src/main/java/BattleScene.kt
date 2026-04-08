@@ -31,6 +31,7 @@ class BattleScene(
     private var slimeIdleAnimation: Animation<TextureRegion>? = null
     private var slimeAttackAnimation: Animation<TextureRegion>? = null
     private var stateTime = 0f
+    private val getDmgButtonRect = Rectangle()
     fun loadAssets() {
         try {
             val atlasPath = "npc/enemy/slime1/slime1-idle.atlas"
@@ -808,14 +809,7 @@ class BattleScene(
 
 
 
-    private fun drawEnemy(batch: SpriteBatch, whitePixel: Texture, enemy: BattleEnemy, x: Float, y: Float, width: Float, height: Float, isSelected: Boolean) {
-        // FIXME: когда бой заканчивался то шрифт становился все меньше и меньше.. оказывается это все было из-за того, что тут не сбрасывался размер шрифта
-        // ^^ ЕСЛИ ЧТО НЕ ИСПРАВИЛ ^^
-        val oldScaleX = font.data.scaleX
-        val oldScaleY = font.data.scaleY
-        // Если враг мертв — рисуем серым
-        batch.color = if (enemy.isAlive()) Color.RED else Color.DARK_GRAY
-        batch.draw(whitePixel, x, y, width, height)
+
 
     private fun drawEnemy(
         batch: SpriteBatch,
@@ -847,6 +841,7 @@ class BattleScene(
             EnemyType.ELECTRIC -> " [Electric]"
             EnemyType.POISON -> " [Poison]"
             EnemyType.HOLY -> " [Holy]"
+        }
         // 2. Получаем кадр анимации
         batch.color = Color.WHITE
         val currentFrame = slimeIdleAnimation?.getKeyFrame(stateTime)
@@ -862,7 +857,7 @@ class BattleScene(
         font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
         font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)
 
-        font.data.setScale(oldScaleX, oldScaleY)
+        //font.data.setScale(oldScaleX, oldScaleY)
         font.color = Color.WHITE
     }
 
