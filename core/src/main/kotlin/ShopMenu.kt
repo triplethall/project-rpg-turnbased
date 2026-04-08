@@ -104,6 +104,31 @@ class ShopMenu(
                 hide()
                 return true
             }
+            if (selectedShopItem != null || selectedInvItem != null)
+            {
+                val window = getWindowRect()
+                val detailsW = 750f
+                val detailsH = 200f
+                val detailsX = window.x + (window.width - detailsW) / 2
+                val detailsY = window.y + 20f
+
+                // Кнопка BUY/SELL (правая часть панели)
+                val buttonWidth = 150f
+                val buttonHeight = 40f
+                val buttonX = detailsX + detailsW - buttonWidth - 20f
+                val buttonY = detailsY + detailsH - 50f
+
+                val buttonRect = Rectangle(buttonX, buttonY, buttonWidth, buttonHeight)
+
+                if (buttonRect.contains(touchX, yInverted)) {
+                    if (selectedShopItem != null) {
+                        buySelectedItem()
+                    } else if (selectedInvItem != null) {
+                        sellSelectedItem()
+                    }
+                    return true
+                }
+            }
             shopItemRects.forEachIndexed { index, rectangle ->
                 if (index < shopItems.size && rectangle.contains(touchX, yInverted))
                 {
@@ -306,9 +331,6 @@ class ShopMenu(
             font.color = Color.GOLD
             val price = item.level * 10
             font.draw(batch, "Price: $price", detailsX + 15f, detailsY + detailsH - 65f)
-
-            font.color = Color.GREEN
-            font.draw(batch, "BUY", detailsX + detailsW - 100f, detailsY + detailsH - 35f)
         } else if (!isShopItem && item is Item) {
             font.color = Color.YELLOW
             font.data.setScale(1.5f)
@@ -321,10 +343,83 @@ class ShopMenu(
             font.color = Color.GOLD
             val price = (item.equipmentItem?.level ?: 1) * 5
             font.draw(batch, "Price: $price", detailsX + 15f, detailsY + detailsH - 65f)
-
-            font.color = Color.ORANGE
-            font.draw(batch, "SELL", detailsX + detailsW - 100f, detailsY + detailsH - 35f)
         }
+        batch.end()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        if (isShopItem)
+        {
+            shapeRenderer.setColor(Color.GREEN)
+        } else {
+            shapeRenderer.setColor(Color.ORANGE)
+        }
+        val buttonWidth = 150f
+        val buttonHeight = 40f
+        val buttonX = detailsX + detailsW - buttonWidth - 20f
+        val buttonY = detailsY + detailsH - 50f
+        shapeRenderer.rect(buttonX, buttonY, buttonWidth, buttonHeight)
+        shapeRenderer.end()
+        batch.begin()
+        font.color = Color.WHITE
+        font.data.setScale(1.5f)
+        val buttonText = if (isShopItem) "BUY" else "SELL"
+        val textOffset = if (isShopItem) 50f else 40f
+        font.draw(batch, buttonText, buttonX + textOffset, buttonY + buttonHeight - 12f)
+
+        if (isShopItem && item is EquipmentItem) {
+            val price = item.level * 10
+            if (player.experience < price) {
+                font.color = Color.RED
+                font.data.setScale(1f)
+                font.draw(batch, "Not enough exp!", buttonX, buttonY - 5f)
+            }
+        }
+    }
+    // покупка предмета
+    private fun buySelectedItem() {
+        val item = selectedShopItem ?: return
+        val price = item.level * 10
+
+        // проверяем хватает ли опыта
+        if (player.experience < price) {
+            println("no exp\nprice: $price\namount: ${player.experience}")
+            return
+        }
+
+        // списываем опыт
+        player.experience -= price
+
+        // добавляем предмет в инвентарь
+        inventory.addEquipmentItem(item)
+
+        println("bought ${item.name} for $price exp")
+
+        // сбрасываем выделение
+        selectedShopItemIndex = -1
+        selectedShopItem = null
+    }
+    // продажа предмета
+    private fun sellSelectedItem() {
+        val item = selectedInvItem ?: return
+
+        // нельзя продать экипированный предмет
+        if (item.isEquipped) {
+            return
+        }
+
+        val eqItem = item.equipmentItem ?: return
+        val price = eqItem.level * 5
+
+        // удаляем предмет из инвентаря
+        inventory.removeItem(item.name, 1)
+
+        // добавляем опыт
+        player.experience += price
+
+        println("sold ${item.name} for $price exp")
+
+        // сбрасываем выделение
+        selectedInvItemIndex = -1
+        selectedInvItem = null
     }
 
 }
