@@ -91,6 +91,7 @@ class BattleScene(
     private val fleeButtonRect = Rectangle()
     private var enemyX = 0
     private var enemyY = 0
+    private var enemyCells: List<Pair<Int, Int>> = emptyList()
     private var madeMoveThisTurn = false
     private var showVictoryScreen = false
     private var showDefeatScreen = false
@@ -123,6 +124,34 @@ class BattleScene(
         updateEnemyBars()
     }
 
+    // ===== НОВЫЙ МЕТОД ДЛЯ БОЯ СО СПИСКОМ ВРАГОВ =====
+    fun startBattleWithEnemies(enemiesList: List<BattleEnemy>, cells: List<Pair<Int, Int>>) {
+        if (player.currentHealth <= 0) {
+            println("player is DEAD, cannot start battle")
+            return
+        }
+        this.enemies = enemiesList.toMutableList()
+        this.enemyCells = cells
+        this.isActive = true
+        this.madeMoveThisTurn = false
+        this.isFleeing = false
+        this.fleeTurnsLeft = 0
+        this.showVictoryScreen = false
+        this.showDefeatScreen = false
+
+        messageSystem = BattleMessageSystem(font, screenWidth, screenHeight, whitePixel)
+        messageSystem.addMessage("Бой начинается! Врагов: ${enemies.size}", Color.YELLOW)
+
+        SoundManager.pausePlaylist()
+        SoundManager.playMusic("music/battle.mp3", true)
+
+        val playerBarX = 20f
+        val playerHealthY = screenHeight * 0.9f
+        val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color.RED)
+        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 20f, Color.BLUE)
+        updateEnemyBars()
+    }
     fun startBattle(enemyCellX: Int, enemyCellY: Int) {
         if (player.currentHealth <= 0) {
             println("player is DEAD LMAO")
@@ -195,9 +224,9 @@ class BattleScene(
 
         if (showVictoryScreen || showDefeatScreen) {
             if (Gdx.input.justTouched() && exitButton.contains(touchX, yInverted)) {
+                endBattleAndClearEnemy()
                 showVictoryScreen = false
                 showDefeatScreen = false
-                endBattleAndClearEnemy()
                 return true
             }
             return true
@@ -214,7 +243,6 @@ class BattleScene(
             }
 
             if (!madeMoveThisTurn && attackButtonRect.contains(touchX, yInverted)) {
-                SoundManager.playSound("sounds/mainBtnSound.mp3")
                 performAttack()
                 return true
             }
@@ -361,6 +389,7 @@ class BattleScene(
         val totalDamage = (baseDamage * randomMultiplier).toInt()
         val dmgWithDef = (totalDamage * (1 - target.defense)).toInt()
         target.takeDamage(dmgWithDef)
+        SoundManager.playSound("sounds/atack.mp3") // звук атаки
         messageSystem.addMessage("dealt $dmgWithDef dmg to ${target.name}", Color.GREEN)
 
         if (!target.isAlive()) {
@@ -598,6 +627,8 @@ class BattleScene(
         if (::messageSystem.isInitialized) {
             messageSystem.render(batch)
         }
+        font.data.setScale(1f)
+        font.color = Color.WHITE
     }
     private fun drawBarWithText(
         batch: SpriteBatch,
@@ -641,6 +672,16 @@ class BattleScene(
     private val verticalGap = 15f
 
 
+
+    private fun drawEnemy(batch: SpriteBatch, whitePixel: Texture, enemy: BattleEnemy, x: Float, y: Float, width: Float, height: Float, isSelected: Boolean) {
+        // FIXME: когда бой заканчивался то шрифт становился все меньше и меньше.. оказывается это все было из-за того, что тут не сбрасывался размер шрифта
+        // ^^ ЕСЛИ ЧТО НЕ ИСПРАВИЛ ^^
+        val oldScaleX = font.data.scaleX
+        val oldScaleY = font.data.scaleY
+        // Если враг мертв — рисуем серым
+        batch.color = if (enemy.isAlive()) Color.RED else Color.DARK_GRAY
+        batch.draw(whitePixel, x, y, width, height)
+
     private fun drawEnemy(
         batch: SpriteBatch,
         whitePixel: Texture,
@@ -671,19 +712,38 @@ class BattleScene(
             batch.color = Color.GREEN
             batch.draw(whitePixel, x, y, width, height)
         }
+        font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
+        font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)
 
-        batch.color = Color.WHITE
+        font.data.setScale(oldScaleX, oldScaleY)
+        font.color = Color.WHITE
     }
 
     fun endBattleAndClearEnemy() {
-        if (enemyX in 0 until gameMap.width && enemyY in 0 until gameMap.height) {
-            gameMap.restoreAfterBattle(enemyX, enemyY)
+        if (isActive && showVictoryScreen) {
+            // Только победа удаляет врагов
+            if (enemyCells.isNotEmpty()) {
+                // Бой через сундук – удаляем всех врагов из списка
+                for ((x, y) in enemyCells) {
+                    if (x in 0 until gameMap.width && y in 0 until gameMap.height) {
+                        gameMap.restoreAfterBattle(x, y)
+                    }
+                }
+            } else {
+                // Обычный бой с одним врагом – удаляем клетку, с которой начался бой
+                if (enemyX in 0 until gameMap.width && enemyY in 0 until gameMap.height) {
+                    gameMap.restoreAfterBattle(enemyX, enemyY)
+                }
+            }
         }
+        // При побеге или поражении ничего не восстанавливаем – враг остаётся
+
         isActive = false
         madeMoveThisTurn = false
         isFleeing = false
         fleeTurnsLeft = 0
         enemies.clear()
+        enemyCells = emptyList()
 
         SoundManager.stopMusic()
         SoundManager.resumePlaylist()

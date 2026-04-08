@@ -384,8 +384,8 @@ class Inventory(
         font.data.setScale(1f)
     }
 
-        // Метод для снятия экипировки по типу
-        private fun unequipItemByType(type: EquipmentType, player: Player) {
+    // Метод для снятия экипировки по типу
+    private fun unequipItemByType(type: EquipmentType, player: Player) {
             val item = player.equipment.getEquipped(type) ?: return
 
             // Снимаем экипировку
@@ -408,11 +408,8 @@ class Inventory(
             }
         }
 
-
-
-
-        // Метод отрисовки панели экипировки
-        private fun renderEquipmentPanel(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
+    // Метод отрисовки панели экипировки
+    private fun renderEquipmentPanel(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
             val equipPanelX = panelX + panelW - 350f
             val equipPanelY = panelY + 50f
             val equipPanelW = 320f
@@ -550,12 +547,8 @@ class Inventory(
             renderPlayerStats(batch, whitePixel, equipPanelX, equipPanelY, equipPanelW, equipPanelH, player)
         }
 
-
-
-
-
-        // Метод отрисовки статистики
-        private fun renderPlayerStats(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
+    // Метод отрисовки статистики
+    private fun renderPlayerStats(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
             val statsX = panelX - 250f
             val statsY = panelY + 10f
 
@@ -575,10 +568,7 @@ class Inventory(
             font.draw(batch, "LUCK: ${(player.luck * 100).toInt()}%",statsX+20f, statsY-5f)
             font.draw(batch, "CORRUPT: ${player.corruption}",statsX+150f, statsY-5f)
         }
-
-
-
-
+    // FIXME: зачем такие пробелы делать 😭😭🙏
     private fun renderItems(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float) {
         val startX = panelX + 50f
         val startY = panelY + panelH - 150f
@@ -786,5 +776,10 @@ class Inventory(
                 items.remove(it)
             }
         }
+    }
+
+    fun getEquippableItems(): List<Item>
+    {
+        return items.filter { it.isEquippable }
     }
 }
