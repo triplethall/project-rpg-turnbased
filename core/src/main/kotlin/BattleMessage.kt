@@ -25,20 +25,36 @@ class BattleMessage(
         return lifetime <= 0
     }
 
-    fun render(batch: SpriteBatch, font: BitmapFont, whitePixel: Texture)
-    {
+    fun render(batch: SpriteBatch, font: BitmapFont, whitePixel: Texture) {
         val alpha = if (lifetime >= fadeStart) 1f else (lifetime / fadeStart).coerceIn(0f, 1f).pow(2)
         layout.setText(font, text)
+
         val textWidth = layout.width
         val textHeight = layout.height
-        val oldBatch = batch.color.cpy()
+
+        // Настраиваем внутренние отступы (padding) для рамки
+        val paddingX = 15f
+        val paddingY = 10f
+
+        // Рассчитываем размеры и положение фона
+        // Теперь фон центрируется относительно Y текста
+        val bgWidth = textWidth + (paddingX * 2)
+        val bgHeight = textHeight + (paddingY * 2)
+        val bgX = x - paddingX
+        val bgY = y - textHeight - paddingY // Опускаем фон ниже базовой линии текста
+
+        val oldBatchColor = batch.color.cpy()
+
+        // Рисуем фон
         batch.color = Color(0f, 0f, 0f, 0.7f * alpha)
-        batch.draw(whitePixel, x - 5f, y - textHeight + 5f, textWidth + 10f, textHeight + 5f)
-        batch.color = oldBatch
-        val oldColor = font.color.cpy()
+        batch.draw(whitePixel, bgX, bgY, bgWidth, bgHeight)
+
+        // Рисуем текст (он остается в точке x, y)
+        batch.color = oldBatchColor
+        val oldFontColor = font.color.cpy()
         font.color = Color(color.r, color.g, color.b, alpha)
         font.draw(batch, text, x, y)
-        font.color = oldColor
+        font.color = oldFontColor
     }
 }
 class BattleMessageSystem(
@@ -46,48 +62,54 @@ class BattleMessageSystem(
     private val screenWidth: Float,
     private val screenHeight: Float,
     private val whitePixel: Texture
-)
-{
+) {
     private val messages = mutableListOf<BattleMessage>()
-    private val maxMsg = 6
-    private val space = 25f
-    private val startX = 20f
-    private var startY = screenHeight * 0.35f
 
-    fun addMessage(text: String, color: Color = Color.WHITE, duration: Float = 5f, fadeStart: Float = 2f)
-    {
+    // --- НАСТРОЙКИ РАЗМЕРА ---
+    private val maxMsg = 10          // Увеличили количество строк (было 6)
+    private val fontScale = 1.67f    // Увеличиваем сам текст (1.0f — стандарт)
+    private val space = 40f         // Увеличили отступ между строками (было 25f), чтобы текст не налезал друг на друга
+    private val startX = 30f        // Чуть отодвинули от края
+    private var startY = screenHeight * 0.45f // Подняли лог чуть выше, чтобы влезло больше строк
+    // -------------------------
+
+    fun addMessage(text: String, color: Color = Color.WHITE, duration: Float = 5f, fadeStart: Float = 2f) {
         messages.add(BattleMessage(text, color, duration, fadeStart))
-        while (messages.size > maxMsg)
-        {
+        if (messages.size > maxMsg) {
             messages.removeAt(0)
         }
         updatePos()
     }
-    private fun updatePos()
-    {
-        val startYpos = startY - (messages.size - 1) * space
+
+    private fun updatePos() {
+        // Чтобы новые сообщения появлялись снизу, а старые уходили вверх:
         messages.forEachIndexed { index, message ->
             message.x = startX
-            message.y = startYpos + index * space
+            message.y = startY + (index * space)
         }
     }
-    fun update(delta: Float)
-    {
+
+    fun update(delta: Float) {
         val it = messages.iterator()
         while (it.hasNext()) {
-            val msg = it.next()
-            if (msg.update(delta)) {
-                it.remove()
-            }
+            if (it.next().update(delta)) it.remove()
         }
-        updatePos()
     }
-    fun render(batch: SpriteBatch)
-    {
-        messages.forEach {it.render(batch,font,whitePixel)}
+
+    fun render(batch: SpriteBatch) {
+        val oldScaleX = font.data.scaleX
+        val oldScaleY = font.data.scaleY
+
+        // Применяем увеличенный масштаб перед отрисовкой всех сообщений
+        font.data.setScale(fontScale)
+
+        messages.forEach { it.render(batch, font, whitePixel) }
+
+        // Возвращаем масштаб в исходное состояние, чтобы не испортить другие тексты
+        font.data.setScale(oldScaleX, oldScaleY)
     }
-    fun clear()
-    {
+
+    fun clear() {
         messages.clear()
     }
 }
