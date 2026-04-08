@@ -42,7 +42,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private Texture statsButtonTexture;
     private Texture pauseBackgroundTexture;
     private Texture statsBackgroundTexture;
-    private Rectangle statsButtonRect;  // прямоугольник кнопки статистики
+    private Rectangle statsButtonRect;
     private Texture BGArena;
     private final int CELL_SIZE = 32;
     private final int CELL_GAP = 4;
@@ -70,23 +70,19 @@ public class RPGTurnbased extends ApplicationAdapter {
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
 
-        gameMap = new GameMap(21, 21,chestMenu);
-        gameMap.generate(1,1);
+        gameMap = new GameMap(21, 21, chestMenu);
+        gameMap.generate(1, 1);
 
-        // Размер карты в пикселях
         mapWidthPixels = gameMap.getWidth() * (CELL_SIZE + CELL_GAP);
         mapHeightPixels = gameMap.getHeight() * (CELL_SIZE + CELL_GAP);
 
-        float screenRatio = (float)Gdx.graphics.getWidth() / Gdx.graphics.getHeight();
+        float screenRatio = (float) Gdx.graphics.getWidth() / Gdx.graphics.getHeight();
 
-        // Подбираем viewport так, чтобы тайлы были квадратными
         float viewWidth, viewHeight;
         if (screenRatio > 1f) {
-            // Экран широкий (ландшафт)
             viewHeight = mapHeightPixels;
             viewWidth = viewHeight * screenRatio;
         } else {
-            // Экран узкий (портрет)
             viewWidth = mapWidthPixels;
             viewHeight = viewWidth / screenRatio;
         }
@@ -99,21 +95,21 @@ public class RPGTurnbased extends ApplicationAdapter {
 
         mapRenderer = new MapRenderer(gameMap, CELL_SIZE, CELL_GAP, chestClosed, chestOpen);
 
-
-
         com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
         pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
         pixmap.fill();
         whitePixel = new com.badlogic.gdx.graphics.Texture(pixmap);
         pauseButtonTexture = new Texture("pauseButton.png");
         inventoryButtonTexture = new Texture("inventorybtn.png");
-        statsButtonTexture = new Texture("statsbtn.png");   // загружаем текстуру для статистики
+        statsButtonTexture = new Texture("statsbtn.png");
         BGArena = new Texture("bg/forest_light_arena.png");
         statsBackgroundTexture = new Texture("menus/bgs/statsmenubg.png");
         continueButtonTexture = new Texture("menus/buttons/continue.png");
         exitButtonTexture = new Texture("menus/buttons/exit.png");
         pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
-        SoundManager.playMusic("music/main_menu.mp3");
+
+        // Включаем музыку главного меню (она будет играть до старта игры)
+        SoundManager.playMusic("music/mainMenu.mp3", true);
         pixmap.dispose();
 
         uiCamera = new OrthographicCamera();
@@ -139,7 +135,6 @@ public class RPGTurnbased extends ApplicationAdapter {
             Gdx.graphics.getHeight(),
             this);
 
-        // Создаём прямоугольник для кнопки статистик
         int margin = 20;
         float btnSize = 120;
         float startY = Gdx.graphics.getHeight() - btnSize;
@@ -148,6 +143,13 @@ public class RPGTurnbased extends ApplicationAdapter {
         player = new Player();
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
+        player.setOnEnterForest(new Player.OnEnterForestListener() {
+            @Override
+            public void onEnterForest(int x, int y) {
+                System.out.println("DEBUG JAVA: onEnterForest вызван!"); // Добавьте эту строку
+                battleScene.startBattle(x, y, 1);
+            }
+        });
         battleScene.setPlayer(player);
         gameStarted = false;
     }
@@ -174,7 +176,6 @@ public class RPGTurnbased extends ApplicationAdapter {
         }
         boolean shopMenuClicked = shopMenu.handleInput();
 
-        // Логика игры (ход игрока, бой, сундук)
         if (battleScene.isActive()) {
             battleScene.update(Gdx.graphics.getDeltaTime());
             battleScene.handleInput(player);
@@ -187,16 +188,13 @@ public class RPGTurnbased extends ApplicationAdapter {
             handlePlayerInput();
         }
 
-        // Очистка экрана
         ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
 
-        // Обновляем камеру только если меню паузы НЕ активно
         if (!isPaused) {
             cameraControl.update();
         }
         mapRenderer.update(Gdx.graphics.getDeltaTime());
 
-        // Отрисовка игрового мира (карта, игрок) только когда не показывается экран окончания боя
         if (!battleScene.isShowingEndScreen()) {
             batch.setProjectionMatrix(cameraControl.getCamera().combined);
             batch.begin();
@@ -205,28 +203,23 @@ public class RPGTurnbased extends ApplicationAdapter {
             batch.end();
         }
 
-        // Обработка инвентаря
         inventory.handleInput(player);
 
-        // Обработка нажатия на кнопку статистики
         if (Gdx.input.justTouched()) {
             float touchX = Gdx.input.getX();
             float touchY = Gdx.input.getY();
-            float gameY = Gdx.graphics.getHeight() - touchY; // преобразуем в координаты UI (начало снизу)
+            float gameY = Gdx.graphics.getHeight() - touchY;
             if (statsButtonRect.contains(touchX, gameY)) {
                 pauseMenu.toggleStats();
             }
         }
 
-        // Отрисовка интерфейса (меню паузы, сундук, инвентарь, кнопка статистики, бой)
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
 
         chestMenu.render(batch, whitePixel);
         pauseMenu.render(batch, whitePixel, player);
         inventory.render(batch, whitePixel, player);
-
-        // Рисуем кнопку статистики
         batch.draw(statsButtonTexture, statsButtonRect.x, statsButtonRect.y, statsButtonRect.width, statsButtonRect.height);
 
         if (battleScene.isActive()) {
@@ -239,34 +232,31 @@ public class RPGTurnbased extends ApplicationAdapter {
 
     private Vector3 screenToGrid(float screenX, float screenY) {
         Vector3 world = cameraControl.getCamera().unproject(new Vector3(screenX, screenY, 0));
-        int gridX = (int)(world.x / (CELL_SIZE + CELL_GAP));
-        int gridY = (int)(world.y / (CELL_SIZE + CELL_GAP));
+        int gridX = (int) (world.x / (CELL_SIZE + CELL_GAP));
+        int gridY = (int) (world.y / (CELL_SIZE + CELL_GAP));
         return new Vector3(gridX, gridY, 0);
     }
 
     private void handlePlayerInput() {
         if (Gdx.input.justTouched() && !cameraControl.isDragging()) {
             Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
-            int targetX = (int)grid.x;
-            int targetY = (int)grid.y;
+            int targetX = (int) grid.x;
+            int targetY = (int) grid.y;
 
-            // check if stepped on city
-            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY)
-            {
-                // check if city is near player
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY) {
                 int dx = Math.abs(player.getX() - targetX);
                 int dy = Math.abs(player.getY() - targetY);
                 boolean isNear = (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
-                if (isNear)
-                {
+                if (isNear) {
                     cityMenu.show();
                 }
                 return;
             }
-            // Если игрок успешно сходил
             if (player.tryMoveTo(targetX, targetY, gameMap)) {
+                SoundManager.playSound("sounds/step.mp3");
 
                 if (gameMap.collectChest(targetX, targetY)) {
+                    SoundManager.playSound("sounds/openSunduk.mp3");
                     chestMenu.show();
                 }
                 if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
@@ -275,10 +265,13 @@ public class RPGTurnbased extends ApplicationAdapter {
             }
         }
     }
-    public void startGame()
-    {
+
+    public void startGame() {
         gameStarted = true;
         mainMenu.hide();
+        // Останавливаем музыку главного меню и запускаем плейлист для карты
+        SoundManager.stopMusic();
+        SoundManager.startPlaylist(false); // false = без перемешивания, можно true для случайного порядка
     }
 
     @Override
@@ -297,5 +290,6 @@ public class RPGTurnbased extends ApplicationAdapter {
         if (mainMenu != null) mainMenu.dispose();
         mapRenderer.dispose();
         font.dispose();
+        SoundManager.dispose(); // обязательно освободить ресурсы звуков
     }
 }

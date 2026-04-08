@@ -121,10 +121,12 @@ class PauseMenu(
 
         if (Gdx.input.justTouched()) {
             if (resumeRect.contains(touchX, gameY)) {
+                SoundManager.playSound("sounds/mainBtnSound.mp3")
                 toggle()
                 return true
             }
             if (exitRect.contains(touchX, gameY)) {
+                SoundManager.playSound("sounds/mainBtnSound.mp3")
                 Gdx.app.exit()
                 return true
             }

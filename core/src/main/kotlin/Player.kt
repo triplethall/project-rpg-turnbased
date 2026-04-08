@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.random.Random
+import kotlin.random.asJavaRandom
 
 class Player(
     var x: Int = 0,
@@ -168,6 +169,17 @@ class Player(
         return (dx == 1 && dy == 0) || (dx == 0 && dy == 1)
     }
 
+    interface OnEnterForestListener {
+        fun onEnterForest(x: Int, y: Int)
+    }
+
+    private var onEnterForestListener: OnEnterForestListener? = null
+
+    fun setOnEnterForest(listener: OnEnterForestListener) {
+        this.onEnterForestListener = listener
+    }
+
+
     fun tryMoveTo(targetX: Int, targetY: Int, gameMap: GameMap): Boolean {
         if (!isAdjacentCardinal(targetX, targetY)) {
             return false
@@ -181,10 +193,21 @@ class Player(
                 // Здесь можно добавить логику награды (например, увеличить счёт, выдать предмет)
 
             }
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.FOREST) {
+                if (Random.nextFloat() < 0.1f) {
+                    onEnterForestListener?.onEnterForest(targetX, targetY)
+                }
+
+            }
             return true
         }
+
         return false
+
     }
+
+
+
 
     fun changeClass(newClass: PlayerClasses) {
         playerClass = newClass
