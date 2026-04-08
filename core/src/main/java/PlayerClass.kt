@@ -182,18 +182,19 @@ enum class PlayerClasses(
 
     //  Применение бонусов класса к игроку:
     fun applyToPlayer(player: Player) {
-        player.damage = baseDamage
-        player.defense = baseDefense
-        player.maxMana = baseMaxMana
-        player.currentMana = baseMaxMana
-        player.maxHealth = baseMaxHealth
-        player.currentHealth = baseMaxHealth
-        player.attackSpeed = baseAttackSpeed
-        player.accuracy = baseAccuracy
-        player.will = baseWill
-        player.mageDamage = baseMageDamage
-        player.luck = baseLuck
-        player.critChance = baseCritChance
+        val level = player.level
+        val levelBonus = level - 1
+
+        player.damage = baseDamage + (levelBonus * 2)
+        player.mageDamage = baseMageDamage + (levelBonus * 2)
+        player.maxHealth = baseMaxHealth + (levelBonus * 8)
+        player.maxMana = baseMaxMana + (levelBonus * 5)
+        player.defense = baseDefense + (levelBonus * 0.01)
+        player.attackSpeed = baseAttackSpeed + (levelBonus * 0.02)
+        player.accuracy = baseAccuracy + (levelBonus * 0.01)
+        player.will = baseWill + (levelBonus * 0.02)
+        player.luck = baseLuck + (levelBonus * 0.01)
+        player.critChance = baseCritChance + (levelBonus * 0.005)
     }
 
 

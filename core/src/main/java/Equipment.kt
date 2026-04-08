@@ -168,13 +168,13 @@ class PlayerEquipment
             return false
         }
         equipped[item.type] = item
-        applyItemBonuses(item, player, true)
+        player.recalculateStats()
         return true
     }
     fun unequip(type: EquipmentType, player: Player? = null): Boolean
     {
         val item = equipped.remove(type) ?: return false
-        player?.let { applyItemBonuses(item, it, false) }
+        player?.recalculateStats()
         return true
     }
 
@@ -183,37 +183,15 @@ class PlayerEquipment
         if (slot !in 0..1) return false
         if (runes[slot] != null) return false
         runes[slot] = rune
-        applyItemBonuses(rune, player, true)
+        player.recalculateStats()
         return true
     }
 
     fun unequipRune(slot: Int, player: Player): Boolean {
         val rune = runes[slot] ?: return false
         runes[slot] = null
-        applyItemBonuses(rune, player, false)
+        player.recalculateStats()
         return true
-    }
-
-
-    private fun applyItemBonuses(item: EquipmentItem, player: Player, apply: Boolean)
-    {
-        val multiplier = if (apply) 1 else -1
-
-        player.damage += item.damageBonus * multiplier
-        player.mageDamage += item.mageDamageBonus * multiplier
-        player.maxHealth += item.healthBonus * multiplier
-        player.maxMana += item.manaBonus * multiplier
-        player.defense += item.defenseBonus * multiplier
-        player.attackSpeed += item.attackSpeedBonus * multiplier
-        player.accuracy += item.accuracyBonus * multiplier
-        player.will += item.willBonus * multiplier
-        player.luck += item.luckBonus * multiplier
-        player.critChance += item.critChanceBonus * multiplier
-
-        if (apply) {
-            player.currentHealth += item.healthBonus
-            player.currentMana += item.manaBonus
-        }
     }
 }
 
