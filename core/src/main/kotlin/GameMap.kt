@@ -42,6 +42,60 @@ class GameMap(
             terrain[x][y] = originalTerrain[x][y] // восстанавливаем исходный тип
         }
     }
+
+
+     // Возвращает список координат всех клеток с типом ENEMY
+    fun getAllEnemyCells(): List<Pair<Int, Int>> {
+        val cells = mutableListOf<Pair<Int, Int>>()
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.ENEMY) {
+                    cells.add(Pair(x, y))
+                }
+            }
+        }
+        return cells
+    }
+
+     //Возвращает список координат врагов в радиусе от центра
+
+    fun getEnemiesNear(centerX: Int, centerY: Int, radius: Int): List<Pair<Int, Int>> {
+        val cells = mutableListOf<Pair<Int, Int>>()
+        for (dx in -radius..radius) {
+            for (dy in -radius..radius) {
+                val nx = centerX + dx
+                val ny = centerY + dy
+                if (nx in 0 until width && ny in 0 until height && terrain[nx][ny] == TerrainType.ENEMY) {
+                    cells.add(Pair(nx, ny))
+                }
+            }
+        }
+        return cells
+    }
+
+      // Проверяет, есть ли хотя бы один враг на карте
+
+    fun hasEnemies(): Boolean {
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.ENEMY) return true
+            }
+        }
+        return false
+    }
+
+     //Удаляет всех врагов с карты (превращает обратно в исходный тип местности)
+    fun clearAllEnemies() {
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.ENEMY) {
+                    terrain[x][y] = originalTerrain[x][y] // восстанавливаем ландшафт
+                }
+            }
+        }
+    }
+
+
     fun isExplored(x: Int, y: Int): Boolean = explored[x][y]
     fun getTerrain(x: Int, y: Int): TerrainType {
         if (x !in 0 until width || y !in 0 until height) return TerrainType.WATER
@@ -669,7 +723,7 @@ class GameMap(
 
         // Для каждого сундука спавним 1-2 врага рядом
         for ((chestX, chestY) in chestPositions) {
-            val enemiesPerChest = random.nextInt(1, 3) // 1 или 2 врага
+            val enemiesPerChest = random.nextInt(1, 4) // 2 или 4 врага
 
             for (i in 0 until enemiesPerChest) {
                 // Ищем подходящую клетку вокруг сундука (радиус 1)

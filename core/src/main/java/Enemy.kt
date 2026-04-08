@@ -1,9 +1,10 @@
 @file:Suppress("unused")
 
 package ru.triplethall.rpgturnbased
+import com.badlogic.gdx.Gdx
 import kotlin.random.Random
 
-
+//enum class EnemyState { IDLE, ATTACKING }
 enum class EnemyType(
     val displayName: String,
     val specialEffect: String? = null   // специальный эффект типа
