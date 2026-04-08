@@ -50,10 +50,9 @@ object SoundManager {
     }
 
     @JvmStatic
-    @JvmOverloads
     fun playMusic(musicFile: String, looping: Boolean = true): Music? {
         return try {
-            currentMusic?.stop()
+            currentMusic?.dispose()
             currentMusic = Gdx.audio.newMusic(Gdx.files.internal(musicFile))
             currentMusic?.isLooping = looping
             currentMusic?.volume = musicVolume
@@ -85,5 +84,67 @@ object SoundManager {
         currentMusic?.dispose()
         sounds.values.forEach { it.dispose() }
         sounds.clear()
+    }
+
+    // === Плейлист для карты ===
+    private val playlistTracks = listOf(
+        "music/mainMusic_1.mp3",
+        "music/mainMusic_2.mp3",
+        "music/mainMusic_3.flac",
+        "music/mainMusic_4.mp3",
+        "music/mainMusic_5.mp3"
+    )
+    private var currentPlaylistIndex = 0
+    private var isPlaylistRunning = false
+
+    @JvmStatic
+    fun startPlaylist(shuffle: Boolean = false) {
+        stopPlaylist()
+        if (shuffle) {
+            currentPlaylistIndex = (0 until playlistTracks.size).random()
+        } else {
+            currentPlaylistIndex = 0
+        }
+        isPlaylistRunning = true
+        playNextInPlaylist()
+    }
+
+    @JvmStatic
+    fun stopPlaylist() {
+        isPlaylistRunning = false
+        stopMusic()
+    }
+
+    @JvmStatic
+    fun pausePlaylist() {
+        if (isPlaylistRunning && currentMusic != null) {
+            currentMusic?.pause()
+        }
+    }
+
+    @JvmStatic
+    fun resumePlaylist() {
+        if (isPlaylistRunning && currentMusic != null) {
+            currentMusic?.play()
+        } else if (isPlaylistRunning) {
+            // если музыка была остановлена по какой-то причине — перезапускаем
+            playNextInPlaylist()
+        }
+    }
+
+    @JvmStatic
+    fun isPlaylistActive(): Boolean = isPlaylistRunning
+
+    private fun playNextInPlaylist() {
+        if (!isPlaylistRunning) return
+        if (playlistTracks.isEmpty()) return
+        val track = playlistTracks[currentPlaylistIndex]
+        val music = playMusic(track, looping = false)
+        music?.setOnCompletionListener {
+            if (isPlaylistRunning) {
+                currentPlaylistIndex = (currentPlaylistIndex + 1) % playlistTracks.size
+                playNextInPlaylist()
+            }
+        }
     }
 }
