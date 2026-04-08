@@ -42,6 +42,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     private Texture inventoryButtonTexture;
     private Texture continueButtonTexture;
     private Texture exitButtonTexture;
+    private Texture barTexture;
     private Texture statsButtonTexture;
     private Texture pauseBackgroundTexture;
     private Texture statsBackgroundTexture;
@@ -112,6 +113,7 @@ public class RPGTurnbased extends ApplicationAdapter {
         exitButtonTexture = new Texture("menus/buttons/exit.png");
         settingsButtonTexture = new Texture("menus/buttons/options.png");  // <-- ЗАГРУЗКА
         pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
+        barTexture = new Texture("playerbarsbg.png");
 
         // Включаем музыку главного меню (она будет играть до старта игры)
         SoundManager.playMusic("music/mainMenu.mp3", true);
@@ -120,7 +122,9 @@ public class RPGTurnbased extends ApplicationAdapter {
         uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena, whitePixel);
+        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena, whitePixel, barTexture);
+        battleScene.loadAssets();
+
         pauseMenu = new PauseMenu(font,
             Gdx.graphics.getWidth(),
             Gdx.graphics.getHeight(),
