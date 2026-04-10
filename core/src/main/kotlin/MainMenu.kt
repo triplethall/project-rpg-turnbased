@@ -122,7 +122,7 @@ class MainMenu(
 
     private fun startGame() {
         visible = false
-        game.startGame()
+        game.showClassSelection()
     }
 
     private fun exitGame() {

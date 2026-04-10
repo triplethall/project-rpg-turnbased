@@ -17,10 +17,11 @@ enum class PlayerClasses(
     val baseWill: Double = 0.0,                  // Воля (сопротивление дебафам)
     val baseLuck: Double = 0.00,                 // Удача
     val baseCritChance: Double = 0.01            // крит шанс
-) {
+)
+{
     ADVENTURIST(
-        displayName = "Авантюрист",
-        description = "Новичок который только начал своё приключение",
+        displayName = "Adventurer",
+        description = "A beginner who has just started their adventure",
         baseDamage = 25,
         baseMaxHealth = 200,
         baseDefense = 0.0,
@@ -33,8 +34,8 @@ enum class PlayerClasses(
         baseCritChance = 0.01
     ),
     KNIGHT(
-        displayName = "Рыцарь",
-        description = "Рассудительный, с повышенной живучесть и урон",
+        displayName = "Knight",
+        description = "Prudent, with increased survivability and damage",
         baseDamage = 30,
         baseDefense = 0.15,
         baseMaxHealth = 250,
@@ -47,8 +48,8 @@ enum class PlayerClasses(
     ),
 
     MAGE(
-        displayName = "Волшебник",
-        description = "Умнейший с повышенным уроном магии",
+        displayName = "Wizard",
+        description = "Wise, with increased magic damage",
         baseDamage = 13,
         baseMageDamage = 28,
         baseMaxMana = 150,
@@ -61,8 +62,8 @@ enum class PlayerClasses(
     ),
 
     ASSASSIN(
-        displayName = "Ассасин",
-        description = "Мастер убийств, Тренировался скрытности",
+        displayName = "Assassin",
+        description = "Master of assassinations, trained in stealth",
         baseDamage = 29,
         baseDefense = 0.05,
         baseMaxHealth = 195,
@@ -75,8 +76,8 @@ enum class PlayerClasses(
     ),
 
     ARCHER(
-        displayName = "Лучник",
-        description = "Зоркий глаз, хорошее владение луком",
+        displayName = "Archer",
+        description = "Keen eye, good archery skills",
         baseDamage = 28,
         baseMaxHealth = 195,
         baseDefense = 0.03,
@@ -90,8 +91,8 @@ enum class PlayerClasses(
     ),
 
     PRIEST(
-        displayName = "Священник",
-        description = "Великий святой, умеет искусно залечивать раны",
+        displayName = "Priest",
+        description = "Great saint, skilled at healing wounds",
         baseDamage = 17,
         baseMaxHealth = 200,
         baseDefense = 0.05,
@@ -105,8 +106,8 @@ enum class PlayerClasses(
     ),
 
     JOKER(
-        displayName = "Джокер",
-        description = "Глупец, что вечно полагается на удачу",
+        displayName = "Joker",
+        description = "Fool who always relies on luck",
         baseDamage = 23,
         baseMaxHealth = 205,
         baseDefense = 0.02,
@@ -120,8 +121,8 @@ enum class PlayerClasses(
     ),
 
     BERSERK(
-        displayName = "Берсерк",
-        description = "Жажда крови, Лишь на грани смерти он чувствует запах крови",
+        displayName = "Berserker",
+        description = "Bloodthirsty, only on the verge of death does he smell blood",
         baseDamage = 33,
         baseMaxHealth = 280,
         baseDefense = 0.08,
@@ -135,8 +136,8 @@ enum class PlayerClasses(
     ),
 
     SHAMAN(
-        displayName = "Шаман",
-        description = "Мастер проклятий, изучал тёмные таинства",
+        displayName = "Shaman",
+        description = "Master of curses, studied dark mysteries",
         baseDamage = 19,
         baseMaxHealth = 210,
         baseDefense = 0.04,
@@ -150,8 +151,8 @@ enum class PlayerClasses(
     ),
 
     SWORDMASTER(
-        displayName = "Мастер меча",
-        description = "Владыка мечей, Силён и быстр",
+        displayName = "Swordmaster",
+        description = "Lord of swords, strong and fast",
         baseDamage = 31,
         baseMaxHealth = 225,
         baseDefense = 0.08,
@@ -165,8 +166,8 @@ enum class PlayerClasses(
     ),
 
     MONARCH(
-        displayName = "Монах",
-        description = "Силён духом, силён телом",
+        displayName = "Monk",
+        description = "Strong in spirit, strong in body",
         baseDamage = 29,
         baseMaxHealth = 260,
         baseDefense = 0.12,
@@ -203,16 +204,16 @@ enum class PlayerClasses(
         return """
         $displayName - $description
         |----------------------
-        | Урон: $baseDamage ${getDiff(baseDamage, 15)}
-        | Защита: ${(baseDefense * 100).toInt()}% ${getDiff(baseDefense, 0.0)}
-        | Здоровье: $baseMaxHealth ${getDiff(baseMaxHealth, 100)}
-        | Мана: $baseMaxMana ${getDiff(baseMaxMana, 50)}
-        | Скорость: ${String.format("%.1f", baseAttackSpeed)} ${getDiff(baseAttackSpeed, 1.0)}
-        | Точность: ${(baseAccuracy * 100).toInt()}% ${getDiff(baseAccuracy, 0.8)}
-        | Воля: ${(baseWill * 100).toInt()}% ${getDiff(baseWill, 0.5)}
-        | Маг. урон: $baseMageDamage ${getDiff(baseMageDamage, 10)}
-        | Удача: ${(baseLuck * 100).toInt()}% ${getDiff(baseLuck, 0.01)}
-        | Крит шанс: ${(baseCritChance * 100).toInt()}% ${getDiff(baseCritChance, 0.01)}
+        | Damage: $baseDamage ${getDiff(baseDamage, 15)}
+        | Defense: ${(baseDefense * 100).toInt()}% ${getDiff(baseDefense, 0.0)}
+        | Health: $baseMaxHealth ${getDiff(baseMaxHealth, 100)}
+        | Mana: $baseMaxMana ${getDiff(baseMaxMana, 50)}
+        | Speed: ${String.format("%.1f", baseAttackSpeed)} ${getDiff(baseAttackSpeed, 1.0)}
+        | Accuracy: ${(baseAccuracy * 100).toInt()}% ${getDiff(baseAccuracy, 0.8)}
+        | Will: ${(baseWill * 100).toInt()}% ${getDiff(baseWill, 0.5)}
+        | Magic Damage: $baseMageDamage ${getDiff(baseMageDamage, 10)}
+        | Luck: ${(baseLuck * 100).toInt()}% ${getDiff(baseLuck, 0.01)}
+        | Crit Chance: ${(baseCritChance * 100).toInt()}% ${getDiff(baseCritChance, 0.01)}
         """.trimMargin()
     }
     private fun getDiff(value: Number, base: Number): String {
@@ -227,27 +228,6 @@ enum class PlayerClasses(
             diff is Double && diff > 0 -> "(+${String.format("%.1f", diff)})"
             diff is Double && diff < 0 -> "(${String.format("%.1f", diff)})"
             else -> ""
-        }
-    }
-}
-
-class ClassSelector {
-    private var selectedClass: PlayerClasses? = null
-
-    fun getCurrentClass(): PlayerClasses? = selectedClass
-
-    fun selectClass(playerClass: PlayerClasses, player: Player) {
-        selectedClass = playerClass
-        playerClass.applyToPlayer(player)
-        println("Выбран класс: ${playerClass.displayName}")
-        println(playerClass.getStatsDescription())
-    }
-
-    fun showAllClasses() {
-        println("====== ДОСТУПНЫЕ КЛАССЫ =====")
-        PlayerClasses.values().forEachIndexed { index, playerClass ->
-            println("\n${index + 1}. ${playerClass.displayName}")
-            println("   ${playerClass.description}")
         }
     }
 }
