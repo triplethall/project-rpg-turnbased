@@ -29,6 +29,9 @@ class Player(
     fun getLightningDamageModifier(): Double {
         return if (debuffManager.hasDebuff(DebuffType.WET)) 1.25 else 1.0
     }
+    init {
+        playerClass.applyToPlayer(this)
+    }
 
     val debuffManager = DebuffManager()
     private var skipTurn = false
@@ -83,18 +86,9 @@ class Player(
         level++
         println("!!!LEVEL UP!!!")
         // Stats up за уровень
-        damage += 2
-        defense += 0.01
-        maxMana += 5
+        recalculateStats()
         currentMana = maxMana  // восстановление маны за ур
-        maxHealth += 8
         currentHealth = maxHealth
-        attackSpeed += 0.02
-        accuracy += 0.01
-        will += 0.02
-        mageDamage += 2
-        luck += 0.01
-        critChance += 0.005
     }
 
 
@@ -215,7 +209,54 @@ class Player(
 
     fun changeClass(newClass: PlayerClasses) {
         playerClass = newClass
-        newClass.applyToPlayer(this)
+        recalculateStats()
+    }
+
+    fun recalculateStats()
+    {
+        val hpPercent = if (maxHealth > 0) currentHealth.toFloat() / maxHealth else 1f
+        val manaPercent = if (maxMana > 0) currentMana.toFloat() / maxMana else 1f
+
+        playerClass.applyToPlayer(this)
+
+        equipment.getAllEquipped().values.forEach { item ->
+            damage += item.damageBonus
+            mageDamage += item.mageDamageBonus
+            maxHealth += item.healthBonus
+            maxMana += item.manaBonus
+            defense += item.defenseBonus
+            attackSpeed += item.attackSpeedBonus
+            accuracy += item.accuracyBonus
+            will += item.willBonus
+            luck += item.luckBonus
+            critChance += item.critChanceBonus
+        }
+        equipment.getRune(0)?.let { rune ->
+            damage += rune.damageBonus
+            mageDamage += rune.mageDamageBonus
+            maxHealth += rune.healthBonus
+            maxMana += rune.manaBonus
+            defense += rune.defenseBonus
+            attackSpeed += rune.attackSpeedBonus
+            accuracy += rune.accuracyBonus
+            will += rune.willBonus
+            luck += rune.luckBonus
+            critChance += rune.critChanceBonus
+        }
+        equipment.getRune(1)?.let { rune ->
+            damage += rune.damageBonus
+            mageDamage += rune.mageDamageBonus
+            maxHealth += rune.healthBonus
+            maxMana += rune.manaBonus
+            defense += rune.defenseBonus
+            attackSpeed += rune.attackSpeedBonus
+            accuracy += rune.accuracyBonus
+            will += rune.willBonus
+            luck += rune.luckBonus
+            critChance += rune.critChanceBonus
+        }
+        currentHealth = (maxHealth * hpPercent).toInt().coerceAtLeast(1)
+        currentMana = (maxMana * manaPercent).toInt().coerceAtLeast(0)
     }
 
     fun render(batch: SpriteBatch, font: BitmapFont, cellSize: Int, cellGap: Int) {

@@ -3,8 +3,12 @@ package ru.triplethall.rpgturnbased
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.Animation
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g2d.TextureAtlas
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.math.Rectangle
 import kotlin.random.Random
 
@@ -14,7 +18,8 @@ class BattleScene(
     private val screenHeight: Float,
     private val gameMap: GameMap,
     private val BGArena: Texture,
-    private val whitePixel: Texture
+    private val whitePixel: Texture,
+    private val barTexture : Texture
 ) {
     var isActive = false
         private set
@@ -22,17 +27,72 @@ class BattleScene(
     fun setPlayer(player: Player) {
         this.player = player
     }
+    private var slimeAtlas: TextureAtlas? = null
+    private var slimeIdleAnimation: Animation<TextureRegion>? = null
+    private var slimeAttackAnimation: Animation<TextureRegion>? = null
+    private var stateTime = 0f
+    private val getDmgButtonRect = Rectangle()
+    fun loadAssets() {
+        try {
+            val atlasPath = "npc/enemy/slime1/slime1-idle.atlas"
+            val atlasFile = Gdx.files.internal(atlasPath)
+
+            if (!atlasFile.exists()) {
+                Gdx.app.error("BATTLE_DEBUG", "ФАЙЛ НЕ НАЙДЕН: $atlasPath")
+                return
+            }
+
+            slimeAtlas = TextureAtlas(atlasFile)
+            val frames = com.badlogic.gdx.utils.Array<TextureRegion>()
+
+            // ЛОГИРОВАНИЕ: Выводим все имена, которые реально есть в атласе
+            Gdx.app.log("BATTLE_DEBUG", "--- Список регионов в атласе ---")
+            slimeAtlas?.regions?.forEach {
+                Gdx.app.log("BATTLE_DEBUG", "Найдено имя: '${it.name}'")
+            }
+
+            // Попытка найти кадры (пробуем разные варианты имен)
+            val namesToTry = arrayOf("idle1", "idle2", "idle_1", "idle_2", "idle")
+
+            for (name in namesToTry) {
+                val region = slimeAtlas?.findRegion(name)
+                if (region != null) {
+                    frames.add(region)
+                    Gdx.app.log("BATTLE_DEBUG", "Добавлен кадр: $name")
+                }
+            }
+
+            if (frames.size > 0) {
+                slimeIdleAnimation = Animation(0.2f, frames, Animation.PlayMode.LOOP)
+                Gdx.app.log("BATTLE_DEBUG", "АНИМАЦИЯ СОЗДАНА. Кадров: ${frames.size}")
+            } else {
+                Gdx.app.error("BATTLE_DEBUG", "ОШИБКА: Не удалось собрать ни одного кадра для анимации!")
+            }
+
+            val attackFrames = com.badlogic.gdx.utils.Array<TextureRegion>()
+            attackFrames.add(slimeAtlas?.findRegion("attack1"))
+            attackFrames.add(slimeAtlas?.findRegion("attack2"))
+            attackFrames.add(slimeAtlas?.findRegion("attack3"))
+// Animation.PlayMode.NORMAL (проиграть один раз и остановиться на последнем кадре)
+            slimeAttackAnimation = Animation(0.1f, attackFrames, Animation.PlayMode.NORMAL)
+
+        } catch (e: Exception) {
+            Gdx.app.error("BATTLE_DEBUG", "КРАШ ПРИ ЗАГРУЗКЕ: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+    private val layout = GlyphLayout()
     private var enemies: MutableList<BattleEnemy> = mutableListOf()
     private var enemyIndex = 0
     private val attackButtonRect = Rectangle()
     private var isFleeing = false
     private var fleeTurnsLeft = 0
-    private val getDmgButtonRect = Rectangle()
     private val nextTurnButtonRect = Rectangle()
     private val skipButtonRect = Rectangle()
     private val fleeButtonRect = Rectangle()
     private var enemyX = 0
     private var enemyY = 0
+    private var enemyCells: List<Pair<Int, Int>> = emptyList()
     private var madeMoveThisTurn = false
     private var showVictoryScreen = false
     private var showDefeatScreen = false
@@ -63,12 +123,40 @@ class BattleScene(
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
 
-        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color.RED)
-        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 20f, Color.BLUE)
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color.RED)
+        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color.BLUE)
 
         updateEnemyBars()
     }
 
+    // ===== НОВЫЙ МЕТОД ДЛЯ БОЯ СО СПИСКОМ ВРАГОВ =====
+    fun startBattleWithEnemies(enemiesList: List<BattleEnemy>, cells: List<Pair<Int, Int>>) {
+        if (player.currentHealth <= 0) {
+            println("player is DEAD, cannot start battle")
+            return
+        }
+        this.enemies = enemiesList.toMutableList()
+        this.enemyCells = cells
+        this.isActive = true
+        this.madeMoveThisTurn = false
+        this.isFleeing = false
+        this.fleeTurnsLeft = 0
+        this.showVictoryScreen = false
+        this.showDefeatScreen = false
+
+        messageSystem = BattleMessageSystem(font, screenWidth, screenHeight, whitePixel)
+        messageSystem.addMessage("Бой начинается! Врагов: ${enemies.size}", Color.YELLOW)
+
+        SoundManager.pausePlaylist()
+        SoundManager.playMusic("music/battle.mp3", true)
+
+        val playerBarX = 20f
+        val playerHealthY = screenHeight * 0.9f
+        val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color.RED)
+        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 20f, Color.BLUE)
+        updateEnemyBars()
+    }
     fun startBattle(enemyCellX: Int, enemyCellY: Int) {
         if (player.currentHealth <= 0) {
             println("player is DEAD LMAO")
@@ -81,17 +169,56 @@ class BattleScene(
     private fun updateEnemyBars() {
         enemyBars.clear()
         val rectHeight = 150f
-        val rectWidth = 100f
+        val rectWidth = 160f
         val space = screenWidth * 0.1f
-        val enemyStartX = screenWidth - rectWidth - space
-        val enemySpacing = 20f
         val rectY = (screenHeight - rectHeight) / 2
+        val rectX = screenWidth - rectWidth - space
+        val enemyStartX = rectX - 400f
+
+        val barWidth = rectWidth
+        val barHeight = 55f
+        val gapAboveEnemy = 15f // Расстояние между врагом и полоской
 
         enemies.forEachIndexed { index, enemy ->
-            val barY = rectY + (index * (rectHeight + enemySpacing)) + rectHeight + 5f
-            enemyBars.add(StatBar(enemyStartX, barY, rectWidth, 10f, Color.RED))
+            var barX = enemyStartX
+            var barY = 0f
+
+            // Дублируем логику координат из getEnemyPos
+            when (enemies.size) {
+                1 -> {
+                    barY = rectY - 100f + rectHeight + gapAboveEnemy
+                }
+                2 -> {
+                    val offsetY = 90f
+                    if (index == 0) {
+                        barY = (rectY - 100f - offsetY) + rectHeight + gapAboveEnemy
+                    } else {
+                        barX = enemyStartX - 100f
+                        barY = (rectY - 100f + offsetY) + rectHeight + gapAboveEnemy
+                    }
+                }
+                3 -> {
+                    val offsetY = 100f
+                    when (index) {
+                        0 -> {
+                            barX = enemyStartX - 100f
+                            barY = (rectY - 100f - offsetY - 50f) + rectHeight + gapAboveEnemy
+                        }
+                        1 -> {
+                            barY = (rectY - 100f) + rectHeight + gapAboveEnemy
+                        }
+                        2 -> {
+                            barX = enemyStartX - 85f
+                            barY = (rectY - 100f + offsetY + 50f) + rectHeight + gapAboveEnemy
+                        }
+                    }
+                }
+            }
+
+            enemyBars.add(StatBar(barX, barY, barWidth, barHeight, Color.RED))
         }
     }
+
 
     fun handleInput(player: Player): Boolean {
         if (!isActive) return false
@@ -102,9 +229,9 @@ class BattleScene(
 
         if (showVictoryScreen || showDefeatScreen) {
             if (Gdx.input.justTouched() && exitButton.contains(touchX, yInverted)) {
+                endBattleAndClearEnemy()
                 showVictoryScreen = false
                 showDefeatScreen = false
-                endBattleAndClearEnemy()
                 return true
             }
             return true
@@ -121,7 +248,6 @@ class BattleScene(
             }
 
             if (!madeMoveThisTurn && attackButtonRect.contains(touchX, yInverted)) {
-                SoundManager.playSound("sounds/mainBtnSound.mp3")
                 performAttack()
                 return true
             }
@@ -138,11 +264,6 @@ class BattleScene(
                 return true
             }
 
-            if (getDmgButtonRect.contains(touchX, yInverted)) {
-                SoundManager.playSound("sounds/mainBtnSound.mp3")
-                getDmg(player, 1)
-                return true
-            }
 
             if (!madeMoveThisTurn && fleeButtonRect.contains(touchX, yInverted)) {
                 SoundManager.playSound("sounds/mainBtnSound.mp3")
@@ -155,7 +276,7 @@ class BattleScene(
 
     fun getEnemyPos(x: Float, y: Float): Int {
         val rectHeight = 150f
-        val rectWidth = 100f
+        val rectWidth = 160f
         val space = screenWidth * 0.1f
         val rectY = (screenHeight - rectHeight) / 2
         val rectX = screenWidth - rectWidth - space
@@ -274,6 +395,7 @@ class BattleScene(
         val dmgWithDef = (totalDamage * (1 - target.defense * target.getDefenseMultiplier())).toInt()
 
         target.takeDamage(dmgWithDef)
+        SoundManager.playSound("sounds/atack.mp3") // звук атаки
         messageSystem.addMessage("dealt $dmgWithDef dmg to ${target.name}", Color.GREEN)
 
         if (!target.isAlive()) {
@@ -451,6 +573,9 @@ class BattleScene(
     }
 
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player) {
+        stateTime += Gdx.graphics.deltaTime // Обновляем время анимации
+
+
         if (showVictoryScreen) {
             drawVictoryScreen(batch, whitePixel)
             return
@@ -488,9 +613,6 @@ class BattleScene(
         batch.color = Color.BLUE
         batch.draw(whitePixel, space + 400f, rectY - 100f, rectWidth, rectHeight)
 
-        font.color = Color.WHITE
-        font.draw(batch, "PLAYER", space + 430f, rectY - 120f)
-        font.draw(batch, "${player.currentHealth}/${player.maxHealth}", space + 430f, rectY + rectHeight - 70f)
 
         if (enemies.isNotEmpty()) {
             val enemyStartX = rectX - 400f
@@ -522,11 +644,35 @@ class BattleScene(
                 }
             }
 
-            font.color = Color.WHITE
-            font.draw(batch, "enemies: ${enemies.size}", screenWidth - 150f, screenHeight - 30f)
 
-            playerHealthBar.render(batch, whitePixel, player.currentHealth, player.maxHealth)
-            playerManaBar.render(batch, whitePixel, player.currentMana, player.maxMana)
+            drawBarWithText(batch, playerHealthBar, "${player.currentHealth}/${player.maxHealth}", 2f, barTexture)
+            drawBarWithText(batch, playerManaBar, "${player.currentMana}/${player.maxMana}", 2f, barTexture)
+// --- СТАТИСТИКА ИГРОКА ---
+            font.data.setScale(1.4f) // Делаем текст чуть меньше для компактности
+            val statsX = 20f
+// Позиция под полоской маны (берем Y мана-бара и отступаем вниз)
+            val statsY = playerManaBar.y - 15f
+
+// Подготавливаем тексты (используем свойства из твоего класса Player)
+            val damageText = "ATK: ${player.damage}"
+            val defenseText = "DEF: ${(player.defense * 100).toInt()}%"
+            val levelText = "LVL: ${player.level}"
+
+            // Рисуем с тенью для лучшей видимости
+            fun drawStatWithShadow(batch: SpriteBatch, text: String, x: Float, y: Float, color: Color) {
+                font.color = Color.BLACK
+                font.draw(batch, text, x + 1f, y - 1f) // Тень
+                font.color = color
+                font.draw(batch, text, x, y)
+            }
+
+// Рисуем в ряд или в колонку
+            drawStatWithShadow(batch, levelText, statsX, statsY, Color.GOLD)
+            drawStatWithShadow(batch, damageText, statsX + 120f, statsY, Color.ORANGE)
+            drawStatWithShadow(batch, defenseText, statsX + 260f, statsY, Color.CYAN)
+
+            font.data.setScale(1.0f) // Сброс масштаба
+
 
 
 
@@ -559,11 +705,17 @@ class BattleScene(
             }
 
             enemies.forEachIndexed { index, enemy ->
-                if (index < enemyBars.size) {
-                    enemyBars[index].render(batch, whitePixel, enemy.currentHealth, enemy.maxHealth)
+                if (enemy.isAlive()) {
+                    enemyBars.getOrNull(index)?.let { bar ->
+                        // Передаем текущие HP/MaxHP врага в функцию отрисовки бара
+                        bar.render(batch, barTexture, whitePixel, enemy.currentHealth, enemy.maxHealth)
+                        // Рисуем текст поверх
+                        drawBarWithText(batch, bar, "${enemy.currentHealth}/${enemy.maxHealth}", 1.25f, barTexture, drawBar = false)
+                    }
                 }
             }
         }
+
 
         // BUTTONS
         batch.color = if (!madeMoveThisTurn && !isFleeing) Color.GREEN else Color.DARK_GRAY
@@ -611,23 +763,69 @@ class BattleScene(
         if (::messageSystem.isInitialized) {
             messageSystem.render(batch)
         }
+        font.data.setScale(1f)
+        font.color = Color.WHITE
+    }
+    private fun drawBarWithText(
+        batch: SpriteBatch,
+        bar: StatBar,
+        text: String,
+        scale: Float,
+        texture: Texture,
+        drawBar: Boolean = true
+    ) {
+        // Рисуем сам бар, если это нужно (для игрока)
+        if (drawBar) {
+            // Здесь используем актуальные статы игрока в зависимости от цвета бара
+            val current = if (bar.color == Color.RED) player.currentHealth else player.currentMana
+            val max = if (bar.color == Color.RED) player.maxHealth else player.maxMana
+            bar.render(batch, texture, whitePixel, current, max)
+        }
+
+        // Настраиваем шрифт
+        font.data.setScale(scale)
+        layout.setText(font, text)
+
+        // Вычисляем центр
+        val textX = bar.x + (bar.width - layout.width) / 2
+        val textY = bar.y + (bar.height + layout.height) / 2
+
+        // РИСУЕМ ТЕНЬ (черный текст со смещением на 2 пикселя)
+        font.color = Color.BLACK
+        font.draw(batch, text, textX + 2f, textY - 2f)
+
+        // РИСУЕМ ОСНОВНОЙ ТЕКСТ (поверх тени)
+        font.color = Color.WHITE
+        font.draw(batch, text, textX, textY)
+
+        // Сбрасываем масштаб и цвет для остального рендера
+        font.data.setScale(1.0f)
+        font.color = Color.WHITE
     }
 
     private val squareSize = 24 * 2f
     private val padding = 3 * 2f
     private val verticalGap = 15f
 
-    private fun getDmg(player: Player, hp: Int = 5) {
-        player.currentHealth = (player.currentHealth - hp).coerceAtLeast(0)
-        println("Упс! У игрока осталось ${player.currentHealth} HP")
-    }
 
-    private fun drawEnemy(batch: SpriteBatch, whitePixel: Texture, enemy: BattleEnemy, x: Float, y: Float, width: Float, height: Float, isSelected: Boolean) {
-        batch.color = if (enemy.isAlive()) Color.RED else Color.DARK_GRAY
-        batch.draw(whitePixel, x, y, width, height)
 
-        if (isSelected && enemy.isAlive()) {
-            batch.color = Color.YELLOW
+
+
+    private fun drawEnemy(
+        batch: SpriteBatch,
+        whitePixel: Texture,
+        enemy: BattleEnemy,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        isSelected: Boolean
+    ) {
+        if (!enemy.isAlive()) return
+
+        // 1. Рисуем тень/выделение под врагом, если он выбран
+        if (isSelected) {
+            batch.color = Color(1f, 1f, 0f, 0.4f) // Желтая подсветка
             batch.draw(whitePixel, x - 5f, y - 5f, width + 10f, height + 10f)
         }
 
@@ -644,22 +842,50 @@ class BattleScene(
             EnemyType.POISON -> " [Poison]"
             EnemyType.HOLY -> " [Holy]"
         }
-        font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
+        // 2. Получаем кадр анимации
+        batch.color = Color.WHITE
+        val currentFrame = slimeIdleAnimation?.getKeyFrame(stateTime)
 
-        font.color = Color.WHITE
-        font.draw(batch, enemy.name, x + 20f, y - 20f)
+        if (currentFrame != null) {
+            // Рисуем спрайт слайма
+            batch.draw(currentFrame, x, y, width, height)
+        } else {
+            // Резервный вариант, если атлас не подгрузился
+            batch.color = Color.GREEN
+            batch.draw(whitePixel, x, y, width, height)
+        }
+        font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
         font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)
+
+        //font.data.setScale(oldScaleX, oldScaleY)
+        font.color = Color.WHITE
     }
 
     fun endBattleAndClearEnemy() {
-        if (enemyX in 0 until gameMap.width && enemyY in 0 until gameMap.height) {
-            gameMap.restoreAfterBattle(enemyX, enemyY)
+        if (isActive && showVictoryScreen) {
+            // Только победа удаляет врагов
+            if (enemyCells.isNotEmpty()) {
+                // Бой через сундук – удаляем всех врагов из списка
+                for ((x, y) in enemyCells) {
+                    if (x in 0 until gameMap.width && y in 0 until gameMap.height) {
+                        gameMap.restoreAfterBattle(x, y)
+                    }
+                }
+            } else {
+                // Обычный бой с одним врагом – удаляем клетку, с которой начался бой
+                if (enemyX in 0 until gameMap.width && enemyY in 0 until gameMap.height) {
+                    gameMap.restoreAfterBattle(enemyX, enemyY)
+                }
+            }
         }
+        // При побеге или поражении ничего не восстанавливаем – враг остаётся
+
         isActive = false
         madeMoveThisTurn = false
         isFleeing = false
         fleeTurnsLeft = 0
         enemies.clear()
+        enemyCells = emptyList()
 
         SoundManager.stopMusic()
         SoundManager.resumePlaylist()

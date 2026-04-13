@@ -15,6 +15,9 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Rectangle;
+import java.util.ArrayList;
+import java.util.List;
+import kotlin.Pair;
 
 import ru.triplethall.rpgturnbased.GameMap;
 import ru.triplethall.rpgturnbased.Player;
@@ -39,9 +42,11 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private Texture inventoryButtonTexture;
     private Texture continueButtonTexture;
     private Texture exitButtonTexture;
+    private Texture barTexture;
     private Texture statsButtonTexture;
     private Texture pauseBackgroundTexture;
     private Texture statsBackgroundTexture;
+    private Texture settingsButtonTexture;   // <-- ДОБАВЛЕНО
     private Rectangle statsButtonRect;
     private Texture BGArena;
     private final int CELL_SIZE = 32;
@@ -59,6 +64,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private ClassSelectionMenu classSelectionMenu;
     private boolean isSelectingClass = false;
     private PlayerClasses selectedPlayerClass = null;
+    private ShopMenu shopMenu;
 
     @Override
     public void create() {
@@ -114,7 +120,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         statsBackgroundTexture = new Texture("menus/bgs/statsmenubg.png");
         continueButtonTexture = new Texture("menus/buttons/continue.png");
         exitButtonTexture = new Texture("menus/buttons/exit.png");
+        settingsButtonTexture = new Texture("menus/buttons/options.png");  // <-- ЗАГРУЗКА
         pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
+        barTexture = new Texture("playerbarsbg.png");
 
         // Включаем музыку главного меню (она будет играть до старта игры)
         SoundManager.playMusic("music/mainMenu.mp3", true);
@@ -123,7 +131,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena, whitePixel);
+        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena, whitePixel, barTexture);
+        battleScene.loadAssets();
+
         pauseMenu = new PauseMenu(font,
             Gdx.graphics.getWidth(),
             Gdx.graphics.getHeight(),
@@ -131,7 +141,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             statsBackgroundTexture,
             continueButtonTexture,
             exitButtonTexture,
-            pauseBackgroundTexture);
+            pauseBackgroundTexture,
+            settingsButtonTexture);
 
         inventory = new Inventory(font,
             Gdx.graphics.getWidth(),
@@ -149,11 +160,12 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         statsButtonRect = new Rectangle(2 * btnSize + margin, startY, btnSize, btnSize);
 
         player = new Player();
+        shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
         player.setOnEnterForest(new Player.OnEnterForestListener() {
             @Override
             public void onEnterForest(int x, int y) {
-                System.out.println("DEBUG JAVA: onEnterForest вызван!"); // Добавьте эту строку
+                System.out.println("DEBUG JAVA: onEnterForest вызван!");
                 battleScene.startBattle(x, y, 1);
             }
         });
@@ -184,11 +196,23 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         isPaused = pauseMenu.isVisible();
         boolean chestClicked = chestMenu.handleInput();
         boolean cityMenuClicked = cityMenu.handleInput();
+        boolean shopClicked = false;
+        if (cityMenu.isShopClicked())
+        {
+            shopMenu.show();
+            shopClicked = true;
+        }
+        boolean shopMenuClicked = shopMenu.handleInput();
 
         if (battleScene.isActive()) {
             battleScene.update(Gdx.graphics.getDeltaTime());
             battleScene.handleInput(player);
-        } else if (!isPaused && !menuClicked && !chestMenu.isVisible() && !cityMenu.isVisible()) {
+        } else if (!isPaused
+            && !menuClicked
+            && !chestMenu.isVisible()
+            && !cityMenu.isVisible()
+            && !shopMenu.isVisible()
+        ) {
             handlePlayerInput();
         }
 
@@ -230,6 +254,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             battleScene.render(batch, whitePixel, player);
         }
         cityMenu.render(batch, shapeRenderer);
+        shopMenu.render(batch, shapeRenderer, whitePixel);
         batch.end();
     }
 
@@ -245,8 +270,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
             int targetX = (int) grid.x;
             int targetY = (int) grid.y;
-
-            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY) {
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY || gameMap.getTerrain(targetX, targetY) == TerrainType.CITYANCHOR) {
                 int dx = Math.abs(player.getX() - targetX);
                 int dy = Math.abs(player.getY() - targetY);
                 boolean isNear = (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
@@ -261,6 +285,22 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 if (gameMap.collectChest(targetX, targetY)) {
                     SoundManager.playSound("sounds/openSunduk.mp3");
                     chestMenu.show();
+
+                    if (gameMap.hasEnemies()) {
+                        // Получаем список координат всех врагов
+                        List<Pair<Integer, Integer>> enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
+                        // Создаём список BattleEnemy (по одному случайному врагу на каждую клетку)
+                        List<BattleEnemy> enemiesList = new ArrayList<>();
+                        for (int i = 0; i < enemyCells.size(); i++) {
+                            // Создаём одного случайного врага
+                            BattleEnemy enemy = BattleEnemy.Companion.createRandomEnemies(1).get(0);
+                            enemiesList.add(enemy);
+                        }
+                        // Запускаем бой со всеми врагами
+                        battleScene.startBattleWithEnemies(enemiesList, enemyCells);
+                        // Закрываем меню сундука, чтобы оно не мешалось во время боя
+                        chestMenu.hide();
+                    }
                 }
                 if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
                     battleScene.startBattle(targetX, targetY);
@@ -306,7 +346,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         mainMenu.hide();
         // Останавливаем музыку главного меню и запускаем плейлист для карты
         SoundManager.stopMusic();
-        SoundManager.startPlaylist(false); // false = без перемешивания, можно true для случайного порядка
+        SoundManager.startPlaylist(false);
     }
 
     @Override
@@ -318,6 +358,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         if (whitePixel != null) whitePixel.dispose();
         if (pauseButtonTexture != null) pauseButtonTexture.dispose();
         if (statsButtonTexture != null) statsButtonTexture.dispose();
+        if (settingsButtonTexture != null) settingsButtonTexture.dispose();  // <-- ОСВОБОЖДЕНИЕ
         if (BGArena != null) BGArena.dispose();
         if (statsBackgroundTexture != null) statsBackgroundTexture.dispose();
         if (continueButtonTexture != null) continueButtonTexture.dispose();
@@ -326,6 +367,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         if (mainMenu != null) mainMenu.dispose();
         mapRenderer.dispose();
         font.dispose();
-        SoundManager.dispose(); // обязательно освободить ресурсы звуков
+        SoundManager.dispose();
     }
 }

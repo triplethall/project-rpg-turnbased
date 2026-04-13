@@ -90,8 +90,7 @@ class Inventory(
             Item("Iron Helmet", "Basic helmet. Defense +10%", 1, true, false, EquipmentDatabase.IRON_HELMET),
             Item("Iron Boots", "Basic boots. Defense +10%", 1, true, false, EquipmentDatabase.IRON_BOOTS),
             Item("Wooden Shield", "Basic shield. Defense +5%", 1, true, false, EquipmentDatabase.WOODEN_SHIELD),
-            Item("Healing Rune", "Increases healing received", 1, true, false, null),
-            Item("Protection Rune", "Increases defense", 1, true, false, null)
+            Item("Defence rune", "+20% armor in exchange for -20% max health", 1, true, false,EquipmentDatabase.DEFENCE_RUNE)
         ))
     }
 
@@ -235,14 +234,7 @@ class Inventory(
                 for (i in 0..1) {
                     if (player.equipment.getRune(i) == null) {
                         // Создаем временный EquipmentItem для руны
-                        val runeItem = EquipmentItem(
-                            id = item.name.lowercase().replace(" ", "_"),
-                            name = item.name,
-                            type = EquipmentType.RUNE,
-                            allowedClasses = listOf(PlayerClasses.ADVENTURIST),
-                            description = item.description,
-                            level = 1
-                        )
+                        val runeItem = item.equipmentItem ?: continue
                         if (player.equipment.equipRune(runeItem, i, player)) {
                             item.isEquipped = true
                             item.quantity--
@@ -384,8 +376,8 @@ class Inventory(
         font.data.setScale(1f)
     }
 
-        // Метод для снятия экипировки по типу
-        private fun unequipItemByType(type: EquipmentType, player: Player) {
+    // Метод для снятия экипировки по типу
+    private fun unequipItemByType(type: EquipmentType, player: Player) {
             val item = player.equipment.getEquipped(type) ?: return
 
             // Снимаем экипировку
@@ -408,11 +400,8 @@ class Inventory(
             }
         }
 
-
-
-
-        // Метод отрисовки панели экипировки
-        private fun renderEquipmentPanel(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
+    // Метод отрисовки панели экипировки
+    private fun renderEquipmentPanel(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
             val equipPanelX = panelX + panelW - 350f
             val equipPanelY = panelY + 50f
             val equipPanelW = 320f
@@ -550,12 +539,8 @@ class Inventory(
             renderPlayerStats(batch, whitePixel, equipPanelX, equipPanelY, equipPanelW, equipPanelH, player)
         }
 
-
-
-
-
-        // Метод отрисовки статистики
-        private fun renderPlayerStats(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
+    // Метод отрисовки статистики
+    private fun renderPlayerStats(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
             val statsX = panelX - 250f
             val statsY = panelY + 10f
 
@@ -575,10 +560,7 @@ class Inventory(
             font.draw(batch, "LUCK: ${(player.luck * 100).toInt()}%",statsX+20f, statsY-5f)
             font.draw(batch, "CORRUPT: ${player.corruption}",statsX+150f, statsY-5f)
         }
-
-
-
-
+    // FIXME: зачем такие пробелы делать 😭😭🙏
     private fun renderItems(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float) {
         val startX = panelX + 50f
         val startY = panelY + panelH - 150f
@@ -696,8 +678,8 @@ class Inventory(
             val equipX = detailsX + 50f
             equipButtonRect.set(equipX, buttonY, buttonW, buttonH)
 
-            val isItemEquipped = item.isEquipped || (item.equipmentItem?.let {
-                currentPlayer?.equipment?.getEquipped(it.type) != null
+            val isItemEquipped = item.isEquipped || (item.equipmentItem?.let { eqItem ->
+                currentPlayer?.equipment?.getEquipped(eqItem.type)?.id == eqItem.id
             } == true)
 
             batch.color = if (isEquipPressed) Color.LIGHT_GRAY else Color(0.3f, 0.6f, 0.3f, 1f)
@@ -786,5 +768,10 @@ class Inventory(
                 items.remove(it)
             }
         }
+    }
+
+    fun getEquippableItems(): List<Item>
+    {
+        return items.filter { it.isEquippable }
     }
 }

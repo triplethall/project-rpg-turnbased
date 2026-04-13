@@ -1,4 +1,3 @@
-@file:Suppress("unused")
 package ru.triplethall.rpgturnbased
 
 import kotlin.collections.joinToString
@@ -169,13 +168,13 @@ class PlayerEquipment
             return false
         }
         equipped[item.type] = item
-        applyItemBonuses(item, player, true)
+        player.recalculateStats()
         return true
     }
     fun unequip(type: EquipmentType, player: Player? = null): Boolean
     {
         val item = equipped.remove(type) ?: return false
-        player?.let { applyItemBonuses(item, it, false) }
+        player?.recalculateStats()
         return true
     }
 
@@ -184,42 +183,21 @@ class PlayerEquipment
         if (slot !in 0..1) return false
         if (runes[slot] != null) return false
         runes[slot] = rune
-        applyItemBonuses(rune, player, true)
+        player.recalculateStats()
         return true
     }
 
     fun unequipRune(slot: Int, player: Player): Boolean {
         val rune = runes[slot] ?: return false
         runes[slot] = null
-        applyItemBonuses(rune, player, false)
+        player.recalculateStats()
         return true
-    }
-
-
-    private fun applyItemBonuses(item: EquipmentItem, player: Player, apply: Boolean)
-    {
-        val multiplier = if (apply) 1 else -1
-
-        player.damage += item.damageBonus * multiplier
-        player.mageDamage += item.mageDamageBonus * multiplier
-        player.maxHealth += item.healthBonus * multiplier
-        player.maxMana += item.manaBonus * multiplier
-        player.defense += item.defenseBonus * multiplier
-        player.attackSpeed += item.attackSpeedBonus * multiplier
-        player.accuracy += item.accuracyBonus * multiplier
-        player.will += item.willBonus * multiplier
-        player.luck += item.luckBonus * multiplier
-        player.critChance += item.critChanceBonus * multiplier
-
-        if (apply) {
-            player.currentHealth += item.healthBonus
-            player.currentMana += item.manaBonus
-        }
     }
 }
 
 object EquipmentDatabase
 {
+
     // ===== KNIGHT / BERSERK =====
     // Swords
     val WOODEN_SWORD = EquipmentItem(
@@ -766,8 +744,89 @@ object EquipmentDatabase
         description = "",
         level = 75
     )
+    // Runes
+    val DEFENCE_RUNE = EquipmentItem(
+        id = "rune_01",
+        name = "Defence rune",
+        type = EquipmentType.RUNE,
+        allowedClasses = listOf(PlayerClasses.KNIGHT, PlayerClasses.ARCHER, PlayerClasses.MAGE),
+        defenseBonus = 0.20,
+        healthBonus = -50,
+        description = "This rune's magic shields you in exchange for your vitality.",
+        level = 20
+    )
 
 
-
+    // TODO: ЕСЛИ ДОБАВЛЯЕТЕ ОРУЖИЕ/БРОНЮ, ДОБАВЬТЕ ИХ В ЭТОТ СПИСОК В САМОМ КОНЦЕ!!!
+    // СПИСОК ВСЕХ ОРУЖИЙ (ВСЕХ КЛАССОВ)
+    val AllWeapons = listOf(
+        WOODEN_SWORD,
+        CHAMPION_SWORD,
+        ANGEL_BOJII,
+        DEEPSEA_ANCHOR,
+        DARKSTEEL_GREATSWORD,
+        RAILBLADE,
+        LUMBER_AXE,
+        BERSERKER_CHOPPA,
+        GRAN_SUDARUSKA,
+        IRON_SPEAR,
+        TRIDENT_SPEAR,
+        SHORT_BOW,
+        LONG_BOW,
+        ETERNAL_GALE,
+        TOY_KNIFE,
+        BUTCHER_KNIFE,
+        BLOODY_MACHETE,
+        RUSTY_DAGGER,
+        CENTRAL_DIRK,
+        CHAMPION_DAGGER,
+        WOODEN_STAFF,
+        CRYSTAL_STAFF,
+        SOUL_EATER_STAFF,
+        GLASS_ORB,
+        APPRENTICE_ORB,
+        ARCHMAGE_ORB,
+        MAGE_ORB,
+        MASTER_ORB,
+        MOLDY_BOOK,
+        SLIMY_TOME,
+        NECRONOMICON,
+        GLACIAL_SCRIPTURES,
+        HELLFIRE_GLYPHS,
+        VOID_GUIDE,
+        MAGNUM_OPUS
+        )
+    // СПИСОК ВСЕХ БРОНЬ (ВСЕХ КЛАССОВ)
+    val AllArmor = listOf(
+        LEATHER_BOOTS,
+        LEATHER_CHESTPLATE,
+        LEATHER_HELMET,
+        IRON_HELMET,
+        IRON_CHESTPLATE,
+        IRON_BOOTS,
+        KNIGHT_HELMET,
+        KNIGHT_CHESTPLATE,
+        KNIGHT_BOOTS,
+        ARCHER_HELMET,
+        ARCHER_CHESTPLATE,
+        ARCHER_BOOTS
+    )
+    // СПИСОК ВСЕХ ЩИТОВ (ВСЕХ КЛАССОВ)
+    val AllShields = listOf(
+        WOODEN_SHIELD,
+        PALADIN_SHIELD,
+        PATH_DEFENDER
+    )
+    // СПИСОК ВСЕХ РУН (АБВЫАБВЫАБВЫ)
+    val AllRunes = listOf(
+        DEFENCE_RUNE
+    )
+    // СПИСОК ВООБЩЕ ВСЕГО (ОРУЖИЯ, БРОНЯ, ЩИТЫ, и т.д.)
+    val AllItems = listOf(
+        AllWeapons.toTypedArray(),
+        AllArmor.toTypedArray(),
+        AllShields.toTypedArray(),
+        AllRunes.toTypedArray()
+    )
 }
 

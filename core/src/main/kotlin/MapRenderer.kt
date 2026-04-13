@@ -17,8 +17,17 @@ class MapRenderer (
     private val chestOpen: Texture
 ){
     private val pixelTexture: Texture
+    private lateinit var beachTextures: Array<TextureRegion>
+    private val BEACH_W = 32f
+    private val BEACH_H = 8f
     private val sandTexture: Texture
+    private val city1Texture: Texture
+    private val upgradeTexture: Texture
     private val dirtTexture: Texture
+    private val mtnTexture: Texture
+    private lateinit var beachCorner: TextureRegion
+    private val CORNER_W = 32f
+    private val CORNER_H = 32f
     private lateinit var cloudTextures: Array<TextureRegion>
     private val waterTextures = arrayOfNulls<Texture>(4)
     private var waterFrameIndex = 0
@@ -26,6 +35,14 @@ class MapRenderer (
     private var lastFrameTime = 0f
     private val frameDuration = 0.5f //частота смены кадров фона
     private val bgTileSize = 1024f
+
+    private val lightCache = Array(gameMap.width) { FloatArray(gameMap.height) }
+    private val distCache = Array(gameMap.width) { FloatArray(gameMap.height) }
+    // Отслеживание последней позиции игрока
+    private var lastPlayerX = -999
+    private var lastPlayerY = -999
+    private var cacheValid = false
+
     private val cellSize = cellSize.toFloat()
     private val cellGap = cellGap.toFloat()
     private val cloudIndices = Array(gameMap.width) {
@@ -48,13 +65,18 @@ class MapRenderer (
         pixmap.fill()
         pixelTexture.draw(pixmap, 0, 0)
         pixmap.dispose()
-
+        mtnTexture = Texture("map_layers/rocks/rock1.png")
+        beachCorner = TextureRegion(Texture("map_layers/beach/corner.png"))
         waterTextures[0] = Texture("bg/water_01_01.png")
         waterTextures[1] = Texture("bg/water_01_02.png")
         waterTextures[2] = Texture("bg/water_01_03.png")
         waterTextures[3] = Texture("bg/water_01_04.png")
-
+        beachTextures = Array(7) { i ->
+            TextureRegion(Texture("map_layers/beach/beach$i.png"))
+        }
+        upgradeTexture = Texture("upgradetile.png")
         dirtTexture = Texture("map_layers/dirt.png")
+        city1Texture = Texture("towns/town1.png")
         forestTexture = Texture("map_layers/forest.png")
         sandTexture = Texture("map_layers/sand_back_tile.png")
         cloudTextures = Array(5) { i ->
@@ -73,6 +95,7 @@ class MapRenderer (
         }
         forestTexture.dispose()
         sandTexture.dispose()
+        city1Texture.dispose()
         dirtTexture.dispose()
         for (region in grassSpoilers) {
             region.texture.dispose()
@@ -122,6 +145,7 @@ class MapRenderer (
     fun render(batch: SpriteBatch, player: Player) {
 
         visibilityManager.updateVisibility(Pair(player.x, player.y))
+        rebuildLightCache(player)
         val mapWidthPx = gameMap.width * (cellSize + cellGap)
         val mapHeightPx = gameMap.height * (cellSize + cellGap)
 
@@ -136,6 +160,9 @@ class MapRenderer (
             }
         }
 
+
+
+
         // слой 1 - базовая подложка, земля
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
@@ -146,10 +173,13 @@ class MapRenderer (
 
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
-                val light = calculateLight(x, y, player)
-
+                val light = if (cacheValid) lightCache[x][y] else 1.0f
+                if (terrain != TerrainType.WATER) {
+                    renderBeaches(batch, x, y, posX, posY, light)
+                    renderBeachCorners(batch, x, y, posX, posY, light)
+                }
                 when (terrain) {
-                    TerrainType.LAND, TerrainType.OpenedChest, TerrainType.Chest, TerrainType.FOREST -> {
+                    TerrainType.LAND, TerrainType.UPGRADE,TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.MOUNTAIN, TerrainType.OpenedChest, TerrainType.Chest, TerrainType.FOREST, TerrainType.ENEMY -> {
                         batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                         batch.draw(dirtTexture, posX, posY, cellSize, cellSize)
                     }
@@ -171,7 +201,7 @@ class MapRenderer (
 
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
-                val light = calculateLight(x, y, player)
+                val light = if (cacheValid) lightCache[x][y] else 1.0f
                 val terrain = gameMap.getTerrain(x, y)
                 if (terrain == TerrainType.WATER) continue
 
@@ -184,7 +214,7 @@ class MapRenderer (
                 batch.draw(pixelTexture, posX + cellSize - inset, posY - cellGap, lineWider, cellSize + 2*cellGap)  // right
                 batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap - inset, cellSize + 2*cellGap + 2*inset, lineWider) // bottom
                 batch.draw(pixelTexture, posX - cellGap - inset, posY + cellSize - inset, cellSize + 2*cellGap + 2*inset, lineWider) // top
-
+                renderGrassBorders(batch, x, y, posX, posY, light)
                 // текстуры травы в клетках
                 batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                 val addition = 3f
@@ -223,12 +253,15 @@ class MapRenderer (
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
                 if (!gameMap.isExplored(x, y)) continue
+                val distance = if (cacheValid) distCache[x][y] else 0f
+
                 val terrain = gameMap.getTerrain(x, y)
+                if (distance > 8 && terrain == TerrainType.ENEMY) continue
                 if (terrain == TerrainType.WATER || terrain == TerrainType.LAND) continue
 
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
-                val light = calculateLight(x, y, player)
+                val light = if (cacheValid) lightCache[x][y] else 1.0f
 
 
                 when (terrain) {
@@ -245,18 +278,29 @@ class MapRenderer (
                             batch.draw(tex, posX+3f, posY+3f, cellSize - 4f, cellSize - 4f)
                         }
                     }
-
+                    TerrainType.UPGRADE -> {
+                        batch.color = Color(0.5f, 0.5f, 0.5f, 1f).mul(light, light, light, 1f)
+                        batch.draw(upgradeTexture, posX + 5.0f, posY+5f, cellSize*0.7f, cellSize*0.7f)
+                    }
+                    TerrainType.CITYANCHOR -> {
+                        batch.color = Color(0.5f, 0.5f, 0.5f, 1f).mul(light, light, light, 1f)
+                        batch.draw(city1Texture, posX - cellSize*0.3f, posY - 1f, cellSize*2.65f, cellSize*2.65f)
+                    }
                     TerrainType.FOREST -> {
                         batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
                         batch.draw(forestTexture, posX - cellSize*0.2f, posY, cellSize*1.4f, cellSize*1.4f)
                     }
+                    TerrainType.MOUNTAIN -> {
+                        batch.color = Color(1f, 1f, 1f, 1f).mul(light, light, light, 1f)
+                        batch.draw(mtnTexture, posX - cellSize*0.2f, posY-cellGap, cellSize*1.4f, cellSize*1.5f)
+                    }
                     else -> {
                         val color = when (terrain) {
-                            TerrainType.MOUNTAIN -> Color.BLACK
-                            TerrainType.CITY -> Color.BROWN
+                            TerrainType.MOUNTAIN -> continue
+                            TerrainType.CITY -> continue
                             TerrainType.ENEMY -> Color.RED
                             TerrainType.TRAP -> Color.GRAY
-                            TerrainType.UPGRADE -> Color.ORANGE
+                            TerrainType.UPGRADE -> continue
                             TerrainType.OUTPOST -> Color.CORAL
                             TerrainType.FOREST -> continue
                             else -> Color.WHITE
@@ -288,20 +332,9 @@ class MapRenderer (
     }
 
 
-    fun calculateLight(x: Int, y: Int, player: Player): Float {
-        val dx = (x - player.x).toDouble()
-        val dy = (y - player.y).toDouble()
-        val distance = sqrt(dx * dx + dy * dy).toFloat()
 
-        return when {
-            distance <= 4.0f -> 1.0f
-            distance >= 8.0f -> 0.4f
-            else -> {
-                val ratio = (distance - 4.0f) / 4.0f
-                1.0f - (ratio * 0.6f)
-            }
-        }
-    }
+
+
 
     fun drawGrassSpoiler(
         batch: SpriteBatch,
@@ -350,6 +383,158 @@ class MapRenderer (
                     grassIndices[x][y][side] = (0..9).random()
                     grassMirrors[x][y][side] = (0..1).random() == 1
                 }
+            }
+        }
+    }
+    private fun renderBeaches(batch: SpriteBatch, x: Int, y: Int, posX: Float, posY: Float, light: Float) {
+        // Проверяем 4 стороны
+        val neighbors = listOf(
+            3 to Pair(0, 1),  // Top (y+1)
+            2 to Pair(0, -1), // Bottom (y-1)
+            0 to Pair(-1, 0), // Left (x-1)
+            1 to Pair(1, 0)   // Right (x+1)
+        )
+
+        for ((side, offset) in neighbors) {
+            val nx = x + offset.first
+            val ny = y + offset.second
+
+            // Если сосед валиден и это вода — рисуем пляж
+            if (nx in -1 until gameMap.width +1 && ny in -1 until gameMap.height+1 &&
+                gameMap.getTerrain(nx, ny) == TerrainType.WATER) {
+
+                // Детерминированный выбор текстуры (чтобы не мерцала при каждом кадре)
+                val texIdx = kotlin.math.abs((x * 31 + y * 17) % 7)
+                val tex = beachTextures[texIdx]
+
+                batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
+
+                when (side) {
+                    3 -> { // вода сверху. Рисуем над тайлом.
+                        batch.draw(tex, posX - cellGap - 1f, posY + cellSize+cellGap, BEACH_W + 2*cellGap+2f, BEACH_H + cellGap*2)
+
+                    }
+                    2 -> { // Bottom: вода снизу. Рисуем под тайлом, поворот 180.
+                        // pivot: Top-Center (16, 8) -> вешаем на нижнюю границу тайла
+                        batch.draw(tex, posX + 2*cellGap - 3.1f,  posY - cellGap - cellSize/2 - 1f, 16f, 8f, BEACH_W + 2*cellGap + 2f, BEACH_H + cellGap*2, 1f, 1f, 180f)
+                    }
+                    0 -> { // Left: вода слева. Рисуем слева, поворот +90 (CCW).
+                        // pivot: Bottom-Left (0, 0) -> вешаем на левый нижний угол тайла
+                        batch.draw(tex, posX - 2*cellGap + 3f, posY - cellGap - 1f, 0f, 0f, BEACH_W + 2* cellGap + 2f, BEACH_H + cellGap*2, 1f, 1f, 90f)
+                    }
+                    1 -> { // Right: вода справа. Рисуем справа, поворот -90 (CW).
+                        // pivot: Top-Left (0, 8) -> вешаем на правый верхний угол тайла
+                        batch.draw(tex, posX + cellSize + 2*cellGap +4f, posY + cellSize/2 + 3*cellGap + 1f, 0f, 8f, BEACH_W+ 2* cellGap + 2f, BEACH_H+ cellGap*2, 1f, 1f, -90f)
+                    }
+                }
+            }
+        }
+    }
+    private fun renderGrassBorders(batch: SpriteBatch, x: Int, y: Int, posX: Float, posY: Float, light: Float) {
+        // Проверяем 4 стороны
+        val neighbors = listOf(
+            3 to Pair(0, 1),  // Top (y+1)
+            2 to Pair(0, -1), // Bottom (y-1)
+            0 to Pair(-1, 0), // Left (x-1)
+            1 to Pair(1, 0)   // Right (x+1)
+        )
+
+        for ((side, offset) in neighbors) {
+            val nx = x + offset.first
+            val ny = y + offset.second
+
+            // Если сосед валиден и это вода — рисуем пляж
+            if (nx in -1 until gameMap.width +1 && ny in -1 until gameMap.height+1 &&
+                gameMap.getTerrain(nx, ny) == TerrainType.WATER) {
+
+                // Детерминированный выбор текстуры (чтобы не мерцала при каждом кадре)
+
+                val texIdx2 = kotlin.math.abs((x * 31 + y * 17) % 10)
+
+                val tex2 = grassSpoilers[texIdx2]
+
+                batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
+
+                when (side) {
+                    3 -> { // вода сверху. Рисуем над тайлом.
+
+                        batch.draw(tex2, posX - cellGap - 1f, posY + cellSize+cellGap, BEACH_W + 2*cellGap+2f, BEACH_H)
+                    }
+                    2 -> { // Bottom: вода снизу. Рисуем под тайлом, поворот 180.
+                        // pivot: Top-Center (16, 8) -> вешаем на нижнюю границу тайла
+                        batch.draw(tex2, posX + 2*cellGap - 3.1f,  posY - cellGap - cellSize/2 - 1f, 16f, 8f, BEACH_W + 2*cellGap + 2f, BEACH_H, 1f, 1f, 180f)
+                    }
+                    0 -> { // Left: вода слева. Рисуем слева, поворот +90 (CCW).
+                        // pivot: Bottom-Left (0, 0) -> вешаем на левый нижний угол тайла
+                        batch.draw(tex2, posX - 2*cellGap + 3f, posY - cellGap - 1f, 0f, 0f, BEACH_W + 2* cellGap + 2f, BEACH_H, 1f, 1f, 90f)
+                    }
+                    1 -> { // Right: вода справа. Рисуем справа, поворот -90 (CW).
+                        // pivot: Top-Left (0, 8) -> вешаем на правый верхний угол тайла
+                        batch.draw(tex2, posX + cellSize + 2*cellGap +4f, posY + cellSize/2 + 3*cellGap + 1f, 0f, 8f, BEACH_W+ 2* cellGap + 2f, BEACH_H, 1f, 1f, -90f)
+                    }
+                }
+            }
+        }
+    }
+    private fun rebuildLightCache(player: Player) {
+        // Если игрок не сдвинулся — выходим
+        if (player.x == lastPlayerX && player.y == lastPlayerY) {
+            cacheValid = true
+            return
+        }
+
+        lastPlayerX = player.x
+        lastPlayerY = player.y
+
+        for (x in 0 until gameMap.width) {
+            for (y in 0 until gameMap.height) {
+                val dx = (x - player.x).toDouble()
+                val dy = (y - player.y).toDouble()
+                // Считаем дистанцию один раз
+                val dist = sqrt(dx * dx + dy * dy).toFloat()
+                distCache[x][y] = dist
+
+                // Сразу считаем свет
+                lightCache[x][y] = when {
+                    dist <= 4.0f -> 1.0f
+                    dist >= 8.0f -> 0.4f
+                    else -> {
+                        val ratio = (dist - 4.0f) / 4.0f
+                        1.0f - (ratio * 0.6f)
+                    }
+                }
+            }
+        }
+        cacheValid = true
+    }
+    private fun renderBeachCorners(batch: SpriteBatch, x: Int, y: Int, posX: Float, posY: Float, light: Float) {
+        // Диагонали: (dx, dy, rotation)
+        // corner.png ориентирован как верх-правый угол (вода по диагонали TR)
+        val diagonals = listOf(
+            Triple(1, 1, 0f),      // Top-Right: вода справа+сверху → 0°
+            Triple(1, -1, -90f),   // Bottom-Right: вода справа+снизу → -90° (по часовой)
+            Triple(-1, -1, 180f),  // Bottom-Left: вода слева+снизу → 180°
+            Triple(-1, 1, 90f)     // Top-Left: вода слева+сверху → +90° (против часовой)
+        )
+
+        for ((dx, dy, rotation) in diagonals) {
+            val nx = x + dx
+            val ny = y + dy
+
+            // Угол нужен, если диагональный сосед и оба прямых соседа — вода
+            if (nx in -1 until gameMap.width + 1 && ny in -1 until gameMap.height + 1 &&
+                gameMap.getTerrain(nx, ny) == TerrainType.WATER &&
+                gameMap.getTerrain(x + dx, y) == TerrainType.WATER &&
+                gameMap.getTerrain(x, y + dy) == TerrainType.WATER) {
+
+                batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
+
+                // Позиция: внешний угол тайла
+                val cornerX = if (dx > 0) posX + cellSize else posX
+                val cornerY = if (dy > 0) posY + cellSize else posY
+
+                // pivot: 0,0 (левый нижний угол текстуры)
+                batch.draw(beachCorner, cornerX, cornerY, 0f, 0f, CORNER_W/1.5f, CORNER_H/1.5f, 1f, 1f, rotation)
             }
         }
     }
