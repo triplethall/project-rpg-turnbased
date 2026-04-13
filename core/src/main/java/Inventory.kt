@@ -90,8 +90,7 @@ class Inventory(
             Item("Iron Helmet", "Basic helmet. Defense +10%", 1, true, false, EquipmentDatabase.IRON_HELMET),
             Item("Iron Boots", "Basic boots. Defense +10%", 1, true, false, EquipmentDatabase.IRON_BOOTS),
             Item("Wooden Shield", "Basic shield. Defense +5%", 1, true, false, EquipmentDatabase.WOODEN_SHIELD),
-            Item("Healing Rune", "Increases healing received", 1, true, false, null),
-            Item("Protection Rune", "Increases defense", 1, true, false, null)
+            Item("Defence rune", "+20% armor in exchange for -20% max health", 1, true, false,EquipmentDatabase.DEFENCE_RUNE)
         ))
     }
 
@@ -235,14 +234,7 @@ class Inventory(
                 for (i in 0..1) {
                     if (player.equipment.getRune(i) == null) {
                         // Создаем временный EquipmentItem для руны
-                        val runeItem = EquipmentItem(
-                            id = item.name.lowercase().replace(" ", "_"),
-                            name = item.name,
-                            type = EquipmentType.RUNE,
-                            allowedClasses = listOf(PlayerClasses.ADVENTURIST),
-                            description = item.description,
-                            level = 1
-                        )
+                        val runeItem = item.equipmentItem ?: continue
                         if (player.equipment.equipRune(runeItem, i, player)) {
                             item.isEquipped = true
                             item.quantity--
@@ -686,8 +678,8 @@ class Inventory(
             val equipX = detailsX + 50f
             equipButtonRect.set(equipX, buttonY, buttonW, buttonH)
 
-            val isItemEquipped = item.isEquipped || (item.equipmentItem?.let {
-                currentPlayer?.equipment?.getEquipped(it.type) != null
+            val isItemEquipped = item.isEquipped || (item.equipmentItem?.let { eqItem ->
+                currentPlayer?.equipment?.getEquipped(eqItem.type)?.id == eqItem.id
             } == true)
 
             batch.color = if (isEquipPressed) Color.LIGHT_GRAY else Color(0.3f, 0.6f, 0.3f, 1f)
