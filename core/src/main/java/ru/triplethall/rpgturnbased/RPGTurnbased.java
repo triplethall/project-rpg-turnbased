@@ -24,7 +24,7 @@ import ru.triplethall.rpgturnbased.Player;
 import ru.triplethall.rpgturnbased.PauseMenu;
 import ru.triplethall.rpgturnbased.SoundManager;
 
-public class RPGTurnbased extends ApplicationAdapter {
+public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionListener{
     private SpriteBatch batch;
     private CameraControl cameraControl;
     private MapRenderer mapRenderer;
@@ -61,6 +61,9 @@ public class RPGTurnbased extends ApplicationAdapter {
     private MainMenu mainMenu;
     private boolean gameStarted = false;
     private CityMenu cityMenu;
+    private ClassSelectionMenu classSelectionMenu;
+    private boolean isSelectingClass = false;
+    private PlayerClasses selectedPlayerClass = null;
     private ShopMenu shopMenu;
 
     @Override
@@ -74,6 +77,12 @@ public class RPGTurnbased extends ApplicationAdapter {
         cityMenu = new CityMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
+
+        classSelectionMenu = new ClassSelectionMenu(
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            this
+        );
 
         gameMap = new GameMap(21, 21, chestMenu);
         gameMap.generate(1, 1);
@@ -166,11 +175,20 @@ public class RPGTurnbased extends ApplicationAdapter {
 
     @Override
     public void render() {
-        if (!gameStarted) {
+        if (!gameStarted && !isSelectingClass) {
             mainMenu.handleInput();
             ScreenUtils.clear(0.05f, 0.05f, 0.1f, 1f);
             batch.setProjectionMatrix(uiCamera.combined);
             mainMenu.render(batch, shapeRenderer);
+            return;
+        }
+
+        // Обработка выбора класса
+        if (isSelectingClass) {
+            classSelectionMenu.handleInput();
+            ScreenUtils.clear(0.05f, 0.05f, 0.1f, 1f);
+            batch.setProjectionMatrix(uiCamera.combined);
+            classSelectionMenu.render(batch, shapeRenderer);
             return;
         }
 
@@ -291,8 +309,40 @@ public class RPGTurnbased extends ApplicationAdapter {
         }
     }
 
-    public void startGame() {
+    public void onClassSelected(PlayerClasses playerClass) {
+        if (playerClass == null) {
+            mainMenu.show();
+            isSelectingClass = false;
+        } else {
+            selectedPlayerClass = playerClass;
+            applyClassToPlayer();
+            startGameAfterClassSelection();
+        }
+    }
+
+    private void applyClassToPlayer() {
+        if (selectedPlayerClass != null) {
+            selectedPlayerClass.applyToPlayer(player);
+            System.out.println("Выбран класс: " + selectedPlayerClass.getDisplayName());
+            System.out.println(selectedPlayerClass.getStatsDescription());
+        }
+    }
+
+    private void startGameAfterClassSelection() {
+        isSelectingClass = false;
         gameStarted = true;
+        mainMenu.hide();
+        SoundManager.stopMusic();
+        SoundManager.startPlaylist(false);
+    }
+
+    public void showClassSelection() {
+        isSelectingClass = true;
+        classSelectionMenu.show();
+    }
+
+    public void startGame() {
+        showClassSelection();
         mainMenu.hide();
         // Останавливаем музыку главного меню и запускаем плейлист для карты
         SoundManager.stopMusic();
@@ -303,6 +353,7 @@ public class RPGTurnbased extends ApplicationAdapter {
     public void dispose() {
         batch.dispose();
         if (image != null) image.dispose();
+        if (classSelectionMenu != null) classSelectionMenu.dispose();
         if (pixelTexture != null) pixelTexture.dispose();
         if (whitePixel != null) whitePixel.dispose();
         if (pauseButtonTexture != null) pauseButtonTexture.dispose();
