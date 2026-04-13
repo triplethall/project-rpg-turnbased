@@ -33,6 +33,7 @@ class MapRenderer (
     private var lastFrameTime = 0f
     private val frameDuration = 0.5f //частота смены кадров фона
     private val bgTileSize = 1024f
+    private val waterFogColor = Color(0f, 0f, 0f, 0f)
     private val cellSize = cellSize.toFloat()
     private val cellGap = cellGap.toFloat()
     private val cloudIndices = Array(gameMap.width) {
@@ -145,7 +146,31 @@ class MapRenderer (
                 batch.draw(currentWaterTex, tx * bgTileSize, ty * bgTileSize, bgTileSize, bgTileSize)
             }
         }
+        for (x in 0 until gameMap.width) {
+            for (y in 0 until gameMap.height) {
+                // Рисуем оверлей только на воде
+                if (gameMap.getTerrain(x, y) != TerrainType.WATER) continue
+                // Опционально: не затемнять туманом войны, если клетка не открыта
+                // if (!gameMap.isExplored(x, y)) continue
 
+                val posX = x * (cellSize + cellGap)
+                val posY = y * (cellSize + cellGap)
+                val light = calculateLight(x, y, player)
+
+                // Если светло — пропускаем, чтобы не гнать лишние вызовы draw
+                if (light >= 1.0f) continue
+
+                // Альфа = инверсия яркости, с коэффициентом для мягкости
+                val alpha = (1.0f - light) * 0.7f
+                waterFogColor.a = alpha
+                batch.color = waterFogColor
+
+                // Рисуем поверх воды, точно по сетке тайлов
+                batch.draw(pixelTexture, posX, posY, cellSize + cellGap, cellSize + cellGap)
+            }
+        }
+// Сброс цвета после прохода
+        batch.color = Color.WHITE
         // слой 1 - базовая подложка, земля
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
