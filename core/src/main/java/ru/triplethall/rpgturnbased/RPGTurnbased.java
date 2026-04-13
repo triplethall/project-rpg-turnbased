@@ -133,7 +133,7 @@ public class RPGTurnbased extends ApplicationAdapter {
             continueButtonTexture,
             exitButtonTexture,
             pauseBackgroundTexture,
-            settingsButtonTexture);   
+            settingsButtonTexture);
 
         inventory = new Inventory(font,
             Gdx.graphics.getWidth(),
@@ -252,8 +252,7 @@ public class RPGTurnbased extends ApplicationAdapter {
             Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
             int targetX = (int) grid.x;
             int targetY = (int) grid.y;
-
-            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY) {
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY || gameMap.getTerrain(targetX, targetY) == TerrainType.CITYANCHOR) {
                 int dx = Math.abs(player.getX() - targetX);
                 int dy = Math.abs(player.getY() - targetY);
                 boolean isNear = (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);

@@ -9,6 +9,7 @@ enum class TerrainType {
     MOUNTAIN,
     Chest,
     CITY,
+    CITYANCHOR,
     ENEMY,
     TRAP,
     UPGRADE,
@@ -679,7 +680,8 @@ class GameMap(
                 {
                     for (dy in 0..1)
                     {
-                        terrain[x + dx][y + dy] = TerrainType.CITY
+                        if (dx == 0 && dy == 0) {terrain[x + dx][y + dy] = TerrainType.CITYANCHOR} else {
+                        terrain[x + dx][y + dy] = TerrainType.CITY}
                     }
                 }
                 return
