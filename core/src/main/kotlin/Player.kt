@@ -3,15 +3,13 @@ package ru.triplethall.rpgturnbased
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.random.Random
-import kotlin.random.asJavaRandom
 
 class Player(
     var x: Int = 0,
     var y: Int = 0,
-    var playerClass : PlayerClasses = PlayerClasses.ADVENTURIST // класс по умолчанию
+    var playerClass: PlayerClasses = PlayerClasses.ADVENTURIST // класс по умолчанию
 ) {
     // Базовые характеристики
     var damage: Int = 30                    // Урон
@@ -29,6 +27,7 @@ class Player(
     fun getLightningDamageModifier(): Double {
         return if (debuffManager.hasDebuff(DebuffType.WET)) 1.25 else 1.0
     }
+
     init {
         playerClass.applyToPlayer(this)
     }
@@ -44,29 +43,24 @@ class Player(
 
     val equipment = PlayerEquipment()
 
-    // формула для расчета опыта
     companion object {
         private const val BASE_EXP = 100
         private const val EXP_GROWTH_FACTOR = 1.4
     }
 
-    fun defenseWork(){
-
+    fun defenseWork() {
     }
-
 
     // Расчет необходимого опыта для некст левела
     fun getExpForNextLevel(): Int {
         return (BASE_EXP * (EXP_GROWTH_FACTOR.pow(level - 1))).toInt()
     }
 
-
     // Получение прогресса опыта в процентах (полоска опыта)
     fun getExpProgress(): Float {
         val expNeeded = getExpForNextLevel()
         return experience.toFloat() / expNeeded.toFloat()
     }
-
 
     // Добавление опыта + проверка на повышение уровня
     fun addExperience(amount: Int) {
@@ -77,7 +71,6 @@ class Player(
             levelUp()
         }
     }
-
 
     // Повышение уровня
     private fun levelUp() {
@@ -91,18 +84,18 @@ class Player(
         currentHealth = maxHealth
     }
 
-
     // Скверна модификаторы
     fun getCorruptionHealthModifier(): Double {
         return (1.0 - (corruption * 0.05)).coerceAtLeast(0.5)  // Максимум -50% здоровья
     }
+
     fun getCorruptionDamageModifier(): Double {
         return (1.0 + (corruption * 0.05)).coerceAtMost(1.5)    // Максимум +50% урона
     }
+
     fun getCorruptionMageDamageModifier(): Double {
         return (1.0 + (corruption * 0.04)).coerceAtMost(1.4)    // Максимум +40% маг. урона
     }
-
 
     // скверна при смерти
     fun applyCorruptionOnDeath() {
@@ -110,18 +103,15 @@ class Player(
         println("total crpt: $corruption")
     }
 
-
     // Проверка хватает ли опыта
     fun canLevelUp(): Boolean {
         return experience >= getExpForNextLevel()
     }
 
-
     // Сброс скверны (например после какого-то события)
     fun removeCorruption(amount: Int) {
         corruption = maxOf(0, corruption - amount)
     }
-
 
     fun spawnOnShore(gameMap: GameMap) {
         val random = Random
@@ -180,7 +170,6 @@ class Player(
         this.onEnterForestListener = listener
     }
 
-
     fun tryMoveTo(targetX: Int, targetY: Int, gameMap: GameMap): Boolean {
         if (!isAdjacentCardinal(targetX, targetY)) {
             return false
@@ -192,19 +181,15 @@ class Player(
             // Проверяем, был ли на этой клетке сундук, и убираем его
             if (gameMap.collectChest(targetX, targetY)) {
                 // Здесь можно добавить логику награды (например, увеличить счёт, выдать предмет)
-
             }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.FOREST) {
                 if (Random.nextFloat() < 0.1f) {
                     onEnterForestListener?.onEnterForest(targetX, targetY)
                 }
-
             }
             return true
         }
-
         return false
-
     }
 
     fun changeClass(newClass: PlayerClasses) {
@@ -212,8 +197,7 @@ class Player(
         recalculateStats()
     }
 
-    fun recalculateStats()
-    {
+    fun recalculateStats() {
         val hpPercent = if (maxHealth > 0) currentHealth.toFloat() / maxHealth else 1f
         val manaPercent = if (maxMana > 0) currentMana.toFloat() / maxMana else 1f
 
