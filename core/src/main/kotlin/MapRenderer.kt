@@ -39,6 +39,15 @@ class MapRenderer (
     private val lightCache = Array(gameMap.width) { FloatArray(gameMap.height) }
     private val distCache = Array(gameMap.width) { FloatArray(gameMap.height) }
     // Отслеживание последней позиции игрока
+    private lateinit var decoTextures: Array<TextureRegion>
+    private data class DecoItem(val idx: Int, val mirror: Boolean, val w: Float, val h: Float, val offX: Float, val offY: Float)
+    // Кэш: [x][y][side] -> 0..2 декорации в зазоре
+    private val decoCache = Array(gameMap.width) {
+        Array(gameMap.height) {
+            Array(4) { mutableListOf<DecoItem>() }
+        }
+    }
+    private val DECO_PROBABILITY = 0.12f
     private var lastPlayerX = -999
     private var lastPlayerY = -999
     private var cacheValid = false
@@ -82,6 +91,10 @@ class MapRenderer (
         cloudTextures = Array(5) { i ->
             TextureRegion(Texture("map_layers/clouds/clouds$i.png"))
         }
+        decoTextures = Array(13) { i ->
+            TextureRegion(Texture("map_decor/deco0-${i.toString().padStart(2, '0')}.png"))
+        }
+        generateDecoVariations()
         grassSpoilers = Array(10) { i ->
             TextureRegion(Texture("map_layers/grass_spoilers/light_grass$i.png"))
         }
@@ -248,10 +261,20 @@ class MapRenderer (
                 }
             }
         }
-
-        // слой 3 - объекты
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
+
+                if (gameMap.getTerrain(x, y) != TerrainType.WATER) {
+                    val light = if (cacheValid) lightCache[x][y] else 1.0f
+                    val posX = x * (cellSize + cellGap)
+                    val posY = y * (cellSize + cellGap)
+                    renderDecoBorders(batch, x, y, posX, posY, light)
+                }
+            }
+        }
+        // слой 3 - объекты
+        for (x in 0 until gameMap.width) {
+            for (y in gameMap.height - 1 downTo 0) {
                 if (!gameMap.isExplored(x, y)) continue
                 val distance = if (cacheValid) distCache[x][y] else 0f
 
@@ -538,4 +561,85 @@ class MapRenderer (
             }
         }
     }
-}
+    fun generateDecoVariations() {
+        val rand = kotlin.random.Random
+        for (x in 0 until gameMap.width) {
+            for (y in gameMap.height - 1 downTo 0) {
+                for (side in 0..3) {
+                    // 0..2 декорации в одном зазоре
+                    if (!isValidDecoSide(x, y, side)) {
+                        decoCache[x][y][side].clear()
+                        continue
+                    }
+                    val count = if (rand.nextFloat() < DECO_PROBABILITY) rand.nextInt(1, 2) else 0
+                    for (n in 0 until count) {
+                        val idx = rand.nextInt(0, 13)
+                        val tex = decoTextures[idx]
+                        val origW = tex.regionWidth.toFloat()
+                        val origH = tex.regionHeight.toFloat()
+                        val target = rand.nextFloat() * 6f + 10f // 10..16f
+                        val scale = target / maxOf(origW, origH)
+
+                        // Рандомное смещение внутри прямоугольника зазора
+                        val offX = when (side) {
+                            0 -> -rand.nextFloat() * cellGap - cellGap
+                            1 -> rand.nextFloat() * cellGap - 2*cellGap
+                            else -> rand.nextFloat() * cellSize
+                        }
+                        val offY = when (side) {
+                            2 -> -rand.nextFloat() * cellGap - cellGap
+                            3 -> rand.nextFloat() * cellGap - 2*cellGap
+                            else -> rand.nextFloat() * cellSize
+                        }
+
+                        decoCache[x][y][side].add(
+                            DecoItem(idx, rand.nextBoolean(), origW * scale, origH * scale, offX, offY)
+                        )
+                    }
+                }
+            }
+        }
+    }
+    private fun renderDecoBorders(batch: SpriteBatch, x: Int, y: Int, posX: Float, posY: Float, light: Float) {
+        for (side in 0..3) {
+            for (deco in decoCache[x][y][side]) {
+                // Затемнение: сдвиг на -0.2f, но не ниже 0.2f (чтобы не уходило в черный)
+                val darkLight = (light - 0.2f).coerceAtLeast(0.2f)
+                batch.color = Color.WHITE.cpy().mul(darkLight, darkLight, darkLight, 1f)
+
+                // Rotation = 0, origin в центре для корректного зеркала
+                val ox = deco.w / 2f
+                val oy = deco.h / 2f
+                batch.draw(
+                    decoTextures[deco.idx],
+                    posX + deco.offX, posY + deco.offY, // позиция внутри зазора
+                    ox, oy,                              // origin
+                    deco.w, deco.h,                      // размеры
+                    if (deco.mirror) -1f else 1f, 1f,    // scale
+                    0f                                   // rotation
+                )
+            }
+        }
+    }
+    private fun isValidDecoSide(x: Int, y: Int, side: Int): Boolean {
+        val (dx, dy) = when (side) {
+            0 -> -1 to 0  // Left
+            1 -> 1 to 0   // Right
+            2 -> 0 to -1  // Bottom
+            3 -> 0 to 1   // Top
+            else -> return false
+        }
+
+        val nx = x + dx
+        val ny = y + dy
+
+        // Если сосед за границей карты — нельзя ставить декор
+        if (nx !in 0 until gameMap.width || ny !in 0 until gameMap.height) return false
+
+        val t1 = gameMap.getTerrain(x, y)
+        val t2 = gameMap.getTerrain(nx, ny)
+
+        // Разрешаем только если ОБА тайла — LAND или ENEMY
+        return (t1 == TerrainType.LAND || t1 == TerrainType.ENEMY) &&
+            (t2 == TerrainType.LAND || t2 == TerrainType.ENEMY)
+}}
