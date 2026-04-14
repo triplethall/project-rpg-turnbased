@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
@@ -46,7 +47,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private Texture statsButtonTexture;
     private Texture pauseBackgroundTexture;
     private Texture statsBackgroundTexture;
-    private Texture settingsButtonTexture;   // <-- ДОБАВЛЕНО
+    private Texture settingsButtonTexture;
     private Rectangle statsButtonRect;
     private Texture BGArena;
     private final int CELL_SIZE = 32;
@@ -120,11 +121,17 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         statsBackgroundTexture = new Texture("menus/bgs/statsmenubg.png");
         continueButtonTexture = new Texture("menus/buttons/continue.png");
         exitButtonTexture = new Texture("menus/buttons/exit.png");
-        settingsButtonTexture = new Texture("menus/buttons/options.png");  // <-- ЗАГРУЗКА
+        settingsButtonTexture = new Texture("menus/buttons/options.png");
         pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
-        barTexture = new Texture("playerbarsbg.png");
 
-        // Включаем музыку главного меню (она будет играть до старта игры)
+        // Загружаем текстуру для полосок (должна быть в assets)
+        try {
+            barTexture = new Texture("playerbarsbg.png");
+        } catch (Exception e) {
+            Gdx.app.error("RPG", "playerbarsbg.png not found, using whitePixel");
+            barTexture = whitePixel;
+        }
+
         SoundManager.playMusic("music/mainMenu.mp3", true);
         pixmap.dispose();
 
@@ -183,7 +190,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             return;
         }
 
-        // Обработка выбора класса
         if (isSelectingClass) {
             classSelectionMenu.handleInput();
             ScreenUtils.clear(0.05f, 0.05f, 0.1f, 1f);
@@ -197,8 +203,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         boolean chestClicked = chestMenu.handleInput();
         boolean cityMenuClicked = cityMenu.handleInput();
         boolean shopClicked = false;
-        if (cityMenu.isShopClicked())
-        {
+        if (cityMenu.isShopClicked()) {
             shopMenu.show();
             shopClicked = true;
         }
@@ -248,6 +253,71 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         chestMenu.render(batch, whitePixel);
         pauseMenu.render(batch, whitePixel, player);
         inventory.render(batch, whitePixel, player);
+
+        if (!battleScene.isActive()) {
+            // Координаты общего фона (рамки)
+            float bgX = 20f;
+            float bgY = Gdx.graphics.getHeight() - 220f;
+            float bgWidth = 500f;      // ширина рамки (подберите под экран)
+            float bgHeight = 160f;      // высота рамки
+
+            // 1. Рисуем общую рамку (текстура растянется)
+            batch.draw(barTexture, bgX, bgY, bgWidth, bgHeight);
+
+            // 2. Вычисляем внутренние отступы
+            float paddingX = bgWidth * 0.165f;
+            float paddingY = bgHeight * 0.35f;
+            float innerWidth = bgWidth - paddingX * 2;
+            float innerHeight = bgHeight - paddingY * 2;
+            float innerX = bgX + paddingX;
+            float innerY = bgY + paddingY;
+
+            // 3. Параметры двух полосок (здоровье сверху, мана снизу)
+            float barHeight = innerHeight * 0.4f;        // высота каждой полоски
+            float barSpacing = innerHeight * 0.1f;       // зазор между полосками
+            float healthBarY = innerY + innerHeight - barHeight;
+            float manaBarY = healthBarY - barHeight - barSpacing;
+
+            // === Полоска здоровья ===
+            float healthPercent = (float) player.getCurrentHealth() / player.getMaxHealth();
+            batch.setColor(Color.BLACK);
+            batch.draw(whitePixel, innerX, healthBarY, innerWidth, barHeight);
+            batch.setColor(Color.RED);
+            batch.draw(whitePixel, innerX, healthBarY, innerWidth * healthPercent, barHeight);
+
+            // === Полоска маны ===
+            float manaPercent = (float) player.getCurrentMana() / player.getMaxMana();
+            batch.setColor(Color.BLACK);
+            batch.draw(whitePixel, innerX, manaBarY, innerWidth, barHeight);
+            batch.setColor(Color.BLUE);
+            batch.draw(whitePixel, innerX, manaBarY, innerWidth * manaPercent, barHeight);
+
+            // === Текст поверх полосок ===
+            GlyphLayout layout = new GlyphLayout();
+            font.getData().setScale(1.2f);
+
+            String healthText = player.getCurrentHealth() + "/" + player.getMaxHealth();
+            layout.setText(font, healthText);
+            float healthTextX = innerX + (innerWidth - layout.width) / 2;
+            float healthTextY = healthBarY + (barHeight + layout.height) / 2;
+            font.setColor(Color.BLACK);
+            font.draw(batch, healthText, healthTextX + 2f, healthTextY - 2f);
+            font.setColor(Color.WHITE);
+            font.draw(batch, healthText, healthTextX, healthTextY);
+
+            String manaText = player.getCurrentMana() + "/" + player.getMaxMana();
+            layout.setText(font, manaText);
+            float manaTextX = innerX + (innerWidth - layout.width) / 2;
+            float manaTextY = manaBarY + (barHeight + layout.height) / 2;
+            font.setColor(Color.BLACK);
+            font.draw(batch, manaText, manaTextX + 2f, manaTextY - 2f);
+            font.setColor(Color.WHITE);
+            font.draw(batch, manaText, manaTextX, manaTextY);
+
+            batch.setColor(Color.WHITE);
+            font.getData().setScale(1f);
+        }
+
         batch.draw(statsButtonTexture, statsButtonRect.x, statsButtonRect.y, statsButtonRect.width, statsButtonRect.height);
 
         if (battleScene.isActive()) {
@@ -256,6 +326,22 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         cityMenu.render(batch, shapeRenderer);
         shopMenu.render(batch, shapeRenderer, whitePixel);
         batch.end();
+    }
+
+
+    private void drawBarText(SpriteBatch batch, StatBar bar, String text, float scale) {
+        GlyphLayout layout = new GlyphLayout(font, text);
+        float textX = bar.getX() + (bar.getWidth() - layout.width) / 2;
+        float textY = bar.getY() + (bar.getHeight() + layout.height) / 2;
+        font.getData().setScale(scale);
+        // Тень
+        font.setColor(Color.BLACK);
+        font.draw(batch, text, textX + 2f, textY - 2f);
+        // Основной текст
+        font.setColor(Color.WHITE);
+        font.draw(batch, text, textX, textY);
+        font.getData().setScale(1f);
+        font.setColor(Color.WHITE);
     }
 
     private Vector3 screenToGrid(float screenX, float screenY) {
@@ -287,18 +373,13 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                     chestMenu.show();
 
                     if (gameMap.hasEnemies()) {
-                        // Получаем список координат всех врагов
                         List<Pair<Integer, Integer>> enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
-                        // Создаём список BattleEnemy (по одному случайному врагу на каждую клетку)
                         List<BattleEnemy> enemiesList = new ArrayList<>();
                         for (int i = 0; i < enemyCells.size(); i++) {
-                            // Создаём одного случайного врага
                             BattleEnemy enemy = BattleEnemy.Companion.createRandomEnemies(1).get(0);
                             enemiesList.add(enemy);
                         }
-                        // Запускаем бой со всеми врагами
                         battleScene.startBattleWithEnemies(enemiesList, enemyCells);
-                        // Закрываем меню сундука, чтобы оно не мешалось во время боя
                         chestMenu.hide();
                     }
                 }
@@ -344,7 +425,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     public void startGame() {
         showClassSelection();
         mainMenu.hide();
-        // Останавливаем музыку главного меню и запускаем плейлист для карты
         SoundManager.stopMusic();
         SoundManager.startPlaylist(false);
     }
@@ -358,7 +438,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         if (whitePixel != null) whitePixel.dispose();
         if (pauseButtonTexture != null) pauseButtonTexture.dispose();
         if (statsButtonTexture != null) statsButtonTexture.dispose();
-        if (settingsButtonTexture != null) settingsButtonTexture.dispose();  // <-- ОСВОБОЖДЕНИЕ
+        if (settingsButtonTexture != null) settingsButtonTexture.dispose();
         if (BGArena != null) BGArena.dispose();
         if (statsBackgroundTexture != null) statsBackgroundTexture.dispose();
         if (continueButtonTexture != null) continueButtonTexture.dispose();
