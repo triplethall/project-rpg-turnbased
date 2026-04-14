@@ -123,8 +123,8 @@ class BattleScene(
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
 
-        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color.RED)
-        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color.BLUE)
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color(0.5f, 0.15f, 0.1f, 1f))
+        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color(0.129f, 0.216f, 0.471f, 1f))
 
         updateEnemyBars()
     }
@@ -153,8 +153,8 @@ class BattleScene(
         val playerBarX = 20f
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
-        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color.RED)
-        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 20f, Color.BLUE)
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color(0.478f, 0.220f, 0.008f, 1f))
+        playerManaBar   = StatBar(playerBarX, playerManaY,  400f, 20f, Color(0.129f, 0.216f, 0.471f, 1f))
         updateEnemyBars()
     }
     fun startBattle(enemyCellX: Int, enemyCellY: Int) {
@@ -645,8 +645,7 @@ class BattleScene(
             }
 
 
-            drawBarWithText(batch, playerHealthBar, "${player.currentHealth}/${player.maxHealth}", 2f, barTexture)
-            drawBarWithText(batch, playerManaBar, "${player.currentMana}/${player.maxMana}", 2f, barTexture)
+            drawPlayerBars(batch, playerHealthBar, playerManaBar, barTexture, gap = 1f)
 // --- СТАТИСТИКА ИГРОКА ---
             font.data.setScale(1.4f) // Делаем текст чуть меньше для компактности
             val statsX = 20f
@@ -802,7 +801,77 @@ class BattleScene(
         font.data.setScale(1.0f)
         font.color = Color.WHITE
     }
+    private fun drawPlayerBars(
+        batch: SpriteBatch,
+        hpBar: StatBar,
+        mpBar: StatBar,
+        bgTexture: Texture,
+        gap: Float = 1f
+    ) {
 
+        val bgY = mpBar.y
+        val bgHeight = hpBar.height + mpBar.height + gap
+        batch.draw(bgTexture, hpBar.x - 85f, bgY - 40f, hpBar.width * 1.8f, bgHeight * 1.4f)
+
+
+        val hpRatio = (this.player.currentHealth.toFloat() / this.player.maxHealth).coerceAtMost(1.0f)
+        val mpRatio = (this.player.currentMana.toFloat() / this.player.maxMana).coerceAtMost(1.0f)
+
+
+        val hpFillX = hpBar.x + 35f
+        val hpFillY = hpBar.y + 23f
+        val hpFullW = hpBar.width + 85f
+        val hpFillW = hpBar.width * hpRatio + 85f
+        val hpFillH = hpBar.height / 2.4f
+
+        val mpFillX = mpBar.x + 35f
+        val mpFillY = mpBar.y + 45f
+        val mpFullW = mpBar.width + 85f
+        val mpFillW = mpBar.width * mpRatio + 85f
+        val mpFillH = mpBar.height / 2.4f
+
+        batch.color = hpBar.color
+        batch.draw(whitePixel, hpFillX, hpFillY, hpFillW, hpFillH)
+        batch.color = mpBar.color
+        batch.draw(whitePixel, mpFillX, mpFillY, mpFillW, mpFillH)
+        batch.color = Color.WHITE
+
+        fun addVolume(fillX: Float, fillY: Float, fillW: Float, fillH: Float) {
+            batch.color = Color(0f, 0f, 0f, 0.2f)
+            batch.draw(whitePixel, fillX, fillY, fillW, fillH / 2f)
+            batch.color = Color(1f, 1f, 1f, 0.25f)
+            batch.draw(whitePixel, fillX, fillY + fillH * 0.75f, fillW, fillH / 4f)
+            batch.color = Color.WHITE
+        }
+        addVolume(hpFillX, hpFillY, hpFillW, hpFillH)
+        addVolume(mpFillX, mpFillY, mpFillW, mpFillH)
+
+        fun drawOverflow(fillX: Float, fillY: Float, fillH: Float, fullW: Float, current: Int, max: Int) {
+            if (current > max) {
+                val overflowRatio = (current - max).toFloat() / max
+                val overflowW = (fullW * overflowRatio).coerceAtMost(fullW)
+                batch.color = Color(1f, 1f, 1f, 0.4f)
+                batch.draw(whitePixel, fillX, fillY, overflowW, fillH)
+                batch.color = Color.WHITE
+            }
+        }
+        drawOverflow(hpFillX, hpFillY, hpFillH, hpFullW, player.currentHealth, player.maxHealth)
+        drawOverflow(mpFillX, mpFillY, mpFillH, mpFullW, player.currentMana, player.maxMana)
+
+        font.data.setScale(3f)
+        fun drawCentered(text: String, fillX: Float, fillY: Float, fullW: Float, fillH: Float) {
+            layout.setText(font, text)
+            val cx = fillX + (fullW - layout.width) / 2
+            val cy = fillY + (fillH + layout.height) / 2 + 2f
+            font.color = Color.BLACK; font.draw(batch, text, cx + 2f, cy - 2f)
+            font.color = Color.WHITE; font.draw(batch, text, cx, cy)
+        }
+        drawCentered("${player.currentHealth}/${player.maxHealth}", hpFillX, hpFillY, hpFullW, hpFillH)
+        drawCentered("${player.currentMana}/${player.maxMana}", mpFillX, mpFillY, mpFullW, mpFillH)
+
+        font.data.setScale(1f)
+        font.color = Color.WHITE
+    }
     private val squareSize = 24 * 2f
     private val padding = 3 * 2f
     private val verticalGap = 15f
