@@ -91,7 +91,7 @@ class MapRenderer (
         cloudTextures = Array(5) { i ->
             TextureRegion(Texture("map_layers/clouds/clouds$i.png"))
         }
-        decoTextures = Array(13) { i ->
+        decoTextures = Array(17) { i ->
             TextureRegion(Texture("map_decor/deco0-${i.toString().padStart(2, '0')}.png"))
         }
         generateDecoVariations()
@@ -573,7 +573,7 @@ class MapRenderer (
                     }
                     val count = if (rand.nextFloat() < DECO_PROBABILITY) rand.nextInt(1, 2) else 0
                     for (n in 0 until count) {
-                        val idx = rand.nextInt(0, 13)
+                        val idx = rand.nextInt(0, 17)
                         val tex = decoTextures[idx]
                         val origW = tex.regionWidth.toFloat()
                         val origH = tex.regionHeight.toFloat()
