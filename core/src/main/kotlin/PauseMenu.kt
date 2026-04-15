@@ -21,7 +21,11 @@ class PauseMenu(
     var isVisible = false
         private set
 
+<<<<<<< Updated upstream
     private val pauseButtonRect = Rectangle(0f, screenHeight - 180f, 120f, 120f)
+=======
+    private val pauseButtonRect = Rectangle(0f, screenHeight - 400f, 120f, 120f)
+>>>>>>> Stashed changes
 
     var isStatsVisible = false
         private set

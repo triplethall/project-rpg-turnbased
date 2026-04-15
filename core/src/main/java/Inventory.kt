@@ -39,7 +39,11 @@ class Inventory(
 
 
     // Кнопка открытия инвентаря
+<<<<<<< Updated upstream
     private val inventoryButtonRect = Rectangle(130f, screenHeight - 180, 120f, 120f)
+=======
+    private val inventoryButtonRect = Rectangle(130f, screenHeight - 400f, 120f, 120f)
+>>>>>>> Stashed changes
 
     // Основное меню инвентаря
     private val closeButtonRect = Rectangle()

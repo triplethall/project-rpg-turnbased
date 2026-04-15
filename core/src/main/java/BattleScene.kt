@@ -1054,7 +1054,10 @@ class BattleScene(
         font.data.setScale(1.0f)
         font.color = Color.WHITE
     }
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
     fun drawPlayerBars(
         batch: SpriteBatch,
         hpBar: StatBar,
@@ -1399,9 +1402,12 @@ class BattleScene(
         SoundManager.resumePlaylist()
     }
 }
+<<<<<<< Updated upstream
 
 data class SkillWheelButton(
     val skill: Skill,
     val rect: Rectangle,
     val angle: Double
 )
+=======
+>>>>>>> Stashed changes
