@@ -167,6 +167,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         statsButtonRect = new Rectangle(2 * btnSize + margin, startY, btnSize, btnSize);
 
         player = new Player();
+        player.loadMapModel();
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
         player.setOnEnterForest(new Player.OnEnterForestListener() {
@@ -176,6 +177,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 battleScene.startBattle(x, y, 1);
             }
         });
+        player.syncRenderPos(CELL_SIZE, CELL_GAP); // Синхронизация стартовой позиции
         battleScene.setPlayer(player);
         gameStarted = false;
     }
@@ -220,6 +222,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         ) {
             handlePlayerInput();
         }
+        player.updateMovement(Gdx.graphics.getDeltaTime());
 
         ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
 
@@ -352,6 +355,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     }
 
     private void handlePlayerInput() {
+        if (player.isMoving()) return;
         if (Gdx.input.justTouched() && !cameraControl.isDragging()) {
             Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
             int targetX = (int) grid.x;
@@ -365,7 +369,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 }
                 return;
             }
-            if (player.tryMoveTo(targetX, targetY, gameMap)) {
+            if (player.tryMoveTo(targetX, targetY, gameMap, CELL_SIZE, CELL_GAP))  {
                 SoundManager.playSound("sounds/step.mp3");
 
                 if (gameMap.collectChest(targetX, targetY)) {

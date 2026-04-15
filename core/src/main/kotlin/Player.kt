@@ -1,8 +1,11 @@
 package ru.triplethall.rpgturnbased
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -26,6 +29,50 @@ class Player(
     val skills = mutableListOf<Skill>()
     var activeSkill: Skill? = null
 
+    var direction: Int = 2          // 1=UP, 2=DOWN, 3=LEFT, 4=RIGHT
+
+
+    private var currentPixelX: Float = 0f
+    private var currentPixelY: Float = 0f
+    private var targetPixelX: Float = 0f
+    private var targetPixelY: Float = 0f
+    private var moveProgress: Float = 1f
+    private val moveDuration: Float = 0.25f // Время прохода клетки (сек). Меньше = быстрее
+    var isMoving: Boolean = false
+        private set
+
+    fun syncRenderPos(cellSize: Int, cellGap: Int) {
+        val step = (cellSize + cellGap).toFloat()
+        currentPixelX = x * step; currentPixelY = y * step
+        targetPixelX = currentPixelX; targetPixelY = currentPixelY
+    }
+
+    fun updateMovement(delta: Float) {
+        if (!isMoving) return
+        moveProgress += delta / moveDuration
+        if (moveProgress >= 1f) {
+            moveProgress = 1f; isMoving = false
+            currentPixelX = targetPixelX; currentPixelY = targetPixelY
+        }
+    }
+
+    private fun getRenderPosition(cellSize: Int, cellGap: Int): Pair<Float, Float> {
+        val step = (cellSize + cellGap).toFloat()
+        if (!isMoving) return Pair(x * step, y * step)
+        val posX = currentPixelX + (targetPixelX - currentPixelX) * moveProgress
+        val posY = currentPixelY + (targetPixelY - currentPixelY) * moveProgress
+        return Pair(posX, posY)
+    }
+    private var moveStateTime: Float = 0f
+    private lateinit var playerModel: PlayerMapModel
+
+    fun initMapModel(bodyTex: Texture, legTex: Texture, armorTex: Texture? = null) {
+        playerModel = PlayerMapModel(
+            bodyRegion = TextureRegion(bodyTex),
+            legRegion  = TextureRegion(legTex),
+            armorRegion = armorTex?.let { TextureRegion(it) }
+        )
+    }
     fun getLightningDamageModifier(): Double {
         return if (debuffManager.hasDebuff(DebuffType.WET)) 1.25 else 1.0
     }
@@ -229,22 +276,28 @@ class Player(
         this.onEnterForestListener = listener
     }
 
-    fun tryMoveTo(targetX: Int, targetY: Int, gameMap: GameMap): Boolean {
-        if (!isAdjacentCardinal(targetX, targetY)) {
-            return false
-        }
+    fun tryMoveTo(targetX: Int, targetY: Int, gameMap: GameMap, cellSize: Int, cellGap: Int): Boolean {
+        if (isMoving) return false // Блокировка во время анимации
+        if (!isAdjacentCardinal(targetX, targetY)) return false
 
         if (gameMap.isWalkable(targetX, targetY)) {
-            x = targetX
-            y = targetY
-            // Проверяем, был ли на этой клетке сундук, и убираем его
-            if (gameMap.collectChest(targetX, targetY)) {
-                // Здесь можно добавить логику награды (например, увеличить счёт, выдать предмет)
+            val step = (cellSize + cellGap).toFloat()
+            direction = when {
+                targetY > y -> 1  // UP
+                targetY < y -> 2  // DOWN
+                targetX < x -> 3  // LEFT
+                targetX > x -> 4  // RIGHT
+                else -> direction
             }
+            currentPixelX = x * step; currentPixelY = y * step
+            targetPixelX = targetX * step; targetPixelY = targetY * step
+            moveProgress = 0f; isMoving = true
+
+            x = targetX; y = targetY // Логические координаты меняем сразу
+
+            if (gameMap.collectChest(targetX, targetY)) { /* логика сундука */ }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.FOREST) {
-                if (Random.nextFloat() < 0.1f) {
-                    onEnterForestListener?.onEnterForest(targetX, targetY)
-                }
+                if (Random.nextFloat() < 0.1f) onEnterForestListener?.onEnterForest(targetX, targetY)
             }
             return true
         }
@@ -303,12 +356,25 @@ class Player(
     }
 
     fun render(batch: SpriteBatch, font: BitmapFont, cellSize: Int, cellGap: Int) {
-        val posX = x * (cellSize + cellGap)
-        val posY = y * (cellSize + cellGap)
+        val (posX, posY) = getRenderPosition(cellSize, cellGap)
 
-        font.color = Color.YELLOW
-        font.draw(batch, "P", posX + 10f, posY + cellSize - 5f)
+        if (isMoving) moveStateTime += Gdx.graphics.deltaTime
+        else moveStateTime = 0f
+
+        val state = if (isMoving) PlayerMapModel.State.MOVING else PlayerMapModel.State.IDLE
+
+        if (::playerModel.isInitialized) {
+            playerModel.render(
+                batch = batch, player = this,
+                x = posX, y = posY, // <-- Плавающая позиция
+                direction = direction, state = state, stateTime = moveStateTime
+            )
+        } else {
+            font.color = Color.YELLOW
+            font.draw(batch, "P", posX + 10f, posY + cellSize - 5f)
+        }
     }
+
 
     fun applyDebuff(type: DebuffType, duration: Int, intensity: Double = 1.0, stacks: Int = 1) {
         debuffManager.addDebuffs(type, duration, intensity, stacks)
@@ -356,5 +422,18 @@ class Player(
 
     fun canUseMagic(): Boolean {
         return DebuffApplier.Companion.canUseMagic(debuffManager.getAllDebuff())
+    }
+    private val modelTextures = mutableListOf<Texture>()
+
+    fun loadMapModel() {
+        val body = Texture("player/maptex/upper.png")
+        val leg  = Texture("player/maptex/leg.png")
+        modelTextures.add(body); modelTextures.add(leg)
+        initMapModel(body, leg) // Броню пока null, добавишь позже
+    }
+
+    fun disposeMapModel() {
+        modelTextures.forEach { it.dispose() }
+        modelTextures.clear()
     }
 }

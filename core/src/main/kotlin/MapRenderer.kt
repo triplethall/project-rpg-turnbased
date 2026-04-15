@@ -28,6 +28,8 @@ class MapRenderer (
     private lateinit var beachCorner: TextureRegion
     private val CORNER_W = 32f
     private val CORNER_H = 32f
+
+
     private lateinit var cloudTextures: Array<TextureRegion>
     private val waterTextures = arrayOfNulls<Texture>(4)
     private var waterFrameIndex = 0
@@ -71,6 +73,7 @@ class MapRenderer (
         pixelTexture = Texture(1,1, Pixmap.Format.RGBA8888)
         val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
         pixmap.setColor(Color.WHITE)
+
         pixmap.fill()
         pixelTexture.draw(pixmap, 0, 0)
         pixmap.dispose()
