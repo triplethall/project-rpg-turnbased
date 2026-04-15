@@ -43,8 +43,22 @@ class BattleEnemy(
     }
 
     // METHOD TO CHECK IF ENEMY HIT
-    fun canHit(): Boolean {
-        return Random.nextDouble() < accuracy
+    fun canHit(target: Player): Boolean {
+        // Базовый шанс попадания врага
+        var hitChance = accuracy
+
+        // Учитываем уклонение игрока
+        if (target.debuffManager.hasDebuff(DebuffType.DODGE)) {
+            val dodgeChance = DebuffApplier.getDodgeChance(
+                target.debuffManager.getAllDebuff(),
+                target.attackSpeed,
+                target.luck
+            )
+            hitChance *= (1.0 - dodgeChance)
+            println("DEBUG: Player has DODGE! Dodge chance: $dodgeChance, Final hit chance: $hitChance")
+        }
+
+        return Random.nextDouble() < hitChance
     }
 
     companion object {
