@@ -25,6 +25,8 @@ class Player(
     var critChance: Double = 0.05           // крит шанс
     var level: Int = 1                      // Уровень
     var experience: Int = 0                 // Опыт
+    val skills = mutableListOf<Skill>()
+    var activeSkill: Skill? = null
 
     fun getLightningDamageModifier(): Double {
         return if (debuffManager.hasDebuff(DebuffType.WET)) 1.25 else 1.0
@@ -47,14 +49,69 @@ class Player(
     // формула для расчета опыта
     companion object {
         private const val BASE_EXP = 100
-        private const val EXP_GROWTH_FACTOR = 1.4
+        private const val EXP_GROWTH_FACTOR = 1.1
     }
 
-    fun defenseWork(){
+    fun learnSkillsForClass() {
+        skills.clear()
+        skills.add(DodgeSkill()) // Базовый навык для всех (1)
 
+        when (playerClass) {
+            PlayerClasses.KNIGHT -> {
+                skills.add(SlashSkill())
+                skills.add(KnightValorSkill())
+            }
+            PlayerClasses.MAGE -> {
+                skills.add(FireArrowSkill())
+                skills.add(WaterStrikeSkill())
+                skills.add(WindSlashSkill())
+                skills.add(StoneBulletSkill())
+                skills.add(IceSpikeSkill())
+                skills.add(LightningBoltSkill())
+            }
+            PlayerClasses.ASSASSIN -> {
+                skills.add(BackstabSkill())
+                skills.add(ShurikenThrowSkill())
+                skills.add(StealthSkill())
+            }
+            PlayerClasses.ARCHER -> {
+                skills.add(ArrowRainSkill())
+                skills.add(AimedShotSkill())
+            }
+            PlayerClasses.PRIEST -> {
+                skills.add(HealSkill())
+                skills.add(ResurrectionSkill())
+                skills.add(CleanseSkill())
+            }
+            PlayerClasses.JOKER -> {
+                skills.add(CoinTossSkill())
+                skills.add(DiceRollSkill())
+                skills.add(SlotMachineSkill())
+            }
+            PlayerClasses.BERSERK -> {
+                skills.add(BloodthirstSkill())
+                skills.add(SelfHarmSkill())
+            }
+            PlayerClasses.SHAMAN -> {
+                skills.add(WeakCurseSkill())
+                skills.add(AlterEgoSkill())
+                skills.add(DarkSecretsSkill())
+                skills.add(HarvestSkill())
+            }
+            PlayerClasses.SWORDMASTER -> {
+                skills.add(DoubleSlashSkill())
+                skills.add(FlurrySkill())
+            }
+            PlayerClasses.MONARCH -> {
+                skills.add(BattleStandardSkill())
+                skills.add(SoulEmpowermentSkill())
+            }
+            else -> {} // ADVENTURIST — только Dodge
+        }
+
+        println("DEBUG: Learned ${skills.size} skills for class $playerClass")
+        skills.forEach { println("DEBUG: - ${it.name}") }
     }
-
-
     // Расчет необходимого опыта для некст левела
     fun getExpForNextLevel(): Int {
         return (BASE_EXP * (EXP_GROWTH_FACTOR.pow(level - 1))).toInt()

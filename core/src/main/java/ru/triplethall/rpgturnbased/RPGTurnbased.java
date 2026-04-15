@@ -322,7 +322,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
     private void applyClassToPlayer() {
         if (selectedPlayerClass != null) {
-            selectedPlayerClass.applyToPlayer(player);
+            player.changeClass(selectedPlayerClass);
+            player.learnSkillsForClass();
             System.out.println("Выбран класс: " + selectedPlayerClass.getDisplayName());
             System.out.println(selectedPlayerClass.getStatsDescription());
         }
