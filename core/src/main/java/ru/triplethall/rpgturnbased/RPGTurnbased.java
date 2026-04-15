@@ -61,6 +61,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private MainMenu mainMenu;
     private boolean gameStarted = false;
     private CityMenu cityMenu;
+    private CaveMenu caveMenu;
     private ClassSelectionMenu classSelectionMenu;
     private boolean isSelectingClass = false;
     private PlayerClasses selectedPlayerClass = null;
@@ -75,6 +76,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         chestOpen = new Texture("bg/chest_open.png");
         chestMenu = new ChestMenu(font);
         cityMenu = new CityMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        caveMenu = new CaveMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
 
@@ -196,6 +198,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         isPaused = pauseMenu.isVisible();
         boolean chestClicked = chestMenu.handleInput();
         boolean cityMenuClicked = cityMenu.handleInput();
+        boolean caveMenuClicked = caveMenu.handleInput();
         boolean shopClicked = false;
         if (cityMenu.isShopClicked())
         {
@@ -212,6 +215,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             && !chestMenu.isVisible()
             && !cityMenu.isVisible()
             && !shopMenu.isVisible()
+            && !caveMenu.isVisible()
         ) {
             handlePlayerInput();
         }
@@ -254,6 +258,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             battleScene.render(batch, whitePixel, player);
         }
         cityMenu.render(batch, shapeRenderer);
+        caveMenu.render(batch, shapeRenderer);
         shopMenu.render(batch, shapeRenderer, whitePixel);
         batch.end();
     }
@@ -270,16 +275,29 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
             int targetX = (int) grid.x;
             int targetY = (int) grid.y;
+            Gdx.app.log("MOVE_DEBUG", "Clicked on {" + targetX + "," + targetY + "} | Terrain = " + gameMap.getTerrain(targetX, targetY));
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CAVEENTRANCE) {
+                int dx = Math.abs(player.getX() - targetX);
+                int dy = Math.abs(player.getY() - targetY);
+                boolean isNear = (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
+                if (isNear) {
+                    caveMenu.show();
+                return;
+                }
+            }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY || gameMap.getTerrain(targetX, targetY) == TerrainType.CITYANCHOR) {
                 int dx = Math.abs(player.getX() - targetX);
                 int dy = Math.abs(player.getY() - targetY);
                 boolean isNear = (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
                 if (isNear) {
                     cityMenu.show();
-                }
                 return;
+                }
             }
+
+            Gdx.app.log("MOVE_DEBUG", "tryMoveTo " + targetX + "," + targetY + " from " + player.getX() + "," + player.getY());
             if (player.tryMoveTo(targetX, targetY, gameMap)) {
+                Gdx.app.log("MOVE_DEBUG", "Move successful");
                 SoundManager.playSound("sounds/step.mp3");
 
                 if (gameMap.collectChest(targetX, targetY)) {
@@ -305,6 +323,10 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
                     battleScene.startBattle(targetX, targetY);
                 }
+            }
+            else
+            {
+                Gdx.app.log("MOVE_DEBUG", "Move failed");
             }
         }
     }

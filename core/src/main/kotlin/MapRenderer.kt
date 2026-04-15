@@ -303,6 +303,7 @@ class MapRenderer (
                             TerrainType.UPGRADE -> continue
                             TerrainType.OUTPOST -> Color.CORAL
                             TerrainType.FOREST -> continue
+                            TerrainType.CAVEENTRANCE -> Color.BROWN
                             else -> Color.WHITE
                         }
                         batch.color = color.cpy().mul(light, light, light, 1f)
