@@ -67,6 +67,10 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private PlayerClasses selectedPlayerClass = null;
     private ShopMenu shopMenu;
 
+    // Бары для главного экрана
+    private StatBar mainHealthBar;
+    private StatBar mainManaBar;
+
     @Override
     public void create() {
         font = new BitmapFont();
@@ -163,7 +167,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
         int margin = 20;
         float btnSize = 120;
-        float startY = Gdx.graphics.getHeight() - btnSize;
+        // Опускаем кнопку статистики ниже (300 пикселей от верхнего края)
+        float startY = Gdx.graphics.getHeight() - btnSize - 150f;
         statsButtonRect = new Rectangle(2 * btnSize + margin, startY, btnSize, btnSize);
 
         player = new Player();
@@ -177,6 +182,16 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             }
         });
         battleScene.setPlayer(player);
+
+        // Создаём бары для главного экрана (такие же, как в бою, с отступом 160 пикселей сверху)
+        float barWidth = 400f;
+        float barHeight = 100f;
+        float barX = 20f;
+        float healthBarY = Gdx.graphics.getHeight() - 100f;
+        float manaBarY = healthBarY - barHeight+ 25f;
+        mainHealthBar = new StatBar(barX, healthBarY, barWidth, barHeight, new Color(0.478f, 0.220f, 0.008f, 1f));
+        mainManaBar = new StatBar(barX, manaBarY, barWidth, barHeight, new Color(0.129f, 0.216f, 0.471f, 1f));
+
         gameStarted = false;
     }
 
@@ -254,68 +269,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         pauseMenu.render(batch, whitePixel, player);
         inventory.render(batch, whitePixel, player);
 
+        // Рисуем бары только если не в бою (используем тот же метод, что и в сцене боя)
         if (!battleScene.isActive()) {
-            // Координаты общего фона (рамки)
-            float bgX = 20f;
-            float bgY = Gdx.graphics.getHeight() - 220f;
-            float bgWidth = 500f;      // ширина рамки (подберите под экран)
-            float bgHeight = 160f;      // высота рамки
-
-            // 1. Рисуем общую рамку (текстура растянется)
-            batch.draw(barTexture, bgX, bgY, bgWidth, bgHeight);
-
-            // 2. Вычисляем внутренние отступы
-            float paddingX = bgWidth * 0.165f;
-            float paddingY = bgHeight * 0.35f;
-            float innerWidth = bgWidth - paddingX * 2;
-            float innerHeight = bgHeight - paddingY * 2;
-            float innerX = bgX + paddingX;
-            float innerY = bgY + paddingY;
-
-            // 3. Параметры двух полосок (здоровье сверху, мана снизу)
-            float barHeight = innerHeight * 0.4f;        // высота каждой полоски
-            float barSpacing = innerHeight * 0.1f;       // зазор между полосками
-            float healthBarY = innerY + innerHeight - barHeight;
-            float manaBarY = healthBarY - barHeight - barSpacing;
-
-            // === Полоска здоровья ===
-            float healthPercent = (float) player.getCurrentHealth() / player.getMaxHealth();
-            batch.setColor(Color.BLACK);
-            batch.draw(whitePixel, innerX, healthBarY, innerWidth, barHeight);
-            batch.setColor(Color.RED);
-            batch.draw(whitePixel, innerX, healthBarY, innerWidth * healthPercent, barHeight);
-
-            // === Полоска маны ===
-            float manaPercent = (float) player.getCurrentMana() / player.getMaxMana();
-            batch.setColor(Color.BLACK);
-            batch.draw(whitePixel, innerX, manaBarY, innerWidth, barHeight);
-            batch.setColor(Color.BLUE);
-            batch.draw(whitePixel, innerX, manaBarY, innerWidth * manaPercent, barHeight);
-
-            // === Текст поверх полосок ===
-            GlyphLayout layout = new GlyphLayout();
-            font.getData().setScale(1.2f);
-
-            String healthText = player.getCurrentHealth() + "/" + player.getMaxHealth();
-            layout.setText(font, healthText);
-            float healthTextX = innerX + (innerWidth - layout.width) / 2;
-            float healthTextY = healthBarY + (barHeight + layout.height) / 2;
-            font.setColor(Color.BLACK);
-            font.draw(batch, healthText, healthTextX + 2f, healthTextY - 2f);
-            font.setColor(Color.WHITE);
-            font.draw(batch, healthText, healthTextX, healthTextY);
-
-            String manaText = player.getCurrentMana() + "/" + player.getMaxMana();
-            layout.setText(font, manaText);
-            float manaTextX = innerX + (innerWidth - layout.width) / 2;
-            float manaTextY = manaBarY + (barHeight + layout.height) / 2;
-            font.setColor(Color.BLACK);
-            font.draw(batch, manaText, manaTextX + 2f, manaTextY - 2f);
-            font.setColor(Color.WHITE);
-            font.draw(batch, manaText, manaTextX, manaTextY);
-
-            batch.setColor(Color.WHITE);
-            font.getData().setScale(1f);
+            battleScene.drawPlayerBars(batch, mainHealthBar, mainManaBar, barTexture, 10f);
         }
 
         batch.draw(statsButtonTexture, statsButtonRect.x, statsButtonRect.y, statsButtonRect.width, statsButtonRect.height);
@@ -328,16 +284,14 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         batch.end();
     }
 
-
+    // Вспомогательный метод (не используется для баров, оставлен для совместимости)
     private void drawBarText(SpriteBatch batch, StatBar bar, String text, float scale) {
         GlyphLayout layout = new GlyphLayout(font, text);
         float textX = bar.getX() + (bar.getWidth() - layout.width) / 2;
         float textY = bar.getY() + (bar.getHeight() + layout.height) / 2;
         font.getData().setScale(scale);
-        // Тень
         font.setColor(Color.BLACK);
         font.draw(batch, text, textX + 2f, textY - 2f);
-        // Основной текст
         font.setColor(Color.WHITE);
         font.draw(batch, text, textX, textY);
         font.getData().setScale(1f);
