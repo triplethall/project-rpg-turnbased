@@ -387,6 +387,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         if (exitButtonTexture != null) exitButtonTexture.dispose();
         if (pauseBackgroundTexture != null) pauseBackgroundTexture.dispose();
         if (mainMenu != null) mainMenu.dispose();
+        if (cityMenu != null) cityMenu.dispose();
         mapRenderer.dispose();
         font.dispose();
         SoundManager.dispose();

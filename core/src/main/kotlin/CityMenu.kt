@@ -21,6 +21,7 @@ class CityMenu(
     private val windowHeight = 450f
     private var closeButtonRect = Rectangle()
     private var shopButtonRect = Rectangle()
+    private val shopButtonTexture: Texture = Texture("menus/buttons/shop.png")
     private fun getWindowRect(): Rectangle
     {
         val x = (screenWidth - windowWidth) / 2
@@ -90,7 +91,7 @@ class CityMenu(
     fun render(batch: SpriteBatch, shapeRenderer: ShapeRenderer)
     {
         if (!isVisible) return
-        batch.end()
+        if (batch.isDrawing) batch.end()
 
         shapeRenderer.setAutoShapeType(true)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
@@ -124,18 +125,19 @@ class CityMenu(
         font.data.setScale(1.3f)
         font.draw(batch, "EXIT", closeButtonRect.x + 28f, closeButtonRect.y + 28f)
         // SHOP BUTTON
-        batch.end()
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(0.2f, 0.5f, 0.8f, 1f)
-        shapeRenderer.rect(shopButtonRect.x, shopButtonRect.y, shopButtonRect.width, shopButtonRect.height)
-        shapeRenderer.end()
-
-        batch.begin()
-        font.color = Color.YELLOW
-        font.data.setScale(1.5f)
-        font.draw(batch, "SHOP", shopButtonRect.x + 65f, shopButtonRect.y + 42f)
+        batch.draw(
+            shopButtonTexture,
+            shopButtonRect.x,
+            shopButtonRect.y,
+            shopButtonRect.width,
+            shopButtonRect.height + 15f
+        )
 
         font.data.setScale(1.0f)
         batch.color = Color.WHITE
+    }
+    fun dispose()
+    {
+        shopButtonTexture.dispose()
     }
 }
