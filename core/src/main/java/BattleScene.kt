@@ -463,21 +463,58 @@ class BattleScene(
         }
         val target = enemies[enemyIndex]
 
+        // ===== ПРОВЕРКА УКЛОНЕНИЯ ВРАГА (для WIND и BUNNY) =====
+        if (target.canDodge(isPhysical = true)) {
+            messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+            SoundManager.playSound("sounds/miss.mp3")
+            madeMoveThisTurn = true
+            return
+        }
+
+        // ===== ПРОВЕРКА УКЛОНЕНИЯ ВРАГА (для типа WIND) =====
+        if (target.enemyType == EnemyType.WIND) {
+            val dodgeChance = 0.25 // 25% уклонение от физических атак
+            if (Random.nextDouble() < dodgeChance) {
+                messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+                madeMoveThisTurn = true
+                return
+            }
+        }
+
         val baseDamage = (player.damage * player.getDamageMultiplier()).toInt()
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val totalDamage = (baseDamage * randomMultiplier).toInt()
-        val dmgWithDef = (totalDamage * (1 - target.defense * target.getDefenseMultiplier())).toInt()
+        var targetDefense = target.defense
+        val dmgWithDef = (totalDamage * (1 - targetDefense.coerceAtMost(0.8))).toInt() // Ограничим защиту 80%
+
+        if (target.enemyType == EnemyType.EARTH) {
+            targetDefense += 0.3
+        }
+
+        // Наносим урон и проверяем, попала ли атака
+        val attackHit = target.takeDamage(dmgWithDef, EnemyType.NO_TYPE, false)
+
+        if (!attackHit) {
+            // Атака не нанесла урон (уклонение кролика от первой атаки)
+            messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+            madeMoveThisTurn = true
+            return
+        }
 
         target.takeDamage(dmgWithDef)
         SoundManager.playSound("sounds/atack.mp3") // звук атаки
         messageSystem.addMessage("dealt $dmgWithDef dmg to ${target.name}", Color.GREEN)
 
         if (!target.isAlive()) {
+            // Проверяем воскрешение нежити
+            if (target.tryResurrect()) {
+                messageSystem.addMessage("${target.name} воскрес!", Color.PURPLE)
+                return
+            }
+
             messageSystem.addMessage("${target.name} is ded", Color.ORANGE)
             val gainExp = (target.maxHealth * 50 + target.damage * 100).coerceAtLeast(10)
-            println("gainExp = $gainExp")
             player.addExperience(gainExp)
-            println("player exp = ${player.experience}")
             messageSystem.addMessage("got $gainExp from ${target.name}", Color.GOLD)
             enemies.removeAt(enemyIndex)
 
@@ -522,6 +559,8 @@ class BattleScene(
                     enemy.processDebuffs()
                     return@forEach
                 }
+
+                // Лечение от HOLY типа
                 if (enemy.enemyType == EnemyType.HOLY && enemy.isAlive()) {
                     val healAmount = (enemy.maxHealth * 0.05).toInt()
                     enemies.filter { it.isAlive() && it != enemy }.forEach { ally ->
@@ -533,11 +572,22 @@ class BattleScene(
                         }
                     }
                 }
+
                 if (enemy.canHit(player)) {
                     val damage = (enemy.calculateDamage(null, true) * enemy.getDamageMultiplier()).toInt()
                     val dmgWithDef = (damage * (1 - player.defense)).toInt()
                     player.currentHealth = (player.currentHealth - dmgWithDef)
                     messageSystem.addMessage("${enemy.name} dealt you $dmgWithDef dmg", Color.RED)
+
+                    // Кража жизни для DARK типа
+                    if (enemy.enemyType == EnemyType.DARK) {
+                        val stolen = enemy.tryLifeSteal(dmgWithDef)
+                        if (stolen > 0) {
+                            messageSystem.addMessage("${enemy.name} крадет $stolen здоровья!", Color.PURPLE)
+                        }
+                    }
+
+                    // Применяем дебаффы от атаки врага
                     applyEnemyDebuff(enemy)
                 } else {
                     messageSystem.addMessage("${enemy.name} missed", Color.YELLOW)
@@ -546,11 +596,12 @@ class BattleScene(
                 enemy.processDebuffs()
             }
         }
+
         val debuffDmg = player.processDebuffs()
-        if (debuffDmg > 0)
-        {
+        if (debuffDmg > 0) {
             messageSystem.addMessage("player took $debuffDmg damage!", Color.FIREBRICK)
         }
+
         if (player.currentHealth <= 0) {
             messageSystem.addMessage("бро тебе нужно больше тренироваться", Color.RED)
             defeatScreen()
@@ -571,11 +622,12 @@ class BattleScene(
 
     private fun applyEnemyDebuff(enemy: BattleEnemy) {
         val debuffChance = when (enemy.enemyType) {
-            EnemyType.WATER -> 0.20   // 20% на мокроту
-            EnemyType.ICE -> 0.25     // 25% на заморозку
+            EnemyType.WATER -> 0.20    // 20% на мокроту
+            EnemyType.ICE -> 0.25      // 25% на заморозку
             EnemyType.ELECTRIC -> 0.20 // 20% на паралич
             EnemyType.CURSED -> 0.15   // 15% на проклятие (при атаке, но основное при смерти)
             EnemyType.POISON -> 0.25   // 25% на отравление
+            EnemyType.BLOOD -> 0.30    // Кровавый тип - 30% шанс на кровотечение
             EnemyType.FIRE -> 0.25     // 25% на горение
             else -> 0.0
         }
@@ -609,6 +661,10 @@ class BattleScene(
                 player.applyDebuff(DebuffType.WET, 3, 1.0)
                 messageSystem.addMessage("Игрок промок! (+25% урон от молний)", Color.CYAN)
             }
+            EnemyType.BLOOD -> {
+                player.applyDebuff(DebuffType.BLEED, 3, 1.0, 1)
+                messageSystem.addMessage("Игрок истекает кровью!", Color.RED)
+            }
             else -> {}
         }
     }
@@ -616,7 +672,21 @@ class BattleScene(
     private fun nextTurn() {
         madeMoveThisTurn = false
         player.skills.forEach { it.reduceCooldown() } // Уменьшаем кулдауны
-        player.currentMana += 10
+        // Базовое восстановление маны
+        var manaRegen = 10
+
+        // Бонус от баффов (если есть бесконечная мана)
+        if (DebuffApplier.hasInfiniteMana(player.debuffManager.getAllDebuff())) {
+            manaRegen = player.maxMana // Полное восстановление
+        }
+
+        // Применяем восстановление с проверкой на максимум
+        player.currentMana = (player.currentMana + manaRegen).coerceAtMost(player.maxMana)
+
+        // Сообщение о восстановлении маны
+        if (manaRegen > 0 && player.currentMana < player.maxMana) {
+            messageSystem.addMessage("Восстановлено $manaRegen маны", Color.CYAN)
+        }
 
         if (isActive && enemies.isNotEmpty() && player.currentHealth > 0) {
             enemyTurn()
@@ -1109,6 +1179,11 @@ class BattleScene(
             EnemyType.ELECTRIC -> " [Electric]"
             EnemyType.POISON -> " [Poison]"
             EnemyType.HOLY -> " [Holy]"
+            EnemyType.DARK -> " [Dark]"
+            EnemyType.BLOOD -> " [Blood]"
+            EnemyType.BERSERK -> " [Berserk]"
+            EnemyType.UNDEAD -> " [Undead]"
+            EnemyType.BUNNY -> " [Bunny]"
         }
         // 2. Получаем кадр анимации
         batch.color = Color.WHITE

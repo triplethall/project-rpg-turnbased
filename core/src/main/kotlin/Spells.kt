@@ -51,7 +51,7 @@ interface TargetableSkill {
 }
 
 // --- БАЗОВЫЙ НАВЫК: Уклонение ---
-class DodgeSkill : Skill("dodge", "Dodge", "Increases dodge chance by 80% for 3 turns ", 10, 1) {
+class DodgeSkill : Skill("dodge", "Dodge", "Increases dodge chance by 80% for 3 turns ", 10, 4) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         // Уклонение реализовано через бафф (дебафф наоборот) или специальный флаг.
         // Проще всего сделать через специальный DebuffType.
@@ -135,7 +135,7 @@ class WindSlashSkill : Skill("wind_slash", "Wind slash", "Magic damage to all en
         return SkillResult(true, "Damage to all enemies: $totalDamage", totalDamage, targets)
     }
 }
-class StoneBulletSkill : Skill("stone_bullet", "Stone bullet", "Throws 3 bullets at random enemies", 25, 1) {
+class StoneBulletSkill : Skill("stone_bullet", "Stone bullet", "Throws 3 bullets at random enemies", 25, 2) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         val aliveEnemies = targets.filter { it.isAlive() }
         if (aliveEnemies.isEmpty()) return SkillResult(false, "There are no goals")
@@ -196,7 +196,7 @@ class LightningBoltSkill : Skill("lightning", "Lightning", "Magic damage to all,
 }
 
 // --- НАВЫКИ АССАСИНА (ASSASSIN) ---
-class BackstabSkill : Skill("backstab", "Backstab", "X2 Damage and bleeding", 15, 2) {
+class BackstabSkill : Skill("backstab", "Backstab", "X2 Damage and bleeding", 15, 4) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         val target = targets.firstOrNull { it.isAlive() } ?: return SkillResult(false, "There are no goals!")
         val damage = calculateDamage(caster.damage, caster, target, isMagic = false, multiplier = 2.0)
@@ -209,7 +209,7 @@ class BackstabSkill : Skill("backstab", "Backstab", "X2 Damage and bleeding", 15
         return SkillResult(true, "The bleeding is applied", damage, listOf(target))
     }
 }
-class ShurikenThrowSkill : Skill("shuriken", "Shuriken Throw", "Deals 1.5 damage", 10, 0) {
+class ShurikenThrowSkill : Skill("shuriken", "Shuriken Throw", "Deals 1.5 damage", 10, 2) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         val target = targets.firstOrNull { it.isAlive() } ?: return SkillResult(false, "There is no goal")
         val damage = calculateDamage(caster.damage, caster, target, isMagic = false, multiplier = 1.5)
@@ -221,7 +221,7 @@ class ShurikenThrowSkill : Skill("shuriken", "Shuriken Throw", "Deals 1.5 damage
         return SkillResult(true, "Hit!", damage, listOf(target))
     }
 }
-class StealthSkill : Skill("stealth", "Stealth", "+10% crit chance and +9% speed", 20, 5) {
+class StealthSkill : Skill("stealth", "Stealth", "+10% crit chance and +9% speed", 20, 3) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         caster.applyDebuff(DebuffType.BUFF_CRIT, 3, 1.1) // 1.1 = +10%
         caster.applyDebuff(DebuffType.BUFF_SPEED, 3, 1.09) // +9%
@@ -287,7 +287,7 @@ class HealSkill : Skill("heal", "Heal", "Restores 20% of health", 30, 3) {
         return SkillResult(true, "Heal +$healAmount HP", healAmount)
     }
 }
-class ResurrectionSkill : Skill("resurrection", "Resurrection", "Upon death, resurrects with 50% HP for 3 turns", 999, 10) {
+class ResurrectionSkill : Skill("resurrection", "Resurrection", "Upon death, resurrects with 50% HP for 3 turns", 100, 10) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         caster.applyDebuff(DebuffType.RESURRECTION, 3, 1.0)
         caster.currentMana = 0 // Тратит всю ману
@@ -321,7 +321,7 @@ class CoinTossSkill : Skill("coin", "Coin Flip", "50% chance to deal damage, dep
         }
     }
 }
-class DiceRollSkill : Skill("dice", "The roll of the dice", "Chance of 1/6 to deal damage, depends on luck", 10, 0) {
+class DiceRollSkill : Skill("dice", "The roll of the dice", "Chance of 1/6 to deal damage, depends on luck", 0, 0) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         val target = targets.firstOrNull { it.isAlive() } ?: return SkillResult(false, "There is no goal")
         val roll = Random.nextInt(1, 7)
@@ -338,7 +338,7 @@ class DiceRollSkill : Skill("dice", "The roll of the dice", "Chance of 1/6 to de
         }
     }
 }
-class SlotMachineSkill : Skill("slot", "Slot machine", "3 numbers from 1 to 9. Three of the same - the effect!", 30, 5) {
+class SlotMachineSkill : Skill("slot", "Slot machine", "3 numbers from 1 to 9. Three of the same - the effect!", 0, 0) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         val a = Random.nextInt(1, 10)
         val b = Random.nextInt(1, 10)
@@ -415,7 +415,7 @@ class WeakCurseSkill : Skill("weak_curse", "Weak curse", "Random curse for 2 tur
         return SkillResult(true, "The curse is cast")
     }
 }
-class AlterEgoSkill : Skill("alter_ego", "Alter ego", "Creates a clone (75% stats) at the cost of 75% HP", 50, 10) {
+class AlterEgoSkill : Skill("alter_ego", "Alter ego", "Creates a clone (75% stats) at the cost of 75% HP", 70, 10) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         caster.currentHealth = (caster.currentHealth * 0.25).toInt()
         caster.applyDebuff(DebuffType.CLONE, 5, 0.75) // Клон как бафф
@@ -424,7 +424,7 @@ class AlterEgoSkill : Skill("alter_ego", "Alter ego", "Creates a clone (75% stat
         return SkillResult(true, "A clone has been created")
     }
 }
-class DarkSecretsSkill : Skill("dark_secrets", "Dark Mysteries", "-5% HP, +50% Magic Damage", 30, 3) {
+class DarkSecretsSkill : Skill("dark_secrets", "Dark Mysteries", "-5% HP, +50% Magic Damage", 50, 3) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         val target = targets.firstOrNull { it.isAlive() } ?: return SkillResult(false, "There is no goal")
         val hpCost = (caster.maxHealth * 0.05).toInt()
@@ -452,7 +452,7 @@ class HarvestSkill : Skill("harvest", "The Harvest", "Steals 10% of the enemy's 
 }
 
 // --- НАВЫКИ МАСТЕРА МЕЧА (SWORDMASTER) ---
-class DoubleSlashSkill : Skill("double_slash", "Double shash", "2 hits with a multiplier of 1.25", 25, 3) {
+class DoubleSlashSkill : Skill("double_slash", "Double slhash", "2 hits with a multiplier of 1.25", 25, 3) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         val target = targets.firstOrNull { it.isAlive() } ?: return SkillResult(false, "There is no goal")
         var totalDamage = 0
@@ -466,7 +466,7 @@ class DoubleSlashSkill : Skill("double_slash", "Double shash", "2 hits with a mu
         return SkillResult(true, "Two hits", totalDamage, listOf(target))
     }
 }
-class FlurrySkill : Skill("flurry", "A flurry of cuts", "Шквал порезов", 30, 4) {
+class FlurrySkill : Skill("flurry", "A flurry of cuts", "Шквал порезов", 30, 7) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         val target = targets.firstOrNull { it.isAlive() } ?: return SkillResult(false, "There is no goal")
         var totalDamage = 0
