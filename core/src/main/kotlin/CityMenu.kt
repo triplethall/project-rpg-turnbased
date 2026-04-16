@@ -110,7 +110,7 @@ class CityMenu(
         font.data.setScale(1.5f)
         val textX = window.x + (window.width / 2) - 70f
         val textY = window.y + window.height - 40f
-        font.draw(batch, "CITY MENU", textX, textY)
+        font.draw(batch, "CITY", textX, textY)
 
         updButtons()
 
