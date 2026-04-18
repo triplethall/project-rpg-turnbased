@@ -190,10 +190,10 @@ class Player(
             x = targetX
             y = targetY
             // Проверяем, был ли на этой клетке сундук, и убираем его
-            if (gameMap.collectChest(targetX, targetY)) {
+            //if (gameMap.collectChest(targetX, targetY)) {
                 // Здесь можно добавить логику награды (например, увеличить счёт, выдать предмет)
-
-            }
+                // without this if block ambush on chest works
+            //}
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.FOREST) {
                 if (Random.nextFloat() < 0.1f) {
                     onEnterForestListener?.onEnterForest(targetX, targetY)

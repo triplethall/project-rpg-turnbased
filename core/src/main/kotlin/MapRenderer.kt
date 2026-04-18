@@ -25,6 +25,7 @@ class MapRenderer (
     private val upgradeTexture: Texture
     private val dirtTexture: Texture
     private val mtnTexture: Texture
+    private val caveTexture: Texture
     private lateinit var beachCorner: TextureRegion
     private val CORNER_W = 32f
     private val CORNER_H = 32f
@@ -85,6 +86,7 @@ class MapRenderer (
         grassSpoilers = Array(10) { i ->
             TextureRegion(Texture("map_layers/grass_spoilers/light_grass$i.png"))
         }
+        caveTexture = Texture("caves/cave0.png")
         generateGrassVariations()
     }
 
@@ -282,6 +284,11 @@ class MapRenderer (
                         batch.color = Color(0.5f, 0.5f, 0.5f, 1f).mul(light, light, light, 1f)
                         batch.draw(upgradeTexture, posX + 5.0f, posY+5f, cellSize*0.7f, cellSize*0.7f)
                     }
+                    TerrainType.CAVEENTRANCE ->
+                    {
+                        batch.color = Color(1f, 1f, 1f, 1f).mul(light, light, light, 1f)
+                        batch.draw(caveTexture, posX - cellSize * 0.2f, posY - cellSize * 0.2f, cellSize * 1.4f, cellSize * 1.4f)
+                    }
                     TerrainType.CITYANCHOR -> {
                         batch.color = Color(0.5f, 0.5f, 0.5f, 1f).mul(light, light, light, 1f)
                         batch.draw(city1Texture, posX - cellSize*0.3f, posY - 1f, cellSize*2.65f, cellSize*2.65f)
@@ -303,7 +310,6 @@ class MapRenderer (
                             TerrainType.UPGRADE -> continue
                             TerrainType.OUTPOST -> Color.CORAL
                             TerrainType.FOREST -> continue
-                            TerrainType.CAVEENTRANCE -> Color.BROWN
                             else -> Color.WHITE
                         }
                         batch.color = color.cpy().mul(light, light, light, 1f)

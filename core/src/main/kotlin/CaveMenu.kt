@@ -93,8 +93,8 @@ class CaveMenu(
         shapeRenderer.end()
 
         batch.begin()
-        val textX = window.x + 20f
-        val textY = window.y + window.height - 20f
+        val textX = window.x + 175f
+        val textY = window.y + window.height - 40f
         font.data.setScale(1.5f)
         font.color = Color.WHITE
         font.draw(batch, "Do you want to proceed?", textX, textY)
