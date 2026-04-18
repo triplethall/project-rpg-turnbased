@@ -91,7 +91,7 @@ class ChestMenu(private val font: BitmapFont) {
 
         // Фон (темно-серый)
         batch.color = Color(0.15f, 0.15f, 0.15f, 0.9f)
-        batch.draw(whitePixel, menuRect.x, menuRect.y, menuRect.width - 100f, menuRect.height)
+        batch.draw(whitePixel, menuRect.x, menuRect.y, menuRect.width, menuRect.height)
 
         // Рамка (светло-серая)
         batch.color = Color.LIGHT_GRAY
