@@ -199,6 +199,18 @@ enum class Enemy(
         baseEnemyWill = 0.2,
         baseEnemyCritChance = 0.07,
         enemyType = EnemyType.HOLY
+    ),
+    // МИМИК
+    CHEST_MIMIC(
+        displayEnemyName = "Mimic",
+        baseEnemyDamage = 20,
+        baseEnemyMageDamage = 10,
+        baseEnemyMaxHealth = 125,
+        baseEnemyDefense = 0.3,
+        baseEnemyAttackSpeed = 1.0,
+        baseEnemyAccuracy = 0.90,
+        baseEnemyWill = 0.1,
+        baseEnemyCritChance = 0.1
     );
 }
 

@@ -122,6 +122,8 @@ class BattleScene(
     // Кнопка для открытия меню навыков
     private val skillsMenuButtonRect = Rectangle()
     private val skillsMenuButtonSize = 80f
+//    private var extraAttackChain = 0
+//    private val maxExtraChain = 3
 
     fun startBattle(enemyCellX: Int, enemyCellY: Int, enemyCount: Int) {
         messageSystem = BattleMessageSystem(font, screenWidth, screenHeight, whitePixel)
@@ -456,6 +458,28 @@ class BattleScene(
 
     fun isShowingEndScreen(): Boolean = showVictoryScreen || showDefeatScreen
 
+//    реализация скорости атаки (на рассмотрение)
+//    fun tryGetExtraAttack()
+//    {
+//        if (extraAttackChain >= maxExtraChain)
+//        {
+//            madeMoveThisTurn = true
+//            extraAttackChain = 0
+//            return
+//        }
+//        val extraChance = (player.attackSpeed - 1.0).coerceAtLeast(0.0)
+//        if (extraChance > 0 && Random.nextDouble() < extraChance)
+//        {
+//            extraAttackChain++
+//            madeMoveThisTurn = false
+//            messageSystem.addMessage("Got extra turn!", Color.CYAN)
+//        }
+//        else
+//        {
+//            madeMoveThisTurn = true
+//            extraAttackChain = 0
+//        }
+//    }
     private fun performAttack() {
         if (isFleeing) {
             messageSystem.addMessage("trying to escape! can't attack!", Color.RED)
@@ -499,6 +523,7 @@ class BattleScene(
                 enemyIndex = 0
             }
         }
+        //tryGetExtraAttack()
         madeMoveThisTurn = true
     }
 

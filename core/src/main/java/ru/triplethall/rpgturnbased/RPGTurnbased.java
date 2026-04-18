@@ -200,7 +200,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
         boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
-        boolean chestClicked = chestMenu.handleInput();
+        ChestAction chestClicked = chestMenu.handleInput();
         boolean cityMenuClicked = cityMenu.handleInput();
         boolean shopClicked = false;
         if (cityMenu.isShopClicked()) {
