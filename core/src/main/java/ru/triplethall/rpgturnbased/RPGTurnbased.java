@@ -58,6 +58,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private ChestMenu chestMenu;
     private Texture chestClosed;
     private Texture chestOpen;
+    private Texture chestMimic;
     private ShapeRenderer shapeRenderer;
     private MainMenu mainMenu;
     private boolean gameStarted = false;
@@ -66,6 +67,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private boolean isSelectingClass = false;
     private PlayerClasses selectedPlayerClass = null;
     private ShopMenu shopMenu;
+    private int currentChestX = -1;
+    private int currentChestY = -1;
 
     @Override
     public void create() {
@@ -74,6 +77,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         font.getData().setScale(1.5f);
         chestClosed = new Texture("bg/chest_closed.png");
         chestOpen = new Texture("bg/chest_open.png");
+        chestMimic = new Texture("bg/chest_closed.png"); // TODO: КОГДА ДОБАВИТЬСЯ СПРАЙТ МИМИКА - ИЗМЕНИТЬ ПУТЬ
         chestMenu = new ChestMenu(font);
         cityMenu = new CityMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch = new SpriteBatch();
@@ -108,7 +112,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         camera.update();
         cameraControl = new CameraControl(camera, mapWidthPixels, mapHeightPixels);
 
-        mapRenderer = new MapRenderer(gameMap, CELL_SIZE, CELL_GAP, chestClosed, chestOpen);
+        mapRenderer = new MapRenderer(gameMap, CELL_SIZE, CELL_GAP, chestClosed, chestOpen, chestMimic);
 
         com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
         pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
@@ -201,6 +205,10 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
         ChestAction chestClicked = chestMenu.handleInput();
+        if (chestClicked != ChestAction.NONE)
+        {
+            processChestAction(chestClicked, currentChestX, currentChestY);
+        }
         boolean cityMenuClicked = cityMenu.handleInput();
         boolean shopClicked = false;
         if (cityMenu.isShopClicked()) {
@@ -367,27 +375,105 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             }
             if (player.tryMoveTo(targetX, targetY, gameMap)) {
                 SoundManager.playSound("sounds/step.mp3");
+                Gdx.app.log("MOVE_DEBUG", "TERRAIN AT "+targetX+","+targetY+"="+gameMap.getTerrain(targetX,targetY));
 
-                if (gameMap.collectChest(targetX, targetY)) {
-                    SoundManager.playSound("sounds/openSunduk.mp3");
+                if (gameMap.getTerrain(targetX, targetY) == TerrainType.Chest) {
+                    currentChestX = targetX;
+                    currentChestY = targetY;
+                    // SoundManager.playSound("sounds/openSunduk.mp3");
+                    Gdx.app.log("CHEST_DEBUG", "STEPPED ON CHEST AT " + targetX + "," + targetY);
                     chestMenu.show();
 
-                    if (gameMap.hasEnemies()) {
-                        List<Pair<Integer, Integer>> enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
-                        List<BattleEnemy> enemiesList = new ArrayList<>();
-                        for (int i = 0; i < enemyCells.size(); i++) {
-                            BattleEnemy enemy = BattleEnemy.Companion.createRandomEnemies(1).get(0);
-                            enemiesList.add(enemy);
-                        }
-                        battleScene.startBattleWithEnemies(enemiesList, enemyCells);
-                        chestMenu.hide();
-                    }
+//                    if (gameMap.hasEnemies()) {
+//                        List<Pair<Integer, Integer>> enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
+//                        List<BattleEnemy> enemiesList = new ArrayList<>();
+//                        for (int i = 0; i < enemyCells.size(); i++) {
+//                            BattleEnemy enemy = BattleEnemy.Companion.createRandomEnemies(1).get(0);
+//                            enemiesList.add(enemy);
+//                        }
+//                        battleScene.startBattleWithEnemies(enemiesList, enemyCells);
+//                        chestMenu.hide();
+//                    }
                 }
                 if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
                     battleScene.startBattle(targetX, targetY);
                 }
             }
         }
+    }
+
+    private void processChestAction(ChestAction action, int x, int y)
+    {
+        if (x < 0 || y < 0) return;
+
+        boolean isMimic = gameMap.isMimicChest(x,y);
+        switch (action)
+        {
+            case IGNORE:
+                // Если игнорируем, то... ну, игнорируем
+                break;
+            case OPEN:
+                // Если открываем сундук то
+                if (isMimic)
+                {
+                    // Если мимик то гг хпшкам
+                    startMimicTrapBattle(x, y);
+                }
+                else
+                {
+                    // Иначе хаваем лутик
+                    gameMap.collectChest(x, y);
+                }
+                break;
+            case ATTACK:
+                // Если атакуем сундук то
+                if (isMimic)
+                {
+                    // Если мимик то стартуем бой без потери хп
+                    startMimicBattle(x, y);
+                }
+                else
+                {
+                    // Иначе разрушаем сундук(с лутом в нем) с 50% шансом
+                    gameMap.collectChest(x, y);
+                    if (Math.random() < 0.5f)
+                    {
+                        // лут даваться должен
+                        Gdx.app.log("CHEST_DEBUG", "LOOT IS GIVEN");
+                    }
+                    else
+                    {
+                        Gdx.app.log("CHEST_DEBUG", "LOOT IS DESTROYED");
+                    }
+                }
+                break;
+        }
+        currentChestX = -1;
+        currentChestY = -1;
+    }
+
+    private void startMimicBattle(int x, int y)
+    {
+        battleScene.startMimicBattle(x, y);
+        gameMap.collectChest(x, y);
+    }
+
+    private void startMimicTrapBattle(int x, int y)
+    {
+        int maxHp = player.getMaxHealth();
+        int currentHp = player.getCurrentHealth();
+        float hpPerc = (float)currentHp/maxHp;
+        if (hpPerc < 0.5f)
+        {
+            player.setCurrentHealth(0);
+        }
+        else
+        {
+            int damage = (int)(currentHp * 0.9f);
+            player.setCurrentHealth(currentHp - damage);
+        }
+        battleScene.startMimicBattle(x, y);
+        gameMap.collectChest(x, y);
     }
 
     public void onClassSelected(PlayerClasses playerClass) {

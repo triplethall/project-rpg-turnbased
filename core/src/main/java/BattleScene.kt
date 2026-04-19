@@ -170,7 +170,9 @@ class BattleScene(
         this.showDefeatScreen = false
 
         messageSystem = BattleMessageSystem(font, screenWidth, screenHeight, whitePixel)
-        messageSystem.addMessage("Бой начинается! Врагов: ${enemies.size}", Color.YELLOW)
+        messageSystem.addMessage("Battle starts! Enemy count: ${enemies.size}", Color.YELLOW)
+
+        // TODO: не используйте русские символы или эмодзи когда используете messageSystem или font.draw.. пишите на английском пж
 
         SoundManager.pausePlaylist()
         SoundManager.playMusic("music/battle.mp3", true)
@@ -195,6 +197,12 @@ class BattleScene(
         }
         val randomCount = (1..3).random()
         startBattle(enemyCellX, enemyCellY, randomCount)
+    }
+    fun startMimicBattle(x: Int, y: Int)
+    {
+        val mimic = BattleEnemy.fromType(Enemy.CHEST_MIMIC)
+        startBattleWithEnemies(listOf(mimic), listOf(Pair(x, y)))
+        messageSystem.addMessage("MIMIC ATTACKED YOU!", Color.FIREBRICK)
     }
     private fun updateEnemyBars() {
         enemyBars.clear()

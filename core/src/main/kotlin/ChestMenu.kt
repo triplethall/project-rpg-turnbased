@@ -114,7 +114,7 @@ class ChestMenu(private val font: BitmapFont) {
 
         // Текст
         batch.color = Color.WHITE
-        font.draw(batch, "TREASURE CHEST", menuRect.x + 80, menuRect.y + menuRect.height - 40)
+        font.draw(batch, "You approach the chest..", menuRect.x + 80, menuRect.y + menuRect.height - 40)
         font.draw(batch, "IGNORE", ignoreBtnRect.x + 35, ignoreBtnRect.y + 40)
         font.draw(batch, "OPEN", openBtnRect.x + 35, openBtnRect.y + 40)
         font.draw(batch, "ATTACK", attackBtnRect.x + 35, attackBtnRect.y + 40)

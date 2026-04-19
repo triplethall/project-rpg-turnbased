@@ -560,7 +560,6 @@ class Inventory(
             font.draw(batch, "LUCK: ${(player.luck * 100).toInt()}%",statsX+20f, statsY-5f)
             font.draw(batch, "CORRUPT: ${player.corruption}",statsX+150f, statsY-5f)
         }
-    // FIXME: зачем такие пробелы делать 😭😭🙏
     private fun renderItems(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float) {
         val startX = panelX + 50f
         val startY = panelY + panelH - 150f

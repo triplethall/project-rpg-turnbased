@@ -14,7 +14,8 @@ class MapRenderer (
     cellSize: Int = 32,
     cellGap: Int = 4,
     private val chestClosed: Texture,
-    private val chestOpen: Texture
+    private val chestOpen: Texture,
+    private val chestMimic: Texture
 ){
     private val pixelTexture: Texture
     private lateinit var beachTextures: Array<TextureRegion>
@@ -296,7 +297,11 @@ class MapRenderer (
                             batch.draw(forestTexture, posX - cellSize*0.2f, posY, cellSize*1.4f, cellSize*1.4f)
                         } else {
 
-                            val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
+                            val tex = when {
+                                terrain == TerrainType.OpenedChest -> chestOpen
+                                gameMap.isMimicChest(x, y) -> chestMimic
+                                else -> chestClosed
+                            }
                             batch.color = Color(light, light, light, 1f)
                             batch.draw(tex, posX+3f, posY+3f, cellSize - 4f, cellSize - 4f)
                         }

@@ -1,5 +1,6 @@
 package ru.triplethall.rpgturnbased
 
+import com.badlogic.gdx.Gdx
 import kotlin.random.Random
 
 // Типы местности
@@ -28,6 +29,7 @@ class GameMap(
 
     private val terrain = Array(width) { Array(height) { TerrainType.WATER } }
     private val explored = Array(width) { BooleanArray(height) { false } }
+    private val mimicChests = mutableSetOf<Pair<Int, Int>>()
 
     fun markExplored(x: Int, y: Int) {
         explored[x][y] = true
@@ -330,6 +332,23 @@ class GameMap(
         }
     }
 
+    fun isMimicChest(x: Int, y: Int): Boolean
+    {
+        return mimicChests.contains(Pair(x, y))
+    }
+
+    fun setMimicChests(x: Int, y: Int, isMimic: Boolean)
+    {
+        if (isMimic)
+        {
+            mimicChests.add(Pair(x,y))
+            Gdx.app.log("CHEST_DEBUG", "Mimic spawned at $x,$y")
+        }
+        else
+        {
+            mimicChests.remove(Pair(x,y))
+        }
+    }
     private fun placeChests() {
         val random = Random
         val possibleCells = mutableListOf<Pair<Int, Int>>()
@@ -355,18 +374,26 @@ class GameMap(
             val (cx, cy) = possibleCells.random(random)
             // Не проверяем на LAND, ставим на любую подходящую клетку
             terrain[cx][cy] = TerrainType.Chest
+            // ШАНС НА МИМИКА 20%
+            if (random.nextDouble() < 0.20f)
+            {
+                setMimicChests(cx,cy,true)
+            }
         }
     }
+
     fun collectChest(x: Int, y: Int): Boolean {
         if (x !in 0 until width || y !in 0 until height) return false
 
         if (terrain[x][y] == TerrainType.Chest) {
             terrain[x][y] = TerrainType.OpenedChest // Теперь он открыт
-            chestMenu?.show()
+            mimicChests.remove(Pair(x,y))
+            // chestMenu?.show()
             return true
         }
         return false
     }
+
     private fun countAdjacentMountains(x: Int, y: Int): Int {
         var count = 0
         for (dx in -1..1) {
@@ -1142,6 +1169,10 @@ class GameMap(
 
                 if (hasNorth && hasSouth && hasWest && hasEast) {
                     terrain[x][y] = TerrainType.Chest
+                    if (random.nextDouble() < 0.20f) // 20% что сундук будет мимиком
+                    {
+                        setMimicChests(x,y,true)
+                    }
                     chestPlaced = true
                     break
                 }
