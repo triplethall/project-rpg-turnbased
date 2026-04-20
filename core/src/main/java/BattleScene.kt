@@ -140,8 +140,8 @@ class BattleScene(
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
 
-        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color(0.5f, 0.15f, 0.1f, 1f))
-        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color(0.129f, 0.216f, 0.471f, 1f))
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color.RED)
+        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color.BLUE)
 
         updateEnemyBars()
         if (player.skills.isEmpty()) {
@@ -176,8 +176,8 @@ class BattleScene(
         val playerBarX = 20f
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
-        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color(0.478f, 0.220f, 0.008f, 1f))
-        playerManaBar   = StatBar(playerBarX, playerManaY,  400f, 20f, Color(0.129f, 0.216f, 0.471f, 1f))
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color.RED)
+        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 20f, Color.BLUE)
         updateEnemyBars()
 
         if (player.skills.isEmpty()) {
@@ -463,21 +463,58 @@ class BattleScene(
         }
         val target = enemies[enemyIndex]
 
+        // ===== ПРОВЕРКА УКЛОНЕНИЯ ВРАГА (для WIND и BUNNY) =====
+        if (target.canDodge(isPhysical = true)) {
+            messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+            SoundManager.playSound("sounds/miss.mp3")
+            madeMoveThisTurn = true
+            return
+        }
+
+        // ===== ПРОВЕРКА УКЛОНЕНИЯ ВРАГА (для типа WIND) =====
+        if (target.enemyType == EnemyType.WIND) {
+            val dodgeChance = 0.25 // 25% уклонение от физических атак
+            if (Random.nextDouble() < dodgeChance) {
+                messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+                madeMoveThisTurn = true
+                return
+            }
+        }
+
         val baseDamage = (player.damage * player.getDamageMultiplier()).toInt()
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val totalDamage = (baseDamage * randomMultiplier).toInt()
-        val dmgWithDef = (totalDamage * (1 - target.defense * target.getDefenseMultiplier())).toInt()
+        var targetDefense = target.defense
+        val dmgWithDef = (totalDamage * (1 - targetDefense.coerceAtMost(0.8))).toInt() // Ограничим защиту 80%
+
+        if (target.enemyType == EnemyType.EARTH) {
+            targetDefense += 0.3
+        }
+
+        // Наносим урон и проверяем, попала ли атака
+        val attackHit = target.takeDamage(dmgWithDef, EnemyType.NO_TYPE, false)
+
+        if (!attackHit) {
+            // Атака не нанесла урон (уклонение кролика от первой атаки)
+            messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+            madeMoveThisTurn = true
+            return
+        }
 
         target.takeDamage(dmgWithDef)
         SoundManager.playSound("sounds/atack.mp3") // звук атаки
         messageSystem.addMessage("dealt $dmgWithDef dmg to ${target.name}", Color.GREEN)
 
         if (!target.isAlive()) {
+            // Проверяем воскрешение нежити
+            if (target.tryResurrect()) {
+                messageSystem.addMessage("${target.name} воскрес!", Color.PURPLE)
+                return
+            }
+
             messageSystem.addMessage("${target.name} is ded", Color.ORANGE)
             val gainExp = (target.maxHealth * 50 + target.damage * 100).coerceAtLeast(10)
-            println("gainExp = $gainExp")
             player.addExperience(gainExp)
-            println("player exp = ${player.experience}")
             messageSystem.addMessage("got $gainExp from ${target.name}", Color.GOLD)
             enemies.removeAt(enemyIndex)
 
@@ -522,6 +559,8 @@ class BattleScene(
                     enemy.processDebuffs()
                     return@forEach
                 }
+
+                // Лечение от HOLY типа
                 if (enemy.enemyType == EnemyType.HOLY && enemy.isAlive()) {
                     val healAmount = (enemy.maxHealth * 0.05).toInt()
                     enemies.filter { it.isAlive() && it != enemy }.forEach { ally ->
@@ -533,11 +572,22 @@ class BattleScene(
                         }
                     }
                 }
+
                 if (enemy.canHit(player)) {
                     val damage = (enemy.calculateDamage(null, true) * enemy.getDamageMultiplier()).toInt()
                     val dmgWithDef = (damage * (1 - player.defense)).toInt()
                     player.currentHealth = (player.currentHealth - dmgWithDef)
                     messageSystem.addMessage("${enemy.name} dealt you $dmgWithDef dmg", Color.RED)
+
+                    // Кража жизни для DARK типа
+                    if (enemy.enemyType == EnemyType.DARK) {
+                        val stolen = enemy.tryLifeSteal(dmgWithDef)
+                        if (stolen > 0) {
+                            messageSystem.addMessage("${enemy.name} крадет $stolen здоровья!", Color.PURPLE)
+                        }
+                    }
+
+                    // Применяем дебаффы от атаки врага
                     applyEnemyDebuff(enemy)
                 } else {
                     messageSystem.addMessage("${enemy.name} missed", Color.YELLOW)
@@ -546,11 +596,12 @@ class BattleScene(
                 enemy.processDebuffs()
             }
         }
+
         val debuffDmg = player.processDebuffs()
-        if (debuffDmg > 0)
-        {
+        if (debuffDmg > 0) {
             messageSystem.addMessage("player took $debuffDmg damage!", Color.FIREBRICK)
         }
+
         if (player.currentHealth <= 0) {
             messageSystem.addMessage("бро тебе нужно больше тренироваться", Color.RED)
             defeatScreen()
@@ -571,11 +622,12 @@ class BattleScene(
 
     private fun applyEnemyDebuff(enemy: BattleEnemy) {
         val debuffChance = when (enemy.enemyType) {
-            EnemyType.WATER -> 0.20   // 20% на мокроту
-            EnemyType.ICE -> 0.25     // 25% на заморозку
+            EnemyType.WATER -> 0.20    // 20% на мокроту
+            EnemyType.ICE -> 0.25      // 25% на заморозку
             EnemyType.ELECTRIC -> 0.20 // 20% на паралич
             EnemyType.CURSED -> 0.15   // 15% на проклятие (при атаке, но основное при смерти)
             EnemyType.POISON -> 0.25   // 25% на отравление
+            EnemyType.BLOOD -> 0.30    // Кровавый тип - 30% шанс на кровотечение
             EnemyType.FIRE -> 0.25     // 25% на горение
             else -> 0.0
         }
@@ -609,6 +661,10 @@ class BattleScene(
                 player.applyDebuff(DebuffType.WET, 3, 1.0)
                 messageSystem.addMessage("Игрок промок! (+25% урон от молний)", Color.CYAN)
             }
+            EnemyType.BLOOD -> {
+                player.applyDebuff(DebuffType.BLEED, 3, 1.0, 1)
+                messageSystem.addMessage("Игрок истекает кровью!", Color.RED)
+            }
             else -> {}
         }
     }
@@ -616,7 +672,21 @@ class BattleScene(
     private fun nextTurn() {
         madeMoveThisTurn = false
         player.skills.forEach { it.reduceCooldown() } // Уменьшаем кулдауны
-        player.currentMana += 10
+        // Базовое восстановление маны
+        var manaRegen = 10
+
+        // Бонус от баффов (если есть бесконечная мана)
+        if (DebuffApplier.hasInfiniteMana(player.debuffManager.getAllDebuff())) {
+            manaRegen = player.maxMana // Полное восстановление
+        }
+
+        // Применяем восстановление с проверкой на максимум
+        player.currentMana = (player.currentMana + manaRegen).coerceAtMost(player.maxMana)
+
+        // Сообщение о восстановлении маны
+        if (manaRegen > 0 && player.currentMana < player.maxMana) {
+            messageSystem.addMessage("Восстановлено $manaRegen маны", Color.CYAN)
+        }
 
         if (isActive && enemies.isNotEmpty() && player.currentHealth > 0) {
             enemyTurn()
@@ -715,10 +785,11 @@ class BattleScene(
                 }
             }
 
+            drawBarWithText(batch, playerHealthBar, "${player.currentHealth}/${player.maxHealth}", 2f, barTexture)
+            drawBarWithText(batch, playerManaBar, "${player.currentMana}/${player.maxMana}", 2f, barTexture)
 
-            drawPlayerBars(batch, playerHealthBar, playerManaBar, barTexture, gap = 1f)
-// --- СТАТИСТИКА ИГРОКА ---
-            font.data.setScale(1.4f) // Делаем текст чуть меньше для компактности
+            // --- СТАТИСТИКА ИГРОКА ---
+            font.data.setScale(1.4f)
             val statsX = 20f
             val statsY = playerManaBar.y - 15f
 
@@ -916,77 +987,7 @@ class BattleScene(
         font.data.setScale(1.0f)
         font.color = Color.WHITE
     }
-    private fun drawPlayerBars(
-        batch: SpriteBatch,
-        hpBar: StatBar,
-        mpBar: StatBar,
-        bgTexture: Texture,
-        gap: Float = 1f
-    ) {
 
-        val bgY = mpBar.y
-        val bgHeight = hpBar.height + mpBar.height + gap
-        batch.draw(bgTexture, hpBar.x - 85f, bgY - 40f, hpBar.width * 1.8f, bgHeight * 1.4f)
-
-
-        val hpRatio = (this.player.currentHealth.toFloat() / this.player.maxHealth).coerceAtMost(1.0f)
-        val mpRatio = (this.player.currentMana.toFloat() / this.player.maxMana).coerceAtMost(1.0f)
-
-
-        val hpFillX = hpBar.x + 35f
-        val hpFillY = hpBar.y + 23f
-        val hpFullW = hpBar.width + 85f
-        val hpFillW = hpBar.width * hpRatio + 85f
-        val hpFillH = hpBar.height / 2.4f
-
-        val mpFillX = mpBar.x + 35f
-        val mpFillY = mpBar.y + 45f
-        val mpFullW = mpBar.width + 85f
-        val mpFillW = mpBar.width * mpRatio + 85f
-        val mpFillH = mpBar.height / 2.4f
-
-        batch.color = hpBar.color
-        batch.draw(whitePixel, hpFillX, hpFillY, hpFillW, hpFillH)
-        batch.color = mpBar.color
-        batch.draw(whitePixel, mpFillX, mpFillY, mpFillW, mpFillH)
-        batch.color = Color.WHITE
-
-        fun addVolume(fillX: Float, fillY: Float, fillW: Float, fillH: Float) {
-            batch.color = Color(0f, 0f, 0f, 0.2f)
-            batch.draw(whitePixel, fillX, fillY, fillW, fillH / 2f)
-            batch.color = Color(1f, 1f, 1f, 0.25f)
-            batch.draw(whitePixel, fillX, fillY + fillH * 0.75f, fillW, fillH / 4f)
-            batch.color = Color.WHITE
-        }
-        addVolume(hpFillX, hpFillY, hpFillW, hpFillH)
-        addVolume(mpFillX, mpFillY, mpFillW, mpFillH)
-
-        fun drawOverflow(fillX: Float, fillY: Float, fillH: Float, fullW: Float, current: Int, max: Int) {
-            if (current > max) {
-                val overflowRatio = (current - max).toFloat() / max
-                val overflowW = (fullW * overflowRatio).coerceAtMost(fullW)
-                batch.color = Color(1f, 1f, 1f, 0.4f)
-                batch.draw(whitePixel, fillX, fillY, overflowW, fillH)
-                batch.color = Color.WHITE
-            }
-        }
-        drawOverflow(hpFillX, hpFillY, hpFillH, hpFullW, player.currentHealth, player.maxHealth)
-        drawOverflow(mpFillX, mpFillY, mpFillH, mpFullW, player.currentMana, player.maxMana)
-
-        font.data.setScale(3f)
-        fun drawCentered(text: String, fillX: Float, fillY: Float, fullW: Float, fillH: Float) {
-            layout.setText(font, text)
-            val cx = fillX + (fullW - layout.width) / 2
-            val cy = fillY + (fillH + layout.height) / 2 + 2f
-            font.color = Color.BLACK; font.draw(batch, text, cx + 2f, cy - 2f)
-            font.color = Color.WHITE; font.draw(batch, text, cx, cy)
-        }
-        drawCentered("${player.currentHealth}/${player.maxHealth}", hpFillX, hpFillY, hpFullW, hpFillH)
-        drawCentered("${player.currentMana}/${player.maxMana}", mpFillX, mpFillY, mpFullW, mpFillH)
-
-        font.data.setScale(1f)
-        font.color = Color.WHITE
-    }
     private val squareSize = 24 * 2f
     private val padding = 3 * 2f
     private val verticalGap = 15f
@@ -1178,6 +1179,11 @@ class BattleScene(
             EnemyType.ELECTRIC -> " [Electric]"
             EnemyType.POISON -> " [Poison]"
             EnemyType.HOLY -> " [Holy]"
+            EnemyType.DARK -> " [Dark]"
+            EnemyType.BLOOD -> " [Blood]"
+            EnemyType.BERSERK -> " [Berserk]"
+            EnemyType.UNDEAD -> " [Undead]"
+            EnemyType.BUNNY -> " [Bunny]"
         }
         // 2. Получаем кадр анимации
         batch.color = Color.WHITE
