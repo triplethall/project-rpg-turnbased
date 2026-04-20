@@ -21,7 +21,8 @@ class ClassSelectionMenu(
     private val screenWidth: Int,
     private val screenHeight: Int,
     private val listener: ClassSelectionListener
-) {
+)
+{
     private var visible = true
     private var selectedClass: PlayerClasses? = null
     private var currentPage = 0

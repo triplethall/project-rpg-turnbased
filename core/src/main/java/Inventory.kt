@@ -63,37 +63,34 @@ class Inventory(
     private var isDropPressed = false
     private var currentPlayer: Player? = null
 
-
-    init {
-        initTestItems()
-        initEquipmentSlots()
-    }
-
-    private fun initEquipmentSlots() {
-        equipmentSlots[EquipmentType.HELMET] = helmetSlotRect
-        equipmentSlots[EquipmentType.CHESTPLATE] = chestplateSlotRect
-        equipmentSlots[EquipmentType.BOOTS] = bootsSlotRect
-        equipmentSlots[EquipmentType.SHIELD] = shieldSlotRect
-        equipmentSlots[EquipmentType.WEAPON] = weaponSlotRect
-        runeSlots.clear()
-        runeSlots.addAll(listOf(rune1SlotRect, rune2SlotRect))
-
-    }
-
-    private fun initTestItems() {
-        // Создаем тестовые предметы с привязкой к EquipmentDatabase
-        items.addAll(listOf(
-            Item("Health Potion", "Restores 50 HP", 3, false),
-            Item("Mana Potion", "Restores 30 MP", 2, false),
-            Item("Wooden Sword", "A basic sword. Damage +10", 1, true, false, EquipmentDatabase.WOODEN_SWORD),
-            Item("Leather Armor", "Basic armor. Defense +15%", 1, true, false, EquipmentDatabase.LEATHER_CHESTPLATE),
-            Item("Iron Helmet", "Basic helmet. Defense +10%", 1, true, false, EquipmentDatabase.IRON_HELMET),
-            Item("Iron Boots", "Basic boots. Defense +10%", 1, true, false, EquipmentDatabase.IRON_BOOTS),
-            Item("Wooden Shield", "Basic shield. Defense +5%", 1, true, false, EquipmentDatabase.WOODEN_SHIELD),
-            Item("Defence rune", "+20% armor in exchange for -20% max health", 1, true, false,EquipmentDatabase.DEFENCE_RUNE)
-        ))
-    }
-
+//    init {
+//        initTestItems()
+//        initEquipmentSlots()
+//    }
+//
+//    private fun initEquipmentSlots() {
+//        equipmentSlots[EquipmentType.HELMET] = helmetSlotRect
+//        equipmentSlots[EquipmentType.CHESTPLATE] = chestplateSlotRect
+//        equipmentSlots[EquipmentType.BOOTS] = bootsSlotRect
+//        equipmentSlots[EquipmentType.SHIELD] = shieldSlotRect
+//        equipmentSlots[EquipmentType.WEAPON] = weaponSlotRect
+//        runeSlots.clear()
+//        runeSlots.addAll(listOf(rune1SlotRect, rune2SlotRect))
+//    }
+//
+//    private fun initTestItems() {
+//        // Создаем тестовые предметы с привязкой к EquipmentDatabase
+//        items.addAll(listOf(
+//            Item("Health Potion", "Restores 50 HP", 3, false),
+//            Item("Mana Potion", "Restores 30 MP", 2, false),
+//            Item("Wooden Sword", "A basic sword. Damage +10", 1, true, false, EquipmentDatabase.WOODEN_SWORD),
+//            Item("Leather Armor", "Basic armor. Defense +15%", 1, true, false, EquipmentDatabase.LEATHER_CHESTPLATE),
+//            Item("Iron Helmet", "Basic helmet. Defense +10%", 1, true, false, EquipmentDatabase.IRON_HELMET),
+//            Item("Iron Boots", "Basic boots. Defense +10%", 1, true, false, EquipmentDatabase.IRON_BOOTS),
+//            Item("Wooden Shield", "Basic shield. Defense +5%", 1, true, false, EquipmentDatabase.WOODEN_SHIELD),
+//            Item("Defence rune", "+20% armor in exchange for -20% max health", 1, true, false,EquipmentDatabase.DEFENCE_RUNE)
+//        ))
+//    }
 
     fun toggle() {
         isVisible = !isVisible
@@ -103,7 +100,6 @@ class Inventory(
             selectedItemIndex = -1
         }
     }
-
 
     fun handleInput(player: Player) {
         val touchX = Gdx.input.x.toFloat()
@@ -196,7 +192,6 @@ class Inventory(
         }
     }
 
-
     fun addEquipmentItem(equipmentItem: EquipmentItem, quantity: Int = 1) {
         val existingItem = items.find { it.equipmentItem?.id == equipmentItem.id }
         if (existingItem != null) {
@@ -212,7 +207,6 @@ class Inventory(
             ))
         }
     }
-
 
     private fun handleEquipItem(item: Item, player: Player) {
         if (!item.isEquippable) return
@@ -287,7 +281,6 @@ class Inventory(
         }
     }
 
-
     private fun handleUseItem(item: Item, player: Player) {
         if (!item.isEquippable && item.quantity > 0) {
             // Логика использования предмета
@@ -309,14 +302,12 @@ class Inventory(
         }
     }
 
-
     private fun handleDropItem(item: Item) {
         items.remove(item)
         isItemDetailsVisible = false
         selectedItem = null
         selectedItemIndex = -1
     }
-
 
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player) {
         currentPlayer = player
@@ -378,189 +369,189 @@ class Inventory(
 
     // Метод для снятия экипировки по типу
     private fun unequipItemByType(type: EquipmentType, player: Player) {
-            val item = player.equipment.getEquipped(type) ?: return
+        val item = player.equipment.getEquipped(type) ?: return
 
-            // Снимаем экипировку
-            if (player.equipment.unequip(type, player)) {
-                // Добавляем предмет обратно в инвентарь
-                val existingItem = items.find { it.equipmentItem?.id == item.id }
-                if (existingItem != null) {
-                    existingItem.quantity++
-                    existingItem.isEquipped = false
-                } else {
-                    items.add(Item(
-                        name = item.name,
-                        description = item.description,
-                        quantity = 1,
-                        isEquippable = true,
-                        isEquipped = false,
-                        equipmentItem = item
-                    ))
-                }
+        // Снимаем экипировку
+        if (player.equipment.unequip(type, player)) {
+            // Добавляем предмет обратно в инвентарь
+            val existingItem = items.find { it.equipmentItem?.id == item.id }
+            if (existingItem != null) {
+                existingItem.quantity++
+                existingItem.isEquipped = false
+            } else {
+                items.add(Item(
+                    name = item.name,
+                    description = item.description,
+                    quantity = 1,
+                    isEquippable = true,
+                    isEquipped = false,
+                    equipmentItem = item
+                ))
             }
         }
+    }
 
     // Метод отрисовки панели экипировки
     private fun renderEquipmentPanel(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
-            val equipPanelX = panelX + panelW - 350f
-            val equipPanelY = panelY + 50f
-            val equipPanelW = 320f
-            val equipPanelH = 600f
+        val equipPanelX = panelX + panelW - 350f
+        val equipPanelY = panelY + 50f
+        val equipPanelW = 320f
+        val equipPanelH = 600f
 
-            // Фон панели экипировки
-            batch.color = Color(0.3f, 0.3f, 0.3f, 0.9f)
-            batch.draw(whitePixel, equipPanelX, equipPanelY, equipPanelW, equipPanelH)
+        // Фон панели экипировки
+        batch.color = Color(0.3f, 0.3f, 0.3f, 0.9f)
+        batch.draw(whitePixel, equipPanelX, equipPanelY, equipPanelW, equipPanelH)
 
-            // Заголовок панели
-            font.color = Color.YELLOW
-            font.data.setScale(1.2f)
-            font.draw(batch, "EQUIPMENT", equipPanelX + 100f, equipPanelY + equipPanelH - 15f)
+        // Заголовок панели
+        font.color = Color.YELLOW
+        font.data.setScale(1.2f)
+        font.draw(batch, "EQUIPMENT", equipPanelX + 100f, equipPanelY + equipPanelH - 15f)
 
-            // Параметры слотов
-            val slotSize = 60f
-            val slotStartX = equipPanelX + 50f
-            var slotY = equipPanelY + equipPanelH - 80f
+        // Параметры слотов
+        val slotSize = 60f
+        val slotStartX = equipPanelX + 50f
+        var slotY = equipPanelY + equipPanelH - 80f
 
-            // 1. Рисуем основные слоты (шлем, нагрудник, ботинки, щит, оружие)
-            val mainSlots = listOf(
-                Triple(EquipmentType.HELMET, "HELMET", helmetSlotRect),
-                Triple(EquipmentType.CHESTPLATE, "CHEST", chestplateSlotRect),
-                Triple(EquipmentType.BOOTS, "BOOTS", bootsSlotRect),
-                Triple(EquipmentType.SHIELD, "SHIELD", shieldSlotRect),
-                Triple(EquipmentType.WEAPON, "WEAPON", weaponSlotRect)
-            )
+        // 1. Рисуем основные слоты (шлем, нагрудник, ботинки, щит, оружие)
+        val mainSlots = listOf(
+            Triple(EquipmentType.HELMET, "HELMET", helmetSlotRect),
+            Triple(EquipmentType.CHESTPLATE, "CHEST", chestplateSlotRect),
+            Triple(EquipmentType.BOOTS, "BOOTS", bootsSlotRect),
+            Triple(EquipmentType.SHIELD, "SHIELD", shieldSlotRect),
+            Triple(EquipmentType.WEAPON, "WEAPON", weaponSlotRect)
+        )
 
-            mainSlots.forEach { (type, label, rect) ->
-                val equippedItem = player.equipment.getEquipped(type)
+        mainSlots.forEach { (type, label, rect) ->
+            val equippedItem = player.equipment.getEquipped(type)
 
-                // Прямоугольник слота
-                rect.set(slotStartX, slotY - slotSize, slotSize, slotSize)
+            // Прямоугольник слота
+            rect.set(slotStartX, slotY - slotSize, slotSize, slotSize)
 
-                // Фон слота
-                batch.color = Color(0.2f, 0.2f, 0.2f, 1f)
-                batch.draw(whitePixel, rect.x, rect.y, rect.width, rect.height)
+            // Фон слота
+            batch.color = Color(0.2f, 0.2f, 0.2f, 1f)
+            batch.draw(whitePixel, rect.x, rect.y, rect.width, rect.height)
 
-                // Рамка слота
-                batch.color = Color.GOLD
-                val thickness = 2f
-                batch.draw(whitePixel, rect.x, rect.y, rect.width, thickness)
-                batch.draw(whitePixel, rect.x, rect.y + rect.height, rect.width, thickness)
-                batch.draw(whitePixel, rect.x, rect.y, thickness, rect.height)
-                batch.draw(whitePixel, rect.x + rect.width, rect.y, thickness, rect.height)
+            // Рамка слота
+            batch.color = Color.GOLD
+            val thickness = 2f
+            batch.draw(whitePixel, rect.x, rect.y, rect.width, thickness)
+            batch.draw(whitePixel, rect.x, rect.y + rect.height, rect.width, thickness)
+            batch.draw(whitePixel, rect.x, rect.y, thickness, rect.height)
+            batch.draw(whitePixel, rect.x + rect.width, rect.y, thickness, rect.height)
 
-                // Если есть экипированный предмет - отображаем
-                if (equippedItem != null) {
-                    batch.color = Color.ORANGE
-                    batch.draw(whitePixel, rect.x + 10f, rect.y + 10f, rect.width - 20f, rect.height - 20f)
+            // Если есть экипированный предмет - отображаем
+            if (equippedItem != null) {
+                batch.color = Color.ORANGE
+                batch.draw(whitePixel, rect.x + 10f, rect.y + 10f, rect.width - 20f, rect.height - 20f)
 
-                    // Первая буква названия
-                    font.color = Color.WHITE
-                    font.data.setScale(0.8f)
-                    val firstLetter = equippedItem.name.take(2)
-                    font.draw(batch, firstLetter, rect.x + rect.width / 2 - 10f, rect.y + rect.height / 2 + 5f)
-                }
-
-                // Название слота
-                font.color = Color.LIGHT_GRAY
+                // Первая буква названия
+                font.color = Color.WHITE
                 font.data.setScale(0.8f)
-                font.draw(batch, label, slotStartX + slotSize + 10f, slotY - slotSize / 2 + 10f)
+                val firstLetter = equippedItem.name.take(2)
+                font.draw(batch, firstLetter, rect.x + rect.width / 2 - 10f, rect.y + rect.height / 2 + 5f)
+            }
 
-                // Отображаем статы предмета если есть
-                if (equippedItem != null) {
-                    font.color = Color.GREEN
-                    font.data.setScale(0.7f)
-                    val statText = if (equippedItem.damageBonus != 0) "ATK: +${equippedItem.damageBonus}"
-                    else if (equippedItem.defenseBonus != 0.0) "DEF: +${(equippedItem.defenseBonus * 100).toInt()}%"
-                    else ""
-                    if (statText.isNotEmpty()) {
-                        font.draw(batch, statText, slotStartX + slotSize + 10f, slotY - slotSize / 2 - 10f)
-                    }
-                }
+            // Название слота
+            font.color = Color.LIGHT_GRAY
+            font.data.setScale(0.8f)
+            font.draw(batch, label, slotStartX + slotSize + 10f, slotY - slotSize / 2 + 10f)
 
-                slotY -= (slotSize + 15f)
-                if (type == EquipmentType.WEAPON) {
-                    slotY -= 10f  // Отступ перед рунами
+            // Отображаем статы предмета если есть
+            if (equippedItem != null) {
+                font.color = Color.GREEN
+                font.data.setScale(0.7f)
+                val statText = if (equippedItem.damageBonus != 0) "ATK: +${equippedItem.damageBonus}"
+                else if (equippedItem.defenseBonus != 0.0) "DEF: +${(equippedItem.defenseBonus * 100).toInt()}%"
+                else ""
+                if (statText.isNotEmpty()) {
+                    font.draw(batch, statText, slotStartX + slotSize + 10f, slotY - slotSize / 2 - 10f)
                 }
             }
 
-            // 2. Рисуем слоты для рун
-            runeSlots.forEachIndexed { index, rect ->
-                val label = "RUNE ${index + 1}"
-                val equippedItem = player.equipment.getRune(index)
-
-                // Прямоугольник слота
-                rect.set(slotStartX, slotY - slotSize, slotSize, slotSize)
-
-                // Фон слота
-                batch.color = Color(0.2f, 0.2f, 0.2f, 1f)
-                batch.draw(whitePixel, rect.x, rect.y, rect.width, rect.height)
-
-                // Рамка слота
-                batch.color = Color.GOLD
-                val thickness = 2f
-                batch.draw(whitePixel, rect.x, rect.y, rect.width, thickness)
-                batch.draw(whitePixel, rect.x, rect.y + rect.height, rect.width, thickness)
-                batch.draw(whitePixel, rect.x, rect.y, thickness, rect.height)
-                batch.draw(whitePixel, rect.x + rect.width, rect.y, thickness, rect.height)
-
-                // Если есть экипированный предмет - отображаем
-                if (equippedItem != null) {
-                    batch.color = Color.ORANGE
-                    batch.draw(whitePixel, rect.x + 10f, rect.y + 10f, rect.width - 20f, rect.height - 20f)
-
-                    // Первая буква названия
-                    font.color = Color.WHITE
-                    font.data.setScale(0.8f)
-                    val firstLetter = equippedItem.name.take(2)
-                    font.draw(batch, firstLetter, rect.x + rect.width / 2 - 10f, rect.y + rect.height / 2 + 5f)
-                }
-
-                // Название слота
-                font.color = Color.LIGHT_GRAY
-                font.data.setScale(0.8f)
-                font.draw(batch, label, slotStartX + slotSize + 10f, slotY - slotSize / 2 + 10f)
-
-                // Отображаем статы предмета если есть
-                if (equippedItem != null) {
-                    font.color = Color.GREEN
-                    font.data.setScale(0.7f)
-                    val statText = if (equippedItem.damageBonus != 0) "ATK: +${equippedItem.damageBonus}"
-                    else if (equippedItem.defenseBonus != 0.0) "DEF: +${(equippedItem.defenseBonus * 100).toInt()}%"
-                    else ""
-                    if (statText.isNotEmpty()) {
-                        font.draw(batch, statText, slotStartX + slotSize + 10f, slotY - slotSize / 2 - 10f)
-                    }
-                }
-
-                slotY -= (slotSize + 15f)
+            slotY -= (slotSize + 15f)
+            if (type == EquipmentType.WEAPON) {
+                slotY -= 10f  // Отступ перед рунами
             }
-
-            // 3. Статистика персонажа
-            renderPlayerStats(batch, whitePixel, equipPanelX, equipPanelY, equipPanelW, equipPanelH, player)
         }
+
+        // 2. Рисуем слоты для рун
+        runeSlots.forEachIndexed { index, rect ->
+            val label = "RUNE ${index + 1}"
+            val equippedItem = player.equipment.getRune(index)
+
+            // Прямоугольник слота
+            rect.set(slotStartX, slotY - slotSize, slotSize, slotSize)
+
+            // Фон слота
+            batch.color = Color(0.2f, 0.2f, 0.2f, 1f)
+            batch.draw(whitePixel, rect.x, rect.y, rect.width, rect.height)
+
+            // Рамка слота
+            batch.color = Color.GOLD
+            val thickness = 2f
+            batch.draw(whitePixel, rect.x, rect.y, rect.width, thickness)
+            batch.draw(whitePixel, rect.x, rect.y + rect.height, rect.width, thickness)
+            batch.draw(whitePixel, rect.x, rect.y, thickness, rect.height)
+            batch.draw(whitePixel, rect.x + rect.width, rect.y, thickness, rect.height)
+
+            // Если есть экипированный предмет - отображаем
+            if (equippedItem != null) {
+                batch.color = Color.ORANGE
+                batch.draw(whitePixel, rect.x + 10f, rect.y + 10f, rect.width - 20f, rect.height - 20f)
+
+                // Первая буква названия
+                font.color = Color.WHITE
+                font.data.setScale(0.8f)
+                val firstLetter = equippedItem.name.take(2)
+                font.draw(batch, firstLetter, rect.x + rect.width / 2 - 10f, rect.y + rect.height / 2 + 5f)
+            }
+
+            // Название слота
+            font.color = Color.LIGHT_GRAY
+            font.data.setScale(0.8f)
+            font.draw(batch, label, slotStartX + slotSize + 10f, slotY - slotSize / 2 + 10f)
+
+            // Отображаем статы предмета если есть
+            if (equippedItem != null) {
+                font.color = Color.GREEN
+                font.data.setScale(0.7f)
+                val statText = if (equippedItem.damageBonus != 0) "ATK: +${equippedItem.damageBonus}"
+                else if (equippedItem.defenseBonus != 0.0) "DEF: +${(equippedItem.defenseBonus * 100).toInt()}%"
+                else ""
+                if (statText.isNotEmpty()) {
+                    font.draw(batch, statText, slotStartX + slotSize + 10f, slotY - slotSize / 2 - 10f)
+                }
+            }
+
+            slotY -= (slotSize + 15f)
+        }
+
+        // 3. Статистика персонажа
+        renderPlayerStats(batch, whitePixel, equipPanelX, equipPanelY, equipPanelW, equipPanelH, player)
+    }
 
     // Метод отрисовки статистики
     private fun renderPlayerStats(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
-            val statsX = panelX - 250f
-            val statsY = panelY + 10f
+        val statsX = panelX - 250f
+        val statsY = panelY + 10f
 
-            font.color = Color.CYAN
-            font.data.setScale(0.9f)
+        font.color = Color.CYAN
+        font.data.setScale(0.9f)
 
-            font.draw(batch, "STATS", statsX + 20f, statsY + 100f)
-            font.color = Color.WHITE
-            font.draw(batch, "HP: ${player.currentHealth}/${player.maxHealth}", statsX + 20f, statsY + 75f)
-            font.draw(batch, "MP: ${player.currentMana}/${player.maxMana}", statsX + 20f, statsY + 55f)
-            font.draw(batch, "ATK: ${player.damage}", statsX + 20f, statsY + 35f)
-            font.draw(batch, "M.ATK: ${player.mageDamage}", statsX + 20f, statsY + 15f)
-            font.draw(batch, "DEF: ${(player.defense * 100).toInt()}%", statsX + 150f, statsY + 75f)
-            font.draw(batch, "CRIT: ${(player.critChance * 100).toInt()}%", statsX + 150f, statsY + 55f)
-            font.draw(batch, "ACC: ${(player.accuracy * 100).toInt()}%", statsX + 150f, statsY + 35f)
-            font.draw(batch, "SPD: ${(player.attackSpeed * 100).toInt()}%", statsX + 150f, statsY + 15f)
-            font.draw(batch, "LUCK: ${(player.luck * 100).toInt()}%",statsX+20f, statsY-5f)
-            font.draw(batch, "CORRUPT: ${player.corruption}",statsX+150f, statsY-5f)
-        }
-    // FIXME: зачем такие пробелы делать 😭😭🙏
+        font.draw(batch, "STATS", statsX + 20f, statsY + 100f)
+        font.color = Color.WHITE
+        font.draw(batch, "HP: ${player.currentHealth}/${player.maxHealth}", statsX + 20f, statsY + 75f)
+        font.draw(batch, "MP: ${player.currentMana}/${player.maxMana}", statsX + 20f, statsY + 55f)
+        font.draw(batch, "ATK: ${player.damage}", statsX + 20f, statsY + 35f)
+        font.draw(batch, "M.ATK: ${player.mageDamage}", statsX + 20f, statsY + 15f)
+        font.draw(batch, "DEF: ${(player.defense * 100).toInt()}%", statsX + 150f, statsY + 75f)
+        font.draw(batch, "CRIT: ${(player.critChance * 100).toInt()}%", statsX + 150f, statsY + 55f)
+        font.draw(batch, "ACC: ${(player.accuracy * 100).toInt()}%", statsX + 150f, statsY + 35f)
+        font.draw(batch, "SPD: ${(player.attackSpeed * 100).toInt()}%", statsX + 150f, statsY + 15f)
+        font.draw(batch, "LUCK: ${(player.luck * 100).toInt()}%",statsX+20f, statsY-5f)
+        font.draw(batch, "CORRUPT: ${player.corruption}",statsX+150f, statsY-5f)
+    }
+
     private fun renderItems(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float) {
         val startX = panelX + 50f
         val startY = panelY + panelH - 150f
@@ -770,8 +761,7 @@ class Inventory(
         }
     }
 
-    fun getEquippableItems(): List<Item>
-    {
+    fun getEquippableItems(): List<Item> {
         return items.filter { it.isEquippable }
     }
 }

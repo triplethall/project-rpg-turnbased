@@ -178,6 +178,21 @@ enum class PlayerClasses(
         baseMageDamage = 20,
         baseLuck = 0.0,
         baseCritChance = 0.06
+    ),
+
+    ALCHEMIST(
+        displayName = "Alchemist",
+        description = "Master of potions and transmutations",
+        baseDamage = 22,
+        baseMaxHealth = 210,
+        baseDefense = 0.06,
+        baseMaxMana = 120,
+        baseAttackSpeed = 1.1,
+        baseAccuracy = 0.86,
+        baseWill = 0.30,
+        baseMageDamage = 26,
+        baseLuck = 0.05,
+        baseCritChance = 0.05
     );
 
 
