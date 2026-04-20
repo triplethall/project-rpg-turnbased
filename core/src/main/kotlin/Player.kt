@@ -106,12 +106,26 @@ class Player(
                 skills.add(BattleStandardSkill())
                 skills.add(SoulEmpowermentSkill())
             }
+            PlayerClasses.ALCHEMIST -> {
+                skills.add(PoisonVialSkill())
+                skills.add(HealingPotionSkill())
+                skills.add(ExplosiveMixtureSkill())
+                skills.add(AdrenalineVialSkill())
+                skills.add(SmokeBombSkill())
+            }
             else -> {} // ADVENTURIST — только Dodge
         }
 
         println("DEBUG: Learned ${skills.size} skills for class $playerClass")
         skills.forEach { println("DEBUG: - ${it.name}") }
     }
+
+    fun learnSkill(skill: Skill) {
+        if (!skills.any { it.id == skill.id }) {
+            skills.add(skill)
+        }
+    }
+
     // Расчет необходимого опыта для некст левела
     fun getExpForNextLevel(): Int {
         return (BASE_EXP * (EXP_GROWTH_FACTOR.pow(level - 1))).toInt()

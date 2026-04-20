@@ -63,37 +63,34 @@ class Inventory(
     private var isDropPressed = false
     private var currentPlayer: Player? = null
 
-
-    init {
-        initTestItems()
-        initEquipmentSlots()
-    }
-
-    private fun initEquipmentSlots() {
-        equipmentSlots[EquipmentType.HELMET] = helmetSlotRect
-        equipmentSlots[EquipmentType.CHESTPLATE] = chestplateSlotRect
-        equipmentSlots[EquipmentType.BOOTS] = bootsSlotRect
-        equipmentSlots[EquipmentType.SHIELD] = shieldSlotRect
-        equipmentSlots[EquipmentType.WEAPON] = weaponSlotRect
-        runeSlots.clear()
-        runeSlots.addAll(listOf(rune1SlotRect, rune2SlotRect))
-
-    }
-
-    private fun initTestItems() {
-        // Создаем тестовые предметы с привязкой к EquipmentDatabase
-        items.addAll(listOf(
-            Item("Health Potion", "Restores 50 HP", 3, false),
-            Item("Mana Potion", "Restores 30 MP", 2, false),
-            Item("Wooden Sword", "A basic sword. Damage +10", 1, true, false, EquipmentDatabase.WOODEN_SWORD),
-            Item("Leather Armor", "Basic armor. Defense +15%", 1, true, false, EquipmentDatabase.LEATHER_CHESTPLATE),
-            Item("Iron Helmet", "Basic helmet. Defense +10%", 1, true, false, EquipmentDatabase.IRON_HELMET),
-            Item("Iron Boots", "Basic boots. Defense +10%", 1, true, false, EquipmentDatabase.IRON_BOOTS),
-            Item("Wooden Shield", "Basic shield. Defense +5%", 1, true, false, EquipmentDatabase.WOODEN_SHIELD),
-            Item("Defence rune", "+20% armor in exchange for -20% max health", 1, true, false,EquipmentDatabase.DEFENCE_RUNE)
-        ))
-    }
-
+//    init {
+//        initTestItems()
+//        initEquipmentSlots()
+//    }
+//
+//    private fun initEquipmentSlots() {
+//        equipmentSlots[EquipmentType.HELMET] = helmetSlotRect
+//        equipmentSlots[EquipmentType.CHESTPLATE] = chestplateSlotRect
+//        equipmentSlots[EquipmentType.BOOTS] = bootsSlotRect
+//        equipmentSlots[EquipmentType.SHIELD] = shieldSlotRect
+//        equipmentSlots[EquipmentType.WEAPON] = weaponSlotRect
+//        runeSlots.clear()
+//        runeSlots.addAll(listOf(rune1SlotRect, rune2SlotRect))
+//    }
+//
+//    private fun initTestItems() {
+//        // Создаем тестовые предметы с привязкой к EquipmentDatabase
+//        items.addAll(listOf(
+//            Item("Health Potion", "Restores 50 HP", 3, false),
+//            Item("Mana Potion", "Restores 30 MP", 2, false),
+//            Item("Wooden Sword", "A basic sword. Damage +10", 1, true, false, EquipmentDatabase.WOODEN_SWORD),
+//            Item("Leather Armor", "Basic armor. Defense +15%", 1, true, false, EquipmentDatabase.LEATHER_CHESTPLATE),
+//            Item("Iron Helmet", "Basic helmet. Defense +10%", 1, true, false, EquipmentDatabase.IRON_HELMET),
+//            Item("Iron Boots", "Basic boots. Defense +10%", 1, true, false, EquipmentDatabase.IRON_BOOTS),
+//            Item("Wooden Shield", "Basic shield. Defense +5%", 1, true, false, EquipmentDatabase.WOODEN_SHIELD),
+//            Item("Defence rune", "+20% armor in exchange for -20% max health", 1, true, false,EquipmentDatabase.DEFENCE_RUNE)
+//        ))
+//    }
 
     fun toggle() {
         isVisible = !isVisible
@@ -103,7 +100,6 @@ class Inventory(
             selectedItemIndex = -1
         }
     }
-
 
     fun handleInput(player: Player) {
         val touchX = Gdx.input.x.toFloat()
@@ -196,7 +192,6 @@ class Inventory(
         }
     }
 
-
     fun addEquipmentItem(equipmentItem: EquipmentItem, quantity: Int = 1) {
         val existingItem = items.find { it.equipmentItem?.id == equipmentItem.id }
         if (existingItem != null) {
@@ -212,7 +207,6 @@ class Inventory(
             ))
         }
     }
-
 
     private fun handleEquipItem(item: Item, player: Player) {
         if (!item.isEquippable) return
@@ -287,7 +281,6 @@ class Inventory(
         }
     }
 
-
     private fun handleUseItem(item: Item, player: Player) {
         if (!item.isEquippable && item.quantity > 0) {
             // Логика использования предмета
@@ -309,14 +302,12 @@ class Inventory(
         }
     }
 
-
     private fun handleDropItem(item: Item) {
         items.remove(item)
         isItemDetailsVisible = false
         selectedItem = null
         selectedItemIndex = -1
     }
-
 
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player) {
         currentPlayer = player
@@ -560,7 +551,7 @@ class Inventory(
             font.draw(batch, "LUCK: ${(player.luck * 100).toInt()}%",statsX+20f, statsY-5f)
             font.draw(batch, "CORRUPT: ${player.corruption}",statsX+150f, statsY-5f)
         }
-    // FIXME: зачем такие пробелы делать 😭😭🙏
+
     private fun renderItems(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float) {
         val startX = panelX + 50f
         val startY = panelY + panelH - 150f
@@ -770,8 +761,7 @@ class Inventory(
         }
     }
 
-    fun getEquippableItems(): List<Item>
-    {
+    fun getEquippableItems(): List<Item> {
         return items.filter { it.isEquippable }
     }
 }
