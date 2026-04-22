@@ -17,7 +17,21 @@ enum class DebuffType {
     STUN,        // Оглушение - пропуск хода
     BLEED,       // Кровотечение - урон каждый ход
     SILENCE,     // Молчание - нельзя использовать магию
-    WET          // Мокрота - +25% урона от молний
+    WET,         // Мокрота - +25% урона от молний
+
+
+    DODGE,              // Уклонение
+    RESURRECTION,       // Воскрешение
+    BUFF_DEFENSE,       // Бафф защиты
+    BUFF_CRIT,          // Бафф крита
+    BUFF_SPEED,         // Бафф скорости
+    BUFF_DAMAGE,        // Бафф урона
+    BUFF_INVULNERABLE,  // Неуязвимость
+    BUFF_INFINITE_MANA, // Бесконечная мана
+    BUFF_HEALTH,        // Бафф здоровья
+    BUFF_WILL,          // Бафф воли
+    CLONE,              // Клон
+    BANNER              // Знамя
 }
 data class DebuffEffect(
     val type: DebuffType,
@@ -107,12 +121,48 @@ interface DamageReceiver {
 
 
 class DebuffApplier {
-
     companion object{
+        // Проверить, есть ли неуязвимость
+        fun isInvulnerable(debuffs: List<DebuffEffect>): Boolean {
+            return debuffs.any { it.type == DebuffType.BUFF_INVULNERABLE }
+        }
+        // Получить модификатор крит шанса
+        fun getCritModifier(debuffs: List<DebuffEffect>): Double {
+            var critMod = 1.0
+            debuffs.forEach { debuff ->
+                if (debuff.type == DebuffType.BUFF_CRIT) {
+                    critMod *= debuff.intensity
+                }
+            }
+            return critMod
+        }
+        // Получить модификатор максимального здоровья
+        fun getHealthModifier(debuffs: List<DebuffEffect>): Double {
+            var healthMod = 1.0
+            debuffs.forEach { debuff ->
+                if (debuff.type == DebuffType.BUFF_HEALTH) {
+                    healthMod *= debuff.intensity
+                }
+            }
+            return healthMod
+        }
+        // Проверить, бесконечная ли мана
+        fun hasInfiniteMana(debuffs: List<DebuffEffect>): Boolean {
+            return debuffs.any { it.type == DebuffType.BUFF_INFINITE_MANA }
+        }
+        // Проверить, активно ли воскрешение
+        fun hasResurrection(debuffs: List<DebuffEffect>): Boolean {
+            return debuffs.any { it.type == DebuffType.RESURRECTION }
+        }
+        // Получить шанс уклонения (максимум 80%)
+        fun getDodgeChance(debuffs: List<DebuffEffect>, baseSpeed: Double, luck: Double): Double {
+            val hasDodge = debuffs.any { it.type == DebuffType.DODGE }
+            if (!hasDodge) return 0.0
+            return (baseSpeed * 0.3 + luck * 0.5).coerceAtMost(0.8)
+        }
         //применение урона от дебафов
         fun applyDamageDebuffs(target: DamageReceiver, debuffs: List<DebuffEffect>, maxHealth: Int): Int {
             var totalDamage = 0
-
             debuffs.forEach { debuffs ->
                 val damage = when (debuffs.type)
                 {
@@ -129,37 +179,53 @@ class DebuffApplier {
             }
             return totalDamage
         }
-
         // получать модификаторы характеристик от дебаффов
-        fun getStatModifiers(debuffs: List<DebuffEffect>): StatModifiers
-        {
+        fun getStatModifiers(debuffs: List<DebuffEffect>): StatModifiers {
             var damageMult = 1.0
             var speedMult = 1.0
             var defenseMult = 1.0
 
 
-            debuffs.forEach { debuffs ->
-                when (debuffs.type)
+            debuffs.forEach { debuff ->
+                when (debuff.type)
                 {
-                    DebuffType.WET -> {}
-                    DebuffType.WEAKNESS -> damageMult *= (1.0 - 0.25 * debuffs.intensity)
-                    DebuffType.CURSE -> {
-                        damageMult *= (1.0 - 0.2 * debuffs.intensity)
-                        defenseMult *= (1.0 - 0.2 * debuffs.intensity)
+                    // ===== БАФФЫ =====
+                    DebuffType.BUFF_DAMAGE -> damageMult *= debuff.intensity
+                    DebuffType.BUFF_SPEED -> speedMult *= debuff.intensity
+                    DebuffType.BUFF_DEFENSE -> defenseMult *= debuff.intensity
+                    DebuffType.BANNER -> {
+                        damageMult *= debuff.intensity
+                        speedMult *= debuff.intensity
+                        speedMult *= debuff.intensity
                     }
-                    DebuffType.SLOW -> speedMult *= (1.0 - 0.4 * debuffs.intensity)
-                    DebuffType.PARALYSIS -> speedMult *= (1.0 - 0.3 * debuffs.intensity)
+                    DebuffType.CLONE -> {
+                        damageMult *= debuff.intensity
+                        speedMult *= debuff.intensity
+                        defenseMult *= debuff.intensity
+                    }
+
+                    // ===== ДЕБАФФЫ =====
+                    DebuffType.WET -> {}
+                    DebuffType.WEAKNESS -> damageMult *= (1.0 - 0.25 * debuff.intensity)
+                    DebuffType.CURSE -> {
+                        damageMult *= (1.0 - 0.2 * debuff.intensity)
+                        defenseMult *= (1.0 - 0.2 * debuff.intensity)
+                    }
+                    DebuffType.SLOW -> speedMult *= (1.0 - 0.4 * debuff.intensity)
+                    DebuffType.PARALYSIS -> speedMult *= (1.0 - 0.3 * debuff.intensity)
                     else -> {}
                 }
             }
             return StatModifiers(damageMult, speedMult, defenseMult)
         }
-
         // Проверить, пропускает ли цель ход
         fun shouldSkipTurn(debuffs: List<DebuffEffect>): Boolean {
-            return debuffs.any { it.type == DebuffType.FREEZE || it.type == DebuffType.STUN }
+            return debuffs.any {
+                it.type == DebuffType.FREEZE ||
+                    it.type == DebuffType.STUN ||
+                    (it.type == DebuffType.PARALYSIS && Random.nextDouble() < 0.3) // 30% шанс
+            }
         }
-
         // Проверить, может ли цель использовать магию
         fun canUseMagic(debuffs: List<DebuffEffect>): Boolean {
             return !debuffs.any { it.type == DebuffType.SILENCE }
@@ -201,8 +267,9 @@ class DebuffRenderer(private val font: BitmapFont) {
     }
 
     private fun drawDebuffIcon(batch: SpriteBatch, debuff: DebuffEffect, x: Float, y: Float, size: Float) {
-        // Используем цвет для обозначения типа дебаффа
+        // Цвет для разных типов
         batch.color = when (debuff.type) {
+            // Дебаффы
             DebuffType.POISON -> Color.GREEN
             DebuffType.BURN -> Color.ORANGE
             DebuffType.FREEZE -> Color.CYAN
@@ -214,14 +281,25 @@ class DebuffRenderer(private val font: BitmapFont) {
             DebuffType.BLEED -> Color.RED
             DebuffType.SILENCE -> Color.BROWN
             DebuffType.WET -> Color.BLUE
+
+            // Баффы
+            DebuffType.DODGE -> Color.CYAN
+            DebuffType.RESURRECTION -> Color.GOLD
+            DebuffType.BUFF_DEFENSE -> Color.BLUE
+            DebuffType.BUFF_CRIT -> Color.ORANGE
+            DebuffType.BUFF_SPEED -> Color.GREEN
+            DebuffType.BUFF_DAMAGE -> Color.RED
+            DebuffType.BUFF_INVULNERABLE -> Color.PINK
+            DebuffType.BUFF_INFINITE_MANA -> Color.PURPLE
+            DebuffType.BUFF_HEALTH -> Color.GREEN
+            DebuffType.BUFF_WILL -> Color.WHITE
+            DebuffType.CLONE -> Color.DARK_GRAY
+            DebuffType.BANNER -> Color.GOLDENROD
         }
 
-        // Рисуем квадрат-иконку
-        val whitePixel = batch.color
-
-        // Временная отрисовка текстом
         font.color = batch.color
         val symbol = when (debuff.type) {
+            // Дебаффы
             DebuffType.POISON -> "☠"
             DebuffType.BURN -> "🔥"
             DebuffType.FREEZE -> "❄"
@@ -233,6 +311,20 @@ class DebuffRenderer(private val font: BitmapFont) {
             DebuffType.BLEED -> "🩸"
             DebuffType.SILENCE -> "🔇"
             DebuffType.WET -> "💧"
+
+            // Баффы
+            DebuffType.DODGE -> "↗"
+            DebuffType.RESURRECTION -> "✝"
+            DebuffType.BUFF_DEFENSE -> "🛡"
+            DebuffType.BUFF_CRIT -> "★"
+            DebuffType.BUFF_SPEED -> "⚡"
+            DebuffType.BUFF_DAMAGE -> "⚔"
+            DebuffType.BUFF_INVULNERABLE -> "✨"
+            DebuffType.BUFF_INFINITE_MANA -> "∞"
+            DebuffType.BUFF_HEALTH -> "❤"
+            DebuffType.BUFF_WILL -> "🧠"
+            DebuffType.CLONE -> "👥"
+            DebuffType.BANNER -> "🚩"
         }
         font.draw(batch, symbol, x + 4f, y + size - 6f)
 
@@ -255,17 +347,32 @@ class DebuffRenderer(private val font: BitmapFont) {
 
     fun renderDebuffTooltip(batch: SpriteBatch, debuff: DebuffEffect, x: Float, y: Float) {
         val tooltipText = when (debuff.type) {
-            DebuffType.POISON -> "Отравление: ${debuff.intensity * 5}% урона в ход"
-            DebuffType.BURN -> "Горение: ${debuff.intensity * 8}% урона в ход"
+            // Дебаффы
+            DebuffType.POISON -> "Отравление: ${(debuff.intensity * 5 * debuff.stackCount).toInt()}% урона/ход"
+            DebuffType.BURN -> "Горение: ${(debuff.intensity * 8).toInt()}% урона/ход"
             DebuffType.FREEZE -> "Заморозка: пропуск хода"
-            DebuffType.PARALYSIS -> "Паралич: -${(debuff.intensity * 30).toInt()}% скорости"
+            DebuffType.PARALYSIS -> "Паралич: 30% шанс пропуска хода"
             DebuffType.CURSE -> "Проклятие: -${(debuff.intensity * 20).toInt()}% ко всем статам"
             DebuffType.WEAKNESS -> "Ослабление: -${(debuff.intensity * 25).toInt()}% урона"
             DebuffType.SLOW -> "Замедление: -${(debuff.intensity * 40).toInt()}% скорости"
             DebuffType.STUN -> "Оглушение: пропуск хода"
-            DebuffType.BLEED -> "Кровотечение: ${debuff.stackCount * 3}% урона в ход"
+            DebuffType.BLEED -> "Кровотечение: ${debuff.stackCount * 3}% урона/ход"
             DebuffType.SILENCE -> "Молчание: нельзя использовать магию"
-            DebuffType.WET -> "Мокрый: повышенный урон от молний"
+            DebuffType.WET -> "Мокрый: +25% урона от молний"
+
+            // Баффы
+            DebuffType.DODGE -> "Уклонение: шанс до 80%"
+            DebuffType.RESURRECTION -> "Воскрешение: возрождение с 50% HP"
+            DebuffType.BUFF_DEFENSE -> "Защита: +${((debuff.intensity - 1) * 100).toInt()}%"
+            DebuffType.BUFF_CRIT -> "Крит: +${((debuff.intensity - 1) * 100).toInt()}%"
+            DebuffType.BUFF_SPEED -> "Скорость: +${((debuff.intensity - 1) * 100).toInt()}%"
+            DebuffType.BUFF_DAMAGE -> "Урон: +${((debuff.intensity - 1) * 100).toInt()}%"
+            DebuffType.BUFF_INVULNERABLE -> "Неуязвимость: иммунитет к урону"
+            DebuffType.BUFF_INFINITE_MANA -> "Бесконечная мана"
+            DebuffType.BUFF_HEALTH -> "Здоровье: +${((debuff.intensity - 1) * 100).toInt()}%"
+            DebuffType.BUFF_WILL -> "Воля: +${((debuff.intensity - 1) * 100).toInt()}%"
+            DebuffType.CLONE -> "Клон: ${(debuff.intensity * 100).toInt()}% характеристик"
+            DebuffType.BANNER -> "Боевой стяг: +${((debuff.intensity - 1) * 100).toInt()}% урона и скорости"
         }
         font.color = Color.WHITE
         font.draw(batch, "$tooltipText (${debuff.duration} ходов)", x + 10f, y + 30f)
