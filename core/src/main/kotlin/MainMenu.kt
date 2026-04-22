@@ -122,8 +122,7 @@ class MainMenu(
 
     private fun startGame() {
         visible = false
-        //FIXME
-        //game.showClassSelection()
+        game.showClassSelection()
     }
 
     private fun exitGame() {
