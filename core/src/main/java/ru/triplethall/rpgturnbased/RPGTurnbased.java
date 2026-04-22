@@ -1,3 +1,71 @@
+package ru.triplethall.rpgturnbased;
+
+import static java.lang.Math.random;
+
+import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.Rectangle;
+import java.util.ArrayList;
+import java.util.List;
+import kotlin.Pair;
+
+import ru.triplethall.rpgturnbased.GameMap;
+import ru.triplethall.rpgturnbased.Player;
+import ru.triplethall.rpgturnbased.PauseMenu;
+import ru.triplethall.rpgturnbased.SoundManager;
+
+public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionListener{
+    private SpriteBatch batch;
+    private CameraControl cameraControl;
+    private MapRenderer mapRenderer;
+    private Inventory inventory;
+    private PauseMenu pauseMenu;
+    private com.badlogic.gdx.graphics.Texture whitePixel;
+    private boolean isPaused = false;
+    private OrthographicCamera uiCamera;
+    private Texture image;
+    private GameMap gameMap;
+    private Player player;
+    private BitmapFont font;
+    private Texture pixelTexture;
+    private Texture pauseButtonTexture;
+    private Texture inventoryButtonTexture;
+    private Texture continueButtonTexture;
+    private Texture exitButtonTexture;
+    private Texture barTexture;
+    private Texture statsButtonTexture;
+    private Texture pauseBackgroundTexture;
+    private Texture statsBackgroundTexture;
+    private Texture settingsButtonTexture;   // <-- ДОБАВЛЕНО
+    private Rectangle statsButtonRect;
+    private Texture BGArena;
+    private final int CELL_SIZE = 32;
+    private final int CELL_GAP = 4;
+    private float mapWidthPixels;
+    private float mapHeightPixels;
+    private BattleScene battleScene;
+    private ChestMenu chestMenu;
+    private Texture chestClosed;
+    private Texture chestOpen;
+    private ShapeRenderer shapeRenderer;
+    private MainMenu mainMenu;
+    private boolean gameStarted = false;
+    private CityMenu cityMenu;
+    private CaveMenu caveMenu;
+    private ClassSelectionMenu classSelectionMenu;
+    private boolean isSelectingClass = false;
+    private PlayerClasses selectedPlayerClass = null;
+    private ShopMenu shopMenu;
             package ru.triplethall.rpgturnbased;
 
             import static java.lang.Math.random;
@@ -67,7 +135,6 @@
                 private PlayerClasses selectedPlayerClass = null;
                 private ShopMenu shopMenu;
 
-<<<<<<< Updated upstream
     // Бары для главного экрана
     private StatBar mainHealthBar;
     private StatBar mainManaBar;
@@ -81,13 +148,14 @@
         chestOpen = new Texture("bg/chest_open.png");
         chestMenu = new ChestMenu(font);
         cityMenu = new CityMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        caveMenu = new CaveMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
-=======
+
                 // Бары для главного экрана
                 private StatBar mainHealthBar;
                 private StatBar mainManaBar;
->>>>>>> Stashed changes
+
 
                 @Override
                 public void create() {
@@ -178,7 +246,6 @@
                         Gdx.graphics.getHeight(),
                         inventoryButtonTexture);
 
-<<<<<<< Updated upstream
         int margin = 20;
         float btnSize = 120;
         // Опускаем кнопку статистики ниже (300 пикселей от верхнего края)
@@ -231,6 +298,7 @@
         isPaused = pauseMenu.isVisible();
         boolean chestClicked = chestMenu.handleInput();
         boolean cityMenuClicked = cityMenu.handleInput();
+        boolean caveMenuClicked = caveMenu.handleInput();
         boolean shopClicked = false;
         if (cityMenu.isShopClicked()) {
             shopMenu.show();
@@ -246,6 +314,7 @@
             && !chestMenu.isVisible()
             && !cityMenu.isVisible()
             && !shopMenu.isVisible()
+            && !caveMenu.isVisible()
         ) {
             handlePlayerInput();
         }
@@ -294,6 +363,7 @@
             battleScene.render(batch, whitePixel, player);
         }
         cityMenu.render(batch, shapeRenderer);
+        caveMenu.render(batch, shapeRenderer);
         shopMenu.render(batch, shapeRenderer, whitePixel);
         batch.end();
     }
@@ -324,16 +394,29 @@
             Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
             int targetX = (int) grid.x;
             int targetY = (int) grid.y;
+            Gdx.app.log("MOVE_DEBUG", "Clicked on {" + targetX + "," + targetY + "} | Terrain = " + gameMap.getTerrain(targetX, targetY));
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CAVEENTRANCE) {
+                int dx = Math.abs(player.getX() - targetX);
+                int dy = Math.abs(player.getY() - targetY);
+                boolean isNear = (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
+                if (isNear) {
+                    caveMenu.show();
+                return;
+                }
+            }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY || gameMap.getTerrain(targetX, targetY) == TerrainType.CITYANCHOR) {
                 int dx = Math.abs(player.getX() - targetX);
                 int dy = Math.abs(player.getY() - targetY);
                 boolean isNear = (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
                 if (isNear) {
                     cityMenu.show();
-                }
                 return;
+                }
             }
+
+            Gdx.app.log("MOVE_DEBUG", "tryMoveTo " + targetX + "," + targetY + " from " + player.getX() + "," + player.getY());
             if (player.tryMoveTo(targetX, targetY, gameMap)) {
+                Gdx.app.log("MOVE_DEBUG", "Move successful");
                 SoundManager.playSound("sounds/step.mp3");
 
                 if (gameMap.collectChest(targetX, targetY)) {
@@ -346,7 +429,6 @@
                         for (int i = 0; i < enemyCells.size(); i++) {
                             BattleEnemy enemy = BattleEnemy.Companion.createRandomEnemies(1).get(0);
                             enemiesList.add(enemy);
-=======
                     mainMenu = new MainMenu(
                         Gdx.graphics.getWidth(),
                         Gdx.graphics.getHeight(),
@@ -527,7 +609,6 @@
                             if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
                                 battleScene.startBattle(targetX, targetY);
                             }
->>>>>>> Stashed changes
                         }
                     }
                 }
@@ -592,7 +673,10 @@
                     SoundManager.dispose();
                 }
             }
-<<<<<<< Updated upstream
+            else
+            {
+                Gdx.app.log("MOVE_DEBUG", "Move failed");
+            }
         }
     }
 
@@ -652,10 +736,10 @@
         if (exitButtonTexture != null) exitButtonTexture.dispose();
         if (pauseBackgroundTexture != null) pauseBackgroundTexture.dispose();
         if (mainMenu != null) mainMenu.dispose();
+        if (cityMenu != null) cityMenu.dispose();
         mapRenderer.dispose();
         font.dispose();
         SoundManager.dispose();
     }
 }
-=======
->>>>>>> Stashed changes
+
