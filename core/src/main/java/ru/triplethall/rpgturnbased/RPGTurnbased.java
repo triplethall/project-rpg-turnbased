@@ -353,9 +353,11 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                     SoundManager.playSound("sounds/openSunduk.mp3");
                     chestMenu.show();
 
+                    List<Pair<Integer, Integer>> enemyCells = null;
+                    List<BattleEnemy> enemiesList = null;
                     if (gameMap.hasEnemies()) {
-                        List<Pair<Integer, Integer>> enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
-                        List<BattleEnemy> enemiesList = new ArrayList<>();
+                        enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
+                        enemiesList = new ArrayList<>();
                         for (int i = 0; i < enemyCells.size(); i++) {
                             BattleEnemy enemy = BattleEnemy.Companion.createRandomEnemies(1).get(0);
                             enemiesList.add(enemy);
@@ -363,8 +365,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                         battleScene.startBattleWithEnemies(enemiesList, enemyCells);
                         chestMenu.hide();
                     }
-                    battleScene.startBattleWithEnemies(enemiesList, enemyCells);
-                    chestMenu.hide();
+                    
                 }
             }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
