@@ -22,7 +22,7 @@ class PauseMenu(
         private set
 
 
-    private val pauseButtonRect = Rectangle(0f, screenHeight - 180f, 120f, 120f)
+    private val pauseButtonRect = Rectangle(10f, screenHeight - 140f, 120f, 120f)
 
 
     var isStatsVisible = false
