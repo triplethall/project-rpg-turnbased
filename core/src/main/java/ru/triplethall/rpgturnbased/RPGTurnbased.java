@@ -154,7 +154,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         statsButtonRect = new Rectangle(2 * btnSize + margin, startY, btnSize, btnSize);
 
         player = new Player();
-
+        player.loadMapModel();
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
 
@@ -165,6 +165,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 battleScene.startBattle(x, y, 1);
             }
         });
+        player.syncRenderPos(CELL_SIZE, CELL_GAP); // Синхронизация стартовой позиции
         battleScene.setPlayer(player);
         gameStarted = false;
     }
@@ -215,6 +216,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         } else if (!isPaused && !menuClicked && !chestMenu.isVisible() && !cityMenu.isVisible() && !shopMenu.isVisible() && !caveMenu.isVisible()) {
             handlePlayerInput();
         }
+        player.updateMovement(Gdx.graphics.getDeltaTime());
 
 
 
@@ -330,39 +332,36 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     }
 
     private void handlePlayerInput() {
-
-        if (!Gdx.input.justTouched() || cameraControl.isDragging()) return;
-
-        Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
-        int targetX = (int) grid.x;
-        int targetY = (int) grid.y;
-
-        // Cave Entrance
-        if (gameMap.getTerrain(targetX, targetY) == TerrainType.CAVEENTRANCE) {
-            if (isAdjacent(targetX, targetY)) {
-                caveMenu.show();
+        if (player.isMoving()) return;
+        if (Gdx.input.justTouched() && !cameraControl.isDragging()) {
+            Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
+            int targetX = (int) grid.x;
+            int targetY = (int) grid.y;
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY || gameMap.getTerrain(targetX, targetY) == TerrainType.CITYANCHOR) {
+                int dx = Math.abs(player.getX() - targetX);
+                int dy = Math.abs(player.getY() - targetY);
+                boolean isNear = (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
+                if (isNear) {
+                    cityMenu.show();
+                }
                 return;
             }
-        }
-        // City
-        if (gameMap.getTerrain(targetX, targetY) == TerrainType.CITY || gameMap.getTerrain(targetX, targetY) == TerrainType.CITYANCHOR) {
-            if (isAdjacent(targetX, targetY)) {
-                cityMenu.show();
-                return;
-            }
-        }
+            if (player.tryMoveTo(targetX, targetY, gameMap, CELL_SIZE, CELL_GAP))  {
+                SoundManager.playSound("sounds/step.mp3");
 
-        if (player.tryMoveTo(targetX, targetY, gameMap)) {
-            SoundManager.playSound("sounds/step.mp3");
+                if (gameMap.collectChest(targetX, targetY)) {
+                    SoundManager.playSound("sounds/openSunduk.mp3");
+                    chestMenu.show();
 
-            if (gameMap.collectChest(targetX, targetY)) {
-                SoundManager.playSound("sounds/openSunduk.mp3");
-                chestMenu.show();
-                if (gameMap.hasEnemies()) {
-                    List<Pair<Integer, Integer>> enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
-                    List<BattleEnemy> enemiesList = new ArrayList<>();
-                    for (int i = 0; i < enemyCells.size(); i++) {
-                        enemiesList.add(BattleEnemy.Companion.createRandomEnemies(1).get(0));
+                    if (gameMap.hasEnemies()) {
+                        List<Pair<Integer, Integer>> enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
+                        List<BattleEnemy> enemiesList = new ArrayList<>();
+                        for (int i = 0; i < enemyCells.size(); i++) {
+                            BattleEnemy enemy = BattleEnemy.Companion.createRandomEnemies(1).get(0);
+                            enemiesList.add(enemy);
+                        }
+                        battleScene.startBattleWithEnemies(enemiesList, enemyCells);
+                        chestMenu.hide();
                     }
                     battleScene.startBattleWithEnemies(enemiesList, enemyCells);
                     chestMenu.hide();
