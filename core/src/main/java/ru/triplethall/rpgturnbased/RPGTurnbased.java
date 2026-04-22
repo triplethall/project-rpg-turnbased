@@ -365,7 +365,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                         battleScene.startBattleWithEnemies(enemiesList, enemyCells);
                         chestMenu.hide();
                     }
-                    
+
                 }
             }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
