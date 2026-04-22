@@ -27,6 +27,7 @@ class BattleScene(
     fun setPlayer(player: Player) {
         this.player = player
     }
+
     private var slimeAtlas: TextureAtlas? = null
     private var slimeIdleAnimation: Animation<TextureRegion>? = null
     private var slimeAttackAnimation: Animation<TextureRegion>? = null
@@ -66,7 +67,10 @@ class BattleScene(
                 slimeIdleAnimation = Animation(0.2f, frames, Animation.PlayMode.LOOP)
                 Gdx.app.log("BATTLE_DEBUG", "АНИМАЦИЯ СОЗДАНА. Кадров: ${frames.size}")
             } else {
-                Gdx.app.error("BATTLE_DEBUG", "ОШИБКА: Не удалось собрать ни одного кадра для анимации!")
+                Gdx.app.error(
+                    "BATTLE_DEBUG",
+                    "ОШИБКА: Не удалось собрать ни одного кадра для анимации!"
+                )
             }
 
             val attackFrames = com.badlogic.gdx.utils.Array<TextureRegion>()
@@ -81,6 +85,7 @@ class BattleScene(
             e.printStackTrace()
         }
     }
+
     private var waitingForSkillTarget = false
     private var selectedSkill: Skill? = null
     private val layout = GlyphLayout()
@@ -140,8 +145,10 @@ class BattleScene(
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
 
-        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color(0.5f, 0.15f, 0.1f, 1f))
-        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color(0.129f, 0.216f, 0.471f, 1f))
+        playerHealthBar =
+            StatBar(playerBarX, playerHealthY, 400f, 100f, Color(0.5f, 0.15f, 0.1f, 1f))
+        playerManaBar =
+            StatBar(playerBarX, playerManaY, 400f, 100f, Color(0.129f, 0.216f, 0.471f, 1f))
 
         updateEnemyBars()
         if (player.skills.isEmpty()) {
@@ -149,9 +156,11 @@ class BattleScene(
         }
         updateSkillButtons()
     }
+
     fun updateSkillButtons() {
         skillButtons.clear()
     }
+
     // ===== НОВЫЙ МЕТОД ДЛЯ БОЯ СО СПИСКОМ ВРАГОВ =====
     fun startBattleWithEnemies(enemiesList: List<BattleEnemy>, cells: List<Pair<Int, Int>>) {
         if (player.currentHealth <= 0) {
@@ -176,8 +185,10 @@ class BattleScene(
         val playerBarX = 20f
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
-        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color(0.478f, 0.220f, 0.008f, 1f))
-        playerManaBar   = StatBar(playerBarX, playerManaY,  400f, 20f, Color(0.129f, 0.216f, 0.471f, 1f))
+        playerHealthBar =
+            StatBar(playerBarX, playerHealthY, 400f, 20f, Color(0.478f, 0.220f, 0.008f, 1f))
+        playerManaBar =
+            StatBar(playerBarX, playerManaY, 400f, 20f, Color(0.129f, 0.216f, 0.471f, 1f))
         updateEnemyBars()
 
         if (player.skills.isEmpty()) {
@@ -185,6 +196,7 @@ class BattleScene(
         }
         updateSkillButtons()
     }
+
     fun startBattle(enemyCellX: Int, enemyCellY: Int) {
         println("DEBUG: Player class = ${player.playerClass}")
         if (player.currentHealth <= 0) {
@@ -194,6 +206,7 @@ class BattleScene(
         val randomCount = (1..3).random()
         startBattle(enemyCellX, enemyCellY, randomCount)
     }
+
     private fun updateEnemyBars() {
         enemyBars.clear()
         val rectHeight = 150f
@@ -216,6 +229,7 @@ class BattleScene(
                 1 -> {
                     barY = rectY - 100f + rectHeight + gapAboveEnemy
                 }
+
                 2 -> {
                     val offsetY = 90f
                     if (index == 0) {
@@ -225,6 +239,7 @@ class BattleScene(
                         barY = (rectY - 100f + offsetY) + rectHeight + gapAboveEnemy
                     }
                 }
+
                 3 -> {
                     val offsetY = 100f
                     when (index) {
@@ -232,9 +247,11 @@ class BattleScene(
                             barX = enemyStartX - 100f
                             barY = (rectY - 100f - offsetY - 50f) + rectHeight + gapAboveEnemy
                         }
+
                         1 -> {
                             barY = (rectY - 100f) + rectHeight + gapAboveEnemy
                         }
+
                         2 -> {
                             barX = enemyStartX - 85f
                             barY = (rectY - 100f + offsetY + 50f) + rectHeight + gapAboveEnemy
@@ -246,6 +263,7 @@ class BattleScene(
             enemyBars.add(StatBar(barX, barY, barWidth, barHeight, Color.RED))
         }
     }
+
     private fun useSkill(skill: Skill) {
         if (!skill.canUse(player, enemies)) {
             messageSystem.addMessage("${skill.name} cant use!", Color.GRAY)
@@ -262,6 +280,7 @@ class BattleScene(
             messageSystem.addMessage("${skill.name} used!", Color.CYAN)
         }
     }
+
     fun handleInput(player: Player): Boolean {
         if (!isActive) return false
 
@@ -348,6 +367,7 @@ class BattleScene(
 
         return false
     }
+
     fun getEnemyPos(x: Float, y: Float): Int {
         val rectHeight = 150f
         val rectWidth = 160f
@@ -362,6 +382,7 @@ class BattleScene(
                 val rect = Rectangle(enemyStartX, enemyY, rectWidth, rectHeight)
                 if (rect.contains(x, y)) return 0
             }
+
             2 -> {
                 val offsetY = 90f
                 val enemyY1 = rectY - 100f - offsetY
@@ -371,6 +392,7 @@ class BattleScene(
                 if (rect1.contains(x, y)) return 0
                 else if (rect2.contains(x, y)) return 1
             }
+
             3 -> {
                 val offsetY = 100f
                 val enemyY1 = rectY - 100f - offsetY
@@ -466,7 +488,8 @@ class BattleScene(
         val baseDamage = (player.damage * player.getDamageMultiplier()).toInt()
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val totalDamage = (baseDamage * randomMultiplier).toInt()
-        val dmgWithDef = (totalDamage * (1 - target.defense * target.getDefenseMultiplier())).toInt()
+        val dmgWithDef =
+            (totalDamage * (1 - target.defense * target.getDefenseMultiplier())).toInt()
 
         target.takeDamage(dmgWithDef)
         SoundManager.playSound("sounds/atack.mp3") // звук атаки
@@ -525,16 +548,21 @@ class BattleScene(
                 if (enemy.enemyType == EnemyType.HOLY && enemy.isAlive()) {
                     val healAmount = (enemy.maxHealth * 0.05).toInt()
                     enemies.filter { it.isAlive() && it != enemy }.forEach { ally ->
-                        val newHealth = (ally.currentHealth + healAmount).coerceAtMost(ally.maxHealth)
+                        val newHealth =
+                            (ally.currentHealth + healAmount).coerceAtMost(ally.maxHealth)
                         val healed = newHealth - ally.currentHealth
                         if (healed > 0) {
                             ally.currentHealth = newHealth
-                            messageSystem.addMessage("${ally.name} restored $healed HP From ${enemy.name}", Color.GREEN)
+                            messageSystem.addMessage(
+                                "${ally.name} restored $healed HP From ${enemy.name}",
+                                Color.GREEN
+                            )
                         }
                     }
                 }
                 if (enemy.canHit(player)) {
-                    val damage = (enemy.calculateDamage(null, true) * enemy.getDamageMultiplier()).toInt()
+                    val damage =
+                        (enemy.calculateDamage(null, true) * enemy.getDamageMultiplier()).toInt()
                     val dmgWithDef = (damage * (1 - player.defense)).toInt()
                     player.currentHealth = (player.currentHealth - dmgWithDef)
                     messageSystem.addMessage("${enemy.name} dealt you $dmgWithDef dmg", Color.RED)
@@ -547,8 +575,7 @@ class BattleScene(
             }
         }
         val debuffDmg = player.processDebuffs()
-        if (debuffDmg > 0)
-        {
+        if (debuffDmg > 0) {
             messageSystem.addMessage("player took $debuffDmg damage!", Color.FIREBRICK)
         }
         if (player.currentHealth <= 0) {
@@ -589,26 +616,32 @@ class BattleScene(
                 player.applyDebuff(DebuffType.POISON, 3, 1.0, 1)
                 messageSystem.addMessage("Игрок отравлен!", Color.GREEN)
             }
+
             EnemyType.FIRE -> {
                 player.applyDebuff(DebuffType.BURN, 3, 1.0)
                 messageSystem.addMessage("Игрок горит!", Color.FIREBRICK)
             }
+
             EnemyType.ICE -> {
                 player.applyDebuff(DebuffType.FREEZE, 1, 1.0)
                 messageSystem.addMessage("Игрок заморожен!", Color.CYAN)
             }
+
             EnemyType.ELECTRIC -> {
                 player.applyDebuff(DebuffType.PARALYSIS, 2, 0.8)
                 messageSystem.addMessage("Игрок парализован!", Color.YELLOW)
             }
+
             EnemyType.CURSED -> {
                 player.applyDebuff(DebuffType.CURSE, 3, 0.7)
                 messageSystem.addMessage("Проклятие падает на игрока!", Color.PURPLE)
             }
+
             EnemyType.WATER -> {
                 player.applyDebuff(DebuffType.WET, 3, 1.0)
                 messageSystem.addMessage("Игрок промок! (+25% урон от молний)", Color.CYAN)
             }
+
             else -> {}
         }
     }
@@ -622,29 +655,39 @@ class BattleScene(
             enemyTurn()
         }
     }
+
     private fun flee() {
         if (isFleeing) {
             isFleeing = false
             fleeTurnsLeft = 0
             madeMoveThisTurn = true
-            messageSystem.addMessage("canceling attempt of escaping. TURN IS WASTED BTWWWW", Color.CORAL)
+            messageSystem.addMessage(
+                "canceling attempt of escaping. TURN IS WASTED BTWWWW",
+                Color.CORAL
+            )
             return
         }
         isFleeing = true
         fleeTurnsLeft = 2
         madeMoveThisTurn = true
-        messageSystem.addMessage("player is escaping! $fleeTurnsLeft turns left till escape!", Color.CYAN)
+        messageSystem.addMessage(
+            "player is escaping! $fleeTurnsLeft turns left till escape!",
+            Color.CYAN
+        )
     }
+
     private fun skipTurn() {
         madeMoveThisTurn = true
         messageSystem.addMessage("skipped a turn", Color.FIREBRICK)
     }
+
     fun update(delta: Float) {
         if (!isActive) return
         if (::messageSystem.isInitialized) {
             messageSystem.update(delta)
         }
     }
+
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player) {
         stateTime += Gdx.graphics.deltaTime // Обновляем время анимации
 
@@ -691,24 +734,81 @@ class BattleScene(
             when (enemies.size) {
                 1 -> {
                     val enemyY = rectY - 100f
-                    drawEnemy(batch, whitePixel, enemies[0], enemyStartX, enemyY, rectWidth, rectHeight, enemyIndex == 0)
+                    drawEnemy(
+                        batch,
+                        whitePixel,
+                        enemies[0],
+                        enemyStartX,
+                        enemyY,
+                        rectWidth,
+                        rectHeight,
+                        enemyIndex == 0
+                    )
                 }
+
                 2 -> {
                     val offsetY = 90f
                     val enemyY1 = rectY - 100f - offsetY
                     val enemyY2 = rectY - 100f + offsetY
-                    drawEnemy(batch, whitePixel, enemies[0], enemyStartX, enemyY1, rectWidth, rectHeight, enemyIndex == 0)
-                    drawEnemy(batch, whitePixel, enemies[1], enemyStartX - 100f, enemyY2, rectWidth, rectHeight, enemyIndex == 1)
+                    drawEnemy(
+                        batch,
+                        whitePixel,
+                        enemies[0],
+                        enemyStartX,
+                        enemyY1,
+                        rectWidth,
+                        rectHeight,
+                        enemyIndex == 0
+                    )
+                    drawEnemy(
+                        batch,
+                        whitePixel,
+                        enemies[1],
+                        enemyStartX - 100f,
+                        enemyY2,
+                        rectWidth,
+                        rectHeight,
+                        enemyIndex == 1
+                    )
                 }
+
                 3 -> {
                     val offsetY = 100f
                     val enemyY1 = rectY - 100f - offsetY
                     val enemyY2 = rectY - 100f
                     val enemyY3 = rectY - 100f + offsetY
-                    drawEnemy(batch, whitePixel, enemies[0], enemyStartX - 100f, enemyY1 - 50f, rectWidth, rectHeight, enemyIndex == 0)
-                    drawEnemy(batch, whitePixel, enemies[1], enemyStartX, enemyY2, rectWidth, rectHeight, enemyIndex == 1)
-                    drawEnemy(batch, whitePixel, enemies[2], enemyStartX - 85f, enemyY3 + 50f, rectWidth, rectHeight, enemyIndex == 2)
+                    drawEnemy(
+                        batch,
+                        whitePixel,
+                        enemies[0],
+                        enemyStartX - 100f,
+                        enemyY1 - 50f,
+                        rectWidth,
+                        rectHeight,
+                        enemyIndex == 0
+                    )
+                    drawEnemy(
+                        batch,
+                        whitePixel,
+                        enemies[1],
+                        enemyStartX,
+                        enemyY2,
+                        rectWidth,
+                        rectHeight,
+                        enemyIndex == 1
+                    )
+                    drawEnemy(
+                        batch,
+                        whitePixel,
+                        enemies[2],
+                        enemyStartX - 85f,
+                        enemyY3 + 50f,
+                        rectWidth,
+                        rectHeight,
+                        enemyIndex == 2
+                    )
                 }
+
                 else -> {
                     println("idk")
                     return
@@ -726,7 +826,13 @@ class BattleScene(
             val defenseText = "DEF: ${(player.defense * 100).toInt()}%"
             val levelText = "LVL: ${player.level}"
 
-            fun drawStatWithShadow(batch: SpriteBatch, text: String, x: Float, y: Float, color: Color) {
+            fun drawStatWithShadow(
+                batch: SpriteBatch,
+                text: String,
+                x: Float,
+                y: Float,
+                color: Color
+            ) {
                 font.color = Color.BLACK
                 font.draw(batch, text, x + 1f, y - 1f)
                 font.color = color
@@ -770,8 +876,21 @@ class BattleScene(
             enemies.forEachIndexed { index, enemy ->
                 if (enemy.isAlive()) {
                     enemyBars.getOrNull(index)?.let { bar ->
-                        bar.render(batch, barTexture, whitePixel, enemy.currentHealth, enemy.maxHealth)
-                        drawBarWithText(batch, bar, "${enemy.currentHealth}/${enemy.maxHealth}", 1.25f, barTexture, drawBar = false)
+                        bar.render(
+                            batch,
+                            barTexture,
+                            whitePixel,
+                            enemy.currentHealth,
+                            enemy.maxHealth
+                        )
+                        drawBarWithText(
+                            batch,
+                            bar,
+                            "${enemy.currentHealth}/${enemy.maxHealth}",
+                            1.25f,
+                            barTexture,
+                            drawBar = false
+                        )
                     }
                 }
             }
@@ -788,16 +907,30 @@ class BattleScene(
         // Белая рамка
         batch.color = Color.WHITE
         batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY - 2f, skillsMenuButtonSize + 4f, 2f)
-        batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY + skillsMenuButtonSize, skillsMenuButtonSize + 4f, 2f)
+        batch.draw(
+            whitePixel,
+            skillsBtnX - 2f,
+            skillsBtnY + skillsMenuButtonSize,
+            skillsMenuButtonSize + 4f,
+            2f
+        )
         batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY, 2f, skillsMenuButtonSize)
-        batch.draw(whitePixel, skillsBtnX + skillsMenuButtonSize, skillsBtnY, 2f, skillsMenuButtonSize)
+        batch.draw(
+            whitePixel,
+            skillsBtnX + skillsMenuButtonSize,
+            skillsBtnY,
+            2f,
+            skillsMenuButtonSize
+        )
 
         font.color = Color.WHITE
         font.data.setScale(1.5f)
         layout.setText(font, "⚔")
-        font.draw(batch, "⚔",
-            skillsBtnX + skillsMenuButtonSize/2 - layout.width/2,
-            skillsBtnY + skillsMenuButtonSize/2 + layout.height/2)
+        font.draw(
+            batch, "⚔",
+            skillsBtnX + skillsMenuButtonSize / 2 - layout.width / 2,
+            skillsBtnY + skillsMenuButtonSize / 2 + layout.height / 2
+        )
         font.data.setScale(1f)
 
         // ===== ОСНОВНЫЕ КНОПКИ =====
@@ -854,18 +987,22 @@ class BattleScene(
 
             // Фон для текста
             batch.color = Color(0f, 0f, 0f, 0.5f)
-            batch.draw(whitePixel,
-                screenWidth/2 - layout.width/2 - 10f,
+            batch.draw(
+                whitePixel,
+                screenWidth / 2 - layout.width / 2 - 10f,
                 screenHeight - 60f,
                 layout.width + 20f,
-                40f)
+                40f
+            )
 
             // Текст
             batch.color = Color.WHITE
             font.color = Color.YELLOW
-            font.draw(batch, text,
-                screenWidth/2 - layout.width/2,
-                screenHeight - 30f)
+            font.draw(
+                batch, text,
+                screenWidth / 2 - layout.width / 2,
+                screenHeight - 30f
+            )
             font.data.setScale(1f)
         }
 
@@ -880,6 +1017,7 @@ class BattleScene(
         font.data.setScale(1f)
         font.color = Color.WHITE
     }
+
     private fun drawBarWithText(
         batch: SpriteBatch,
         bar: StatBar,
@@ -916,41 +1054,45 @@ class BattleScene(
         font.data.setScale(1.0f)
         font.color = Color.WHITE
     }
-    private fun drawPlayerBars(
+
+    fun drawPlayerBars(
         batch: SpriteBatch,
         hpBar: StatBar,
         mpBar: StatBar,
         bgTexture: Texture,
         gap: Float = 1f
     ) {
-
+        // Общий фон
         val bgY = mpBar.y
         val bgHeight = hpBar.height + mpBar.height + gap
         batch.draw(bgTexture, hpBar.x - 85f, bgY - 40f, hpBar.width * 1.8f, bgHeight * 1.4f)
 
+        // Динамические отступы (в процентах от размеров бара)
+        val hpFillYOffset = hpBar.height * 0.23f   // 23% от высоты (было 23f при высоте 100)
+        val mpFillYOffset = mpBar.height * 0.45f   // 45% от высоты (было 45f)
+        val fillXOffset = hpBar.width * 0.0875f    // 8.75% от ширины (было 35f при ширине 400)
+        val fillHeight = hpBar.height / 2.4f       // сохраняем пропорцию
 
-        val hpRatio = (this.player.currentHealth.toFloat() / this.player.maxHealth).coerceAtMost(1.0f)
-        val mpRatio = (this.player.currentMana.toFloat() / this.player.maxMana).coerceAtMost(1.0f)
+        val hpRatio = (player.currentHealth.toFloat() / player.maxHealth).coerceIn(0f, 1f)
+        val mpRatio = (player.currentMana.toFloat() / player.maxMana).coerceIn(0f, 1f)
 
-
-        val hpFillX = hpBar.x + 35f
-        val hpFillY = hpBar.y + 23f
+        val hpFillX = hpBar.x + fillXOffset
+        val hpFillY = hpBar.y + hpFillYOffset
         val hpFullW = hpBar.width + 85f
         val hpFillW = hpBar.width * hpRatio + 85f
-        val hpFillH = hpBar.height / 2.4f
 
-        val mpFillX = mpBar.x + 35f
-        val mpFillY = mpBar.y + 45f
+        val mpFillX = mpBar.x + fillXOffset
+        val mpFillY = mpBar.y + mpFillYOffset
         val mpFullW = mpBar.width + 85f
         val mpFillW = mpBar.width * mpRatio + 85f
-        val mpFillH = mpBar.height / 2.4f
 
         batch.color = hpBar.color
-        batch.draw(whitePixel, hpFillX, hpFillY, hpFillW, hpFillH)
+        batch.draw(whitePixel, hpFillX, hpFillY, hpFillW, fillHeight)
         batch.color = mpBar.color
-        batch.draw(whitePixel, mpFillX, mpFillY, mpFillW, mpFillH)
+        batch.draw(whitePixel, mpFillX, mpFillY, mpFillW, fillHeight)
         batch.color = Color.WHITE
 
+        // Эффекты объёма
         fun addVolume(fillX: Float, fillY: Float, fillW: Float, fillH: Float) {
             batch.color = Color(0f, 0f, 0f, 0.2f)
             batch.draw(whitePixel, fillX, fillY, fillW, fillH / 2f)
@@ -958,10 +1100,18 @@ class BattleScene(
             batch.draw(whitePixel, fillX, fillY + fillH * 0.75f, fillW, fillH / 4f)
             batch.color = Color.WHITE
         }
-        addVolume(hpFillX, hpFillY, hpFillW, hpFillH)
-        addVolume(mpFillX, mpFillY, mpFillW, mpFillH)
+        addVolume(hpFillX, hpFillY, hpFillW, fillHeight)
+        addVolume(mpFillX, mpFillY, mpFillW, fillHeight)
 
-        fun drawOverflow(fillX: Float, fillY: Float, fillH: Float, fullW: Float, current: Int, max: Int) {
+        // Переполнение (если статы выше максимума)
+        fun drawOverflow(
+            fillX: Float,
+            fillY: Float,
+            fillH: Float,
+            fullW: Float,
+            current: Int,
+            max: Int
+        ) {
             if (current > max) {
                 val overflowRatio = (current - max).toFloat() / max
                 val overflowW = (fullW * overflowRatio).coerceAtMost(fullW)
@@ -970,23 +1120,39 @@ class BattleScene(
                 batch.color = Color.WHITE
             }
         }
-        drawOverflow(hpFillX, hpFillY, hpFillH, hpFullW, player.currentHealth, player.maxHealth)
-        drawOverflow(mpFillX, mpFillY, mpFillH, mpFullW, player.currentMana, player.maxMana)
+        drawOverflow(hpFillX, hpFillY, fillHeight, hpFullW, player.currentHealth, player.maxHealth)
+        drawOverflow(mpFillX, mpFillY, fillHeight, mpFullW, player.currentMana, player.maxMana)
 
+        // Текст
         font.data.setScale(3f)
         fun drawCentered(text: String, fillX: Float, fillY: Float, fullW: Float, fillH: Float) {
             layout.setText(font, text)
             val cx = fillX + (fullW - layout.width) / 2
             val cy = fillY + (fillH + layout.height) / 2 + 2f
-            font.color = Color.BLACK; font.draw(batch, text, cx + 2f, cy - 2f)
-            font.color = Color.WHITE; font.draw(batch, text, cx, cy)
+            font.color = Color.BLACK
+            font.draw(batch, text, cx + 2f, cy - 2f)
+            font.color = Color.WHITE
+            font.draw(batch, text, cx, cy)
         }
-        drawCentered("${player.currentHealth}/${player.maxHealth}", hpFillX, hpFillY, hpFullW, hpFillH)
-        drawCentered("${player.currentMana}/${player.maxMana}", mpFillX, mpFillY, mpFullW, mpFillH)
+        drawCentered(
+            "${player.currentHealth}/${player.maxHealth}",
+            hpFillX,
+            hpFillY,
+            hpFullW,
+            fillHeight
+        )
+        drawCentered(
+            "${player.currentMana}/${player.maxMana}",
+            mpFillX,
+            mpFillY,
+            mpFullW,
+            fillHeight
+        )
 
         font.data.setScale(1f)
         font.color = Color.WHITE
     }
+
     private val squareSize = 24 * 2f
     private val padding = 3 * 2f
     private val verticalGap = 15f
@@ -1234,8 +1400,10 @@ class BattleScene(
     }
 }
 
+
 data class SkillWheelButton(
     val skill: Skill,
     val rect: Rectangle,
     val angle: Double
 )
+

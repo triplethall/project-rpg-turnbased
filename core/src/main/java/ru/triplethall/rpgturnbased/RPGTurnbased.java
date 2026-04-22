@@ -1,40 +1,30 @@
 package ru.triplethall.rpgturnbased;
 
-import static java.lang.Math.random;
-
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.math.Rectangle;
+import kotlin.Pair;
 import java.util.ArrayList;
 import java.util.List;
-import kotlin.Pair;
 
-import ru.triplethall.rpgturnbased.GameMap;
-import ru.triplethall.rpgturnbased.Player;
-import ru.triplethall.rpgturnbased.PauseMenu;
-import ru.triplethall.rpgturnbased.SoundManager;
-
-public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionListener{
+public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionListener {
     private SpriteBatch batch;
     private CameraControl cameraControl;
     private MapRenderer mapRenderer;
     private Inventory inventory;
     private PauseMenu pauseMenu;
-    private com.badlogic.gdx.graphics.Texture whitePixel;
+    private Texture whitePixel;
     private boolean isPaused = false;
     private OrthographicCamera uiCamera;
-    private Texture image;
     private GameMap gameMap;
     private Player player;
     private BitmapFont font;
@@ -62,6 +52,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private MainMenu mainMenu;
     private boolean gameStarted = false;
     private CityMenu cityMenu;
+    private CaveMenu caveMenu;
     private ClassSelectionMenu classSelectionMenu;
     private boolean isSelectingClass = false;
     private PlayerClasses selectedPlayerClass = null;
@@ -72,14 +63,25 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         font = new BitmapFont();
         font.setColor(Color.YELLOW);
         font.getData().setScale(1.5f);
+
         chestClosed = new Texture("bg/chest_closed.png");
         chestOpen = new Texture("bg/chest_open.png");
         chestMenu = new ChestMenu(font);
+
         cityMenu = new CityMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        // Инициализация CaveMenu (проверь конструктор, если нужны параметры)
+        caveMenu = new CaveMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
 
         classSelectionMenu = new ClassSelectionMenu(
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            this
+        );
+
+        mainMenu = new MainMenu(
             Gdx.graphics.getWidth(),
             Gdx.graphics.getHeight(),
             this
@@ -92,7 +94,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         mapHeightPixels = gameMap.getHeight() * (CELL_SIZE + CELL_GAP);
 
         float screenRatio = (float) Gdx.graphics.getWidth() / Gdx.graphics.getHeight();
-
         float viewWidth, viewHeight;
         if (screenRatio > 1f) {
             viewHeight = mapHeightPixels;
@@ -101,6 +102,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             viewWidth = mapWidthPixels;
             viewHeight = viewWidth / screenRatio;
         }
+
         OrthographicCamera camera = new OrthographicCamera();
         camera.setToOrtho(false, viewWidth, viewHeight);
         camera.position.set(mapWidthPixels / 2f, mapHeightPixels / 2f, 0);
@@ -113,7 +115,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
         pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
         pixmap.fill();
-        whitePixel = new com.badlogic.gdx.graphics.Texture(pixmap);
+        whitePixel = new Texture(pixmap);
+        pixmap.dispose();
+
         pauseButtonTexture = new Texture("pauseButton.png");
         inventoryButtonTexture = new Texture("inventorybtn.png");
         statsButtonTexture = new Texture("statsbtn.png");
@@ -124,7 +128,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         settingsButtonTexture = new Texture("menus/buttons/options.png");
         pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
 
-        // Загружаем текстуру для полосок (должна быть в assets)
         try {
             barTexture = new Texture("playerbarsbg.png");
         } catch (Exception e) {
@@ -133,7 +136,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         }
 
         SoundManager.playMusic("music/mainMenu.mp3", true);
-        pixmap.dispose();
 
         uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -141,25 +143,10 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena, whitePixel, barTexture);
         battleScene.loadAssets();
 
-        pauseMenu = new PauseMenu(font,
-            Gdx.graphics.getWidth(),
-            Gdx.graphics.getHeight(),
-            pauseButtonTexture,
-            statsBackgroundTexture,
-            continueButtonTexture,
-            exitButtonTexture,
-            pauseBackgroundTexture,
-            settingsButtonTexture);
+        pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(),
+            pauseButtonTexture, statsBackgroundTexture, continueButtonTexture, exitButtonTexture, pauseBackgroundTexture, settingsButtonTexture);
 
-        inventory = new Inventory(font,
-            Gdx.graphics.getWidth(),
-            Gdx.graphics.getHeight(),
-            inventoryButtonTexture);
-
-        mainMenu = new MainMenu(
-            Gdx.graphics.getWidth(),
-            Gdx.graphics.getHeight(),
-            this);
+        inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventoryButtonTexture);
 
         int margin = 20;
         float btnSize = 120;
@@ -170,10 +157,11 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         player.loadMapModel();
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
+
+
         player.setOnEnterForest(new Player.OnEnterForestListener() {
             @Override
             public void onEnterForest(int x, int y) {
-                System.out.println("DEBUG JAVA: onEnterForest вызван!");
                 battleScene.startBattle(x, y, 1);
             }
         });
@@ -184,26 +172,36 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
     @Override
     public void render() {
+        // Главное меню
         if (!gameStarted && !isSelectingClass) {
-            mainMenu.handleInput();
-            ScreenUtils.clear(0.05f, 0.05f, 0.1f, 1f);
-            batch.setProjectionMatrix(uiCamera.combined);
-            mainMenu.render(batch, shapeRenderer);
+            if (mainMenu != null) {
+
+                mainMenu.handleInput();
+                ScreenUtils.clear(0.05f, 0.05f, 0.1f, 1f);
+                batch.setProjectionMatrix(uiCamera.combined);
+                mainMenu.render(batch, shapeRenderer);
+            }
             return;
         }
 
+        // Выбор класса
         if (isSelectingClass) {
-            classSelectionMenu.handleInput();
             ScreenUtils.clear(0.05f, 0.05f, 0.1f, 1f);
             batch.setProjectionMatrix(uiCamera.combined);
+            // batch.begin();  ← ЗАКОММЕНТИРУЙ ЭТУ СТРОКУ
+            classSelectionMenu.handleInput();
             classSelectionMenu.render(batch, shapeRenderer);
+            // batch.end();    ← И ЭТУ
+
             return;
         }
 
+        // Обработка меню
         boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
         boolean chestClicked = chestMenu.handleInput();
         boolean cityMenuClicked = cityMenu.handleInput();
+        boolean caveMenuClicked = caveMenu.handleInput();
         boolean shopClicked = false;
         if (cityMenu.isShopClicked()) {
             shopMenu.show();
@@ -211,24 +209,20 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         }
         boolean shopMenuClicked = shopMenu.handleInput();
 
+        // Игровой цикл
         if (battleScene.isActive()) {
             battleScene.update(Gdx.graphics.getDeltaTime());
             battleScene.handleInput(player);
-        } else if (!isPaused
-            && !menuClicked
-            && !chestMenu.isVisible()
-            && !cityMenu.isVisible()
-            && !shopMenu.isVisible()
-        ) {
+        } else if (!isPaused && !menuClicked && !chestMenu.isVisible() && !cityMenu.isVisible() && !shopMenu.isVisible() && !caveMenu.isVisible()) {
             handlePlayerInput();
         }
         player.updateMovement(Gdx.graphics.getDeltaTime());
 
-        ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
 
-        if (!isPaused) {
-            cameraControl.update();
-        }
+
+        // Рендер мира
+        ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
+        if (!isPaused) cameraControl.update();
         mapRenderer.update(Gdx.graphics.getDeltaTime());
 
         if (!battleScene.isShowingEndScreen()) {
@@ -241,6 +235,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
         inventory.handleInput(player);
 
+        // Тач для статистики
         if (Gdx.input.justTouched()) {
             float touchX = Gdx.input.getX();
             float touchY = Gdx.input.getY();
@@ -250,6 +245,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             }
         }
 
+        // Рендер UI
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
 
@@ -257,45 +253,37 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         pauseMenu.render(batch, whitePixel, player);
         inventory.render(batch, whitePixel, player);
 
+        // Ручная отрисовка баров (ТВОИ ПРАВКИ)
         if (!battleScene.isActive()) {
-            // Координаты общего фона (рамки)
             float bgX = 20f;
             float bgY = Gdx.graphics.getHeight() - 220f;
-            float bgWidth = 500f;      // ширина рамки (подберите под экран)
-            float bgHeight = 160f;      // высота рамки
-
-            // 1. Рисуем общую рамку (текстура растянется)
+            float bgWidth = 500f;
+            float bgHeight = 160f;
             batch.draw(barTexture, bgX, bgY, bgWidth, bgHeight);
 
-            // 2. Вычисляем внутренние отступы
             float paddingX = bgWidth * 0.165f;
             float paddingY = bgHeight * 0.35f;
             float innerWidth = bgWidth - paddingX * 2;
             float innerHeight = bgHeight - paddingY * 2;
             float innerX = bgX + paddingX;
             float innerY = bgY + paddingY;
-
-            // 3. Параметры двух полосок (здоровье сверху, мана снизу)
-            float barHeight = innerHeight * 0.4f;        // высота каждой полоски
-            float barSpacing = innerHeight * 0.1f;       // зазор между полосками
+            float barHeight = innerHeight * 0.4f;
+            float barSpacing = innerHeight * 0.1f;
             float healthBarY = innerY + innerHeight - barHeight;
             float manaBarY = healthBarY - barHeight - barSpacing;
 
-            // === Полоска здоровья ===
             float healthPercent = (float) player.getCurrentHealth() / player.getMaxHealth();
             batch.setColor(Color.BLACK);
             batch.draw(whitePixel, innerX, healthBarY, innerWidth, barHeight);
             batch.setColor(Color.RED);
             batch.draw(whitePixel, innerX, healthBarY, innerWidth * healthPercent, barHeight);
 
-            // === Полоска маны ===
             float manaPercent = (float) player.getCurrentMana() / player.getMaxMana();
             batch.setColor(Color.BLACK);
             batch.draw(whitePixel, innerX, manaBarY, innerWidth, barHeight);
             batch.setColor(Color.BLUE);
             batch.draw(whitePixel, innerX, manaBarY, innerWidth * manaPercent, barHeight);
 
-            // === Текст поверх полосок ===
             GlyphLayout layout = new GlyphLayout();
             font.getData().setScale(1.2f);
 
@@ -322,36 +310,25 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         }
 
         batch.draw(statsButtonTexture, statsButtonRect.x, statsButtonRect.y, statsButtonRect.width, statsButtonRect.height);
-
-        if (battleScene.isActive()) {
-            battleScene.render(batch, whitePixel, player);
-        }
+        if (battleScene.isActive()) battleScene.render(batch, whitePixel, player);
         cityMenu.render(batch, shapeRenderer);
+        caveMenu.render(batch, shapeRenderer); // Рендер CaveMenu
         shopMenu.render(batch, shapeRenderer, whitePixel);
         batch.end();
     }
 
-
-    private void drawBarText(SpriteBatch batch, StatBar bar, String text, float scale) {
+    private void drawBarText(SpriteBatch batch, String text, float x, float y) {
         GlyphLayout layout = new GlyphLayout(font, text);
-        float textX = bar.getX() + (bar.getWidth() - layout.width) / 2;
-        float textY = bar.getY() + (bar.getHeight() + layout.height) / 2;
-        font.getData().setScale(scale);
-        // Тень
         font.setColor(Color.BLACK);
-        font.draw(batch, text, textX + 2f, textY - 2f);
-        // Основной текст
+        font.draw(batch, text, x + 2f, y - 2f);
         font.setColor(Color.WHITE);
-        font.draw(batch, text, textX, textY);
-        font.getData().setScale(1f);
+        font.draw(batch, text, x, y);
         font.setColor(Color.WHITE);
     }
 
     private Vector3 screenToGrid(float screenX, float screenY) {
         Vector3 world = cameraControl.getCamera().unproject(new Vector3(screenX, screenY, 0));
-        int gridX = (int) (world.x / (CELL_SIZE + CELL_GAP));
-        int gridY = (int) (world.y / (CELL_SIZE + CELL_GAP));
-        return new Vector3(gridX, gridY, 0);
+        return new Vector3((int) (world.x / (CELL_SIZE + CELL_GAP)), (int) (world.y / (CELL_SIZE + CELL_GAP)), 0);
     }
 
     private void handlePlayerInput() {
@@ -386,17 +363,26 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                         battleScene.startBattleWithEnemies(enemiesList, enemyCells);
                         chestMenu.hide();
                     }
+                    battleScene.startBattleWithEnemies(enemiesList, enemyCells);
+                    chestMenu.hide();
                 }
-                if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
-                    battleScene.startBattle(targetX, targetY);
-                }
+            }
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
+                battleScene.startBattle(targetX, targetY);
             }
         }
     }
 
+    private boolean isAdjacent(int tx, int ty) {
+        int dx = Math.abs(player.getX() - tx);
+        int dy = Math.abs(player.getY() - ty);
+        return (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
+    }
+
+    @Override
     public void onClassSelected(PlayerClasses playerClass) {
         if (playerClass == null) {
-            mainMenu.show();
+            if (mainMenu != null) mainMenu.show();
             isSelectingClass = false;
         } else {
             selectedPlayerClass = playerClass;
@@ -406,18 +392,16 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     }
 
     private void applyClassToPlayer() {
-        if (selectedPlayerClass != null) {
+        if (selectedPlayerClass != null && player != null) {
             player.changeClass(selectedPlayerClass);
             player.learnSkillsForClass();
-            System.out.println("Выбран класс: " + selectedPlayerClass.getDisplayName());
-            System.out.println(selectedPlayerClass.getStatsDescription());
         }
     }
 
     private void startGameAfterClassSelection() {
         isSelectingClass = false;
         gameStarted = true;
-        mainMenu.hide();
+        if (mainMenu != null) mainMenu.hide();
         SoundManager.stopMusic();
         SoundManager.startPlaylist(false);
     }
@@ -429,7 +413,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
     public void startGame() {
         showClassSelection();
-        mainMenu.hide();
+        if (mainMenu != null) mainMenu.hide();
         SoundManager.stopMusic();
         SoundManager.startPlaylist(false);
     }
@@ -437,21 +421,25 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     @Override
     public void dispose() {
         batch.dispose();
-        if (image != null) image.dispose();
-        if (classSelectionMenu != null) classSelectionMenu.dispose();
-        if (pixelTexture != null) pixelTexture.dispose();
+        font.dispose();
+        shapeRenderer.dispose();
+        mapRenderer.dispose();
+        SoundManager.dispose();
+
         if (whitePixel != null) whitePixel.dispose();
+        if (chestClosed != null) chestClosed.dispose();
+        if (chestOpen != null) chestOpen.dispose();
         if (pauseButtonTexture != null) pauseButtonTexture.dispose();
-        if (statsButtonTexture != null) statsButtonTexture.dispose();
-        if (settingsButtonTexture != null) settingsButtonTexture.dispose();
-        if (BGArena != null) BGArena.dispose();
-        if (statsBackgroundTexture != null) statsBackgroundTexture.dispose();
+        if (inventoryButtonTexture != null) inventoryButtonTexture.dispose();
         if (continueButtonTexture != null) continueButtonTexture.dispose();
         if (exitButtonTexture != null) exitButtonTexture.dispose();
+        if (barTexture != null) barTexture.dispose();
+        if (statsButtonTexture != null) statsButtonTexture.dispose();
         if (pauseBackgroundTexture != null) pauseBackgroundTexture.dispose();
+        if (statsBackgroundTexture != null) statsBackgroundTexture.dispose();
+        if (settingsButtonTexture != null) settingsButtonTexture.dispose();
+        if (BGArena != null) BGArena.dispose();
+        if (classSelectionMenu != null) classSelectionMenu.dispose();
         if (mainMenu != null) mainMenu.dispose();
-        mapRenderer.dispose();
-        font.dispose();
-        SoundManager.dispose();
     }
 }

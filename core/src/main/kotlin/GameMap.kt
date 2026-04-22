@@ -15,7 +15,8 @@ enum class TerrainType {
     UPGRADE,
     OUTPOST,
     OpenedChest,
-    FOREST
+    FOREST,
+    CAVEENTRANCE
 
 }
 
@@ -133,6 +134,7 @@ class GameMap(
         placeForestGroups()
         placeChests()
         placeCity()
+        placeCaveEntrance(playerStartX, playerStartY)
         placeEnemies(10, playerStartX, playerStartY)
         placeTraps(3, playerStartX, playerStartY)
         placeUpgrade()
@@ -1172,5 +1174,50 @@ class GameMap(
             }
         }
         return neighbors
+    }
+    private fun canPlaceCaveEntrance(x: Int, y: Int, startX: Int, startY: Int): Boolean
+    {
+        if (terrain[x][y] != TerrainType.LAND) return false
+        if (isPlayerStartPosition(x, y, startX, startY, 10)) return false
+        for (xx in -1..1)
+        {
+            for (yy in -1..1)
+            {
+                val dx = x + xx
+                val dy = y + yy
+                if (dx in 0 until width && dy in 0 until height)
+                {
+                    when (terrain[dx][dy])
+                    {
+                        TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.OUTPOST,
+                        TerrainType.UPGRADE, TerrainType.Chest, TerrainType.ENEMY,
+                        TerrainType.MOUNTAIN, TerrainType.TRAP, TerrainType.WATER,
+                        TerrainType.FOREST -> return false
+                        else -> {}
+                    }
+
+                }
+            }
+        }
+        return true
+    }
+    private fun placeCaveEntrance(startX: Int, startY: Int)
+    {
+        val random = Random
+        val count = random.nextInt(1, 3)
+        var placed = 0
+        var attempts = 0
+        val maxAttempts = 500
+        while (placed < count && attempts < maxAttempts)
+        {
+            attempts++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceCaveEntrance(x, y, startX, startY))
+            {
+                terrain[x][y] = TerrainType.CAVEENTRANCE
+                placed++
+            }
+        }
     }
 }
