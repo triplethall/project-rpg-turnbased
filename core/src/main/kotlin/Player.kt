@@ -66,10 +66,20 @@ class Player(
     private var moveStateTime: Float = 0f
     private lateinit var playerModel: PlayerMapModel
 
-    fun initMapModel(bodyTex: Texture, legTex: Texture, armorTex: Texture? = null) {
+    fun initMapModel(
+        bodyDown: Texture,
+        bodyUp: Texture,
+        bodyLeft: Texture,
+        bodyRight: Texture,
+        legTex: Texture,
+        armorTex: Texture? = null
+    ) {
         playerModel = PlayerMapModel(
-            bodyRegion = TextureRegion(bodyTex),
-            legRegion  = TextureRegion(legTex),
+            bodyDown = TextureRegion(bodyDown),
+            bodyUp = TextureRegion(bodyUp),
+            bodyLeft = TextureRegion(bodyLeft),
+            bodyRight = TextureRegion(bodyRight),
+            legRegion = TextureRegion(legTex),
             armorRegion = armorTex?.let { TextureRegion(it) }
         )
     }
@@ -426,14 +436,18 @@ class Player(
     private val modelTextures = mutableListOf<Texture>()
 
     fun loadMapModel() {
-        val body = Texture("player/maptex/upper.png")
-        val leg  = Texture("player/maptex/leg.png")
-        modelTextures.add(body); modelTextures.add(leg)
-        initMapModel(body, leg) // Броню пока null, добавишь позже
-    }
+        val bodyDown = Texture("player/maptex/upper_down.png")
+        val bodyUp = Texture("player/maptex/upper_up.png")
+        val bodyLeft = Texture("player/maptex/upper_left.png")
+        val bodyRight = Texture("player/maptex/upper_right.png")
+        val leg = Texture("player/maptex/leg.png")
 
-    fun disposeMapModel() {
-        modelTextures.forEach { it.dispose() }
-        modelTextures.clear()
+        modelTextures.add(bodyDown)
+        modelTextures.add(bodyUp)
+        modelTextures.add(bodyLeft)
+        modelTextures.add(bodyRight)
+        modelTextures.add(leg)
+
+        initMapModel(bodyDown, bodyUp, bodyLeft, bodyRight, leg)
     }
 }
