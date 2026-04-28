@@ -19,7 +19,12 @@ class BattleScene(
     private val gameMap: GameMap,
     private val BGArena: Texture,
     private val whitePixel: Texture,
-    private val barTexture: Texture
+    private val barTexture: Texture,
+    // НОВЫЕ ТЕКСТУРЫ для кнопок
+    private val attackTexture: Texture,
+    private val nextTurnTexture: Texture,
+    private val fleeTexture: Texture,
+    private val logsTexture: Texture
 ) {
     var isActive = false
         private set
@@ -78,17 +83,18 @@ class BattleScene(
             e.printStackTrace()
         }
     }
+
     private var waitingForSkillTarget = false
     private var selectedSkill: Skill? = null
     private val layout = GlyphLayout()
     private var enemies: MutableList<BattleEnemy> = mutableListOf()
     private var enemyIndex = 0
     private val attackButtonRect = Rectangle()
+    private val nextTurnButtonRect = Rectangle()
+    private val fleeButtonRect = Rectangle()
+    private val logsButtonRect = Rectangle()
     private var isFleeing = false
     private var fleeTurnsLeft = 0
-    private val nextTurnButtonRect = Rectangle()
-    private val skipButtonRect = Rectangle()
-    private val fleeButtonRect = Rectangle()
     private var enemyX = 0
     private var enemyY = 0
     private var enemyCells: List<Pair<Int, Int>> = emptyList()
@@ -104,7 +110,8 @@ class BattleScene(
     private lateinit var messageSystem: BattleMessageSystem
     private val enemyBars = mutableListOf<StatBar>()
     private val debuffRenderer = DebuffRenderer(font)
-    private var battleLog = mutableListOf<String>()
+    private val battleLog = mutableListOf<String>()
+    private var showLogs = false
     private var lastDebuffDamage = 0
 
     // ===== РАДИАЛЬНОЕ МЕНЮ НАВЫКОВ =====
@@ -137,7 +144,6 @@ class BattleScene(
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
 
-        // Оригинальные цвета из первого файла
         playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color(0.5f, 0.15f, 0.1f, 1f))
         playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color(0.129f, 0.216f, 0.471f, 1f))
 
@@ -146,10 +152,15 @@ class BattleScene(
             player.learnSkillsForClass()
         }
         updateSkillButtons()
+
+        // Очищаем лог при старте боя
+        battleLog.clear()
     }
+
     fun updateSkillButtons() {
         skillButtons.clear()
     }
+
     // ===== НОВЫЙ МЕТОД ДЛЯ БОЯ СО СПИСКОМ ВРАГОВ =====
     fun startBattleWithEnemies(enemiesList: List<BattleEnemy>, cells: List<Pair<Int, Int>>) {
         if (player.currentHealth <= 0) {
@@ -166,7 +177,9 @@ class BattleScene(
         this.showDefeatScreen = false
 
         messageSystem = BattleMessageSystem(font, screenWidth, screenHeight, whitePixel)
-        messageSystem.addMessage("Battle begin! Enemy count: ${enemies.size}", Color.YELLOW)
+        val msg = "Battle begin! Enemy count: ${enemies.size}"
+        messageSystem.addMessage(msg, Color.YELLOW)
+        addToBattleLog(msg)
 
         SoundManager.pausePlaylist()
         SoundManager.playMusic("music/battle.mp3", true)
@@ -174,7 +187,6 @@ class BattleScene(
         val playerBarX = 20f
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
-        // Унифицируем высоту баров для общей подложки, цвета оставляем оригинальными
         playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color(0.5f, 0.15f, 0.1f, 1f))
         playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color(0.129f, 0.216f, 0.471f, 1f))
 
@@ -183,7 +195,10 @@ class BattleScene(
             player.learnSkillsForClass()
         }
         updateSkillButtons()
+
+        battleLog.clear()
     }
+
     fun startBattle(enemyCellX: Int, enemyCellY: Int) {
         println("DEBUG: Player class = ${player.playerClass}")
         if (player.currentHealth <= 0) {
@@ -193,6 +208,7 @@ class BattleScene(
         val randomCount = (1..3).random()
         startBattle(enemyCellX, enemyCellY, randomCount)
     }
+
     fun startMimicBattle(x: Int, y: Int, mimicSize: Int) {
         val mimicType = when (mimicSize) {
             2 -> Enemy.MEDIUM_MIMIC
@@ -202,6 +218,12 @@ class BattleScene(
         val mimic = BattleEnemy.fromType(mimicType)
         startBattleWithEnemies(listOf(mimic), listOf(Pair(x, y)))
         messageSystem.addMessage("MIMIC ATTACKED YOU!", Color.FIREBRICK)
+        addToBattleLog("MIMIC ATTACKED YOU!")
+    }
+
+    private fun addToBattleLog(msg: String) {
+        battleLog.add(msg)
+        if (battleLog.size > 20) battleLog.removeAt(0)
     }
 
     private fun updateEnemyBars() {
@@ -254,9 +276,11 @@ class BattleScene(
             enemyBars.add(StatBar(barX, barY, barWidth, barHeight, Color.RED))
         }
     }
+
     private fun useSkill(skill: Skill) {
         if (!skill.canUse(player, enemies)) {
             messageSystem.addMessage("${skill.name} cant use!", Color.GRAY)
+            addToBattleLog("${skill.name} cant use!")
             return
         }
         val result = skill.execute(player, enemies, messageSystem)
@@ -268,8 +292,10 @@ class BattleScene(
                 victoryScreen()
             }
             messageSystem.addMessage("${skill.name} used!", Color.CYAN)
+            addToBattleLog("${skill.name} used!")
         }
     }
+
     fun handleInput(player: Player): Boolean {
         if (!isActive) return false
 
@@ -292,16 +318,19 @@ class BattleScene(
         }
 
         if (Gdx.input.justTouched()) {
+            // 1. Радиальное меню
             if (showSkillWheel) {
                 return handleSkillWheelInput(touchX, yInverted)
             }
 
+            // 2. Кнопка открытия меню навыков
             if (!madeMoveThisTurn && skillsMenuButtonRect.contains(touchX, yInverted)) {
                 showSkillWheel = true
                 buildSkillWheel()
                 return true
             }
 
+            // 3. Выбор цели для навыка
             if (waitingForSkillTarget && selectedSkill != null) {
                 val clickedIndex = getEnemyPos(touchX, yInverted)
                 if (clickedIndex != -1 && enemies.getOrNull(clickedIndex)?.isAlive() == true) {
@@ -317,6 +346,7 @@ class BattleScene(
                 }
             }
 
+            // 4. Выбор врага
             if (!madeMoveThisTurn && !waitingForSkillTarget) {
                 val clickedIndex = getEnemyPos(touchX, yInverted)
                 if (clickedIndex != -1 && enemies.getOrNull(clickedIndex)?.isAlive() == true) {
@@ -325,27 +355,33 @@ class BattleScene(
                 }
             }
 
+            // 5. Кнопка АТАКИ
             if (!madeMoveThisTurn && attackButtonRect.contains(touchX, yInverted)) {
                 performAttack()
                 return true
             }
 
+            // 6. Кнопка СЛЕДУЮЩИЙ ХОД
             if (madeMoveThisTurn && nextTurnButtonRect.contains(touchX, yInverted)) {
                 nextTurn()
                 return true
             }
 
-            if (!madeMoveThisTurn && skipButtonRect.contains(touchX, yInverted)) {
-                skipTurn()
-                return true
-            }
+            // 7. Кнопка ПОБЕГА (flee)
             if (!madeMoveThisTurn && fleeButtonRect.contains(touchX, yInverted)) {
                 flee()
+                return true
+            }
+
+            // 8. Кнопка ЛОГОВ
+            if (!madeMoveThisTurn && logsButtonRect.contains(touchX, yInverted)) {
+                showLogs = !showLogs
                 return true
             }
         }
         return false
     }
+
     fun getEnemyPos(x: Float, y: Float): Int {
         val rectHeight = 150f
         val rectWidth = 160f
@@ -389,6 +425,7 @@ class BattleScene(
         println("victory")
         SoundManager.playSound("sounds/victorySound.mp3")
         showVictoryScreen = true
+        addToBattleLog("VICTORY!")
     }
 
     private fun defeatScreen() {
@@ -404,6 +441,7 @@ class BattleScene(
             player.currentHealth = 1
         }
         showDefeatScreen = true
+        addToBattleLog("DEFEAT...")
     }
 
     private fun drawVictoryScreen(batch: SpriteBatch, whitePixel: Texture) {
@@ -457,12 +495,15 @@ class BattleScene(
     private fun performAttack() {
         if (isFleeing) {
             messageSystem.addMessage("trying to escape! can't attack!", Color.RED)
+            addToBattleLog("Can't attack while escaping!")
             return
         }
         val target = enemies[enemyIndex]
 
+        // Уклонение
         if (target.canDodge(isPhysical = true)) {
             messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+            addToBattleLog("${target.name} dodged attack!")
             SoundManager.playSound("sounds/miss.mp3")
             madeMoveThisTurn = true
             return
@@ -472,6 +513,7 @@ class BattleScene(
             val dodgeChance = 0.25
             if (Random.nextDouble() < dodgeChance) {
                 messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+                addToBattleLog("${target.name} dodged attack!")
                 madeMoveThisTurn = true
                 return
             }
@@ -491,38 +533,47 @@ class BattleScene(
 
         if (!attackHit) {
             messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+            addToBattleLog("${target.name} dodged!")
             madeMoveThisTurn = true
             return
         }
 
         target.takeDamage(dmgWithDef)
         SoundManager.playSound("sounds/atack.mp3")
-        messageSystem.addMessage("dealt $dmgWithDef dmg to ${target.name}", Color.GREEN)
+        val dmgMsg = "dealt $dmgWithDef dmg to ${target.name}"
+        messageSystem.addMessage(dmgMsg, Color.GREEN)
+        addToBattleLog(dmgMsg)
 
         if (!target.isAlive()) {
             if (target.tryResurrect()) {
                 messageSystem.addMessage("${target.name} воскрес!", Color.PURPLE)
+                addToBattleLog("${target.name} resurrected!")
                 return
             }
 
             messageSystem.addMessage("${target.name} is ded", Color.ORANGE)
+            addToBattleLog("${target.name} died")
             val gainExp = (target.maxHealth * 50 + target.damage * 100).coerceAtLeast(10)
             player.addExperience(gainExp)
             messageSystem.addMessage("got $gainExp from ${target.name}", Color.GOLD)
+            addToBattleLog("+$gainExp XP")
             enemies.removeAt(enemyIndex)
 
             if (target.enemyType == EnemyType.CURSED) {
                 player.applyDebuff(DebuffType.CURSE, 3, 0.7)
                 messageSystem.addMessage("${target.name} cursed you!", Color.PURPLE)
+                addToBattleLog("You are cursed!")
             }
 
             updateEnemyBars()
             if (enemies.isEmpty()) {
                 messageSystem.addMessage("victory🕺")
+                addToBattleLog("Victory!")
                 victoryScreen()
                 return
             } else {
                 messageSystem.addMessage("${enemies.size} enemies left")
+                addToBattleLog("${enemies.size} enemies remain")
             }
             if (enemyIndex >= enemies.size) {
                 enemyIndex = 0
@@ -541,6 +592,7 @@ class BattleScene(
         }
 
         messageSystem.addMessage("enemy turn", Color.ORANGE)
+        addToBattleLog("--- Enemy turn ---")
 
         enemies.forEach { enemy ->
             if (enemy.isAlive() && player.currentHealth > 0) {
@@ -548,10 +600,12 @@ class BattleScene(
 
                 if (skipEnemyTurn) {
                     messageSystem.addMessage("${enemy.name} skips turn! (debuff)")
+                    addToBattleLog("${enemy.name} skips turn")
                     enemy.processDebuffs()
                     return@forEach
                 }
 
+                // Лечение HOLY
                 if (enemy.enemyType == EnemyType.HOLY && enemy.isAlive()) {
                     val healAmount = (enemy.maxHealth * 0.05).toInt()
                     enemies.filter { it.isAlive() && it != enemy }.forEach { ally ->
@@ -560,6 +614,7 @@ class BattleScene(
                         if (healed > 0) {
                             ally.currentHealth = newHealth
                             messageSystem.addMessage("${ally.name} restored $healed HP From ${enemy.name}", Color.GREEN)
+                            addToBattleLog("${ally.name} healed +$healed HP")
                         }
                     }
                 }
@@ -568,18 +623,22 @@ class BattleScene(
                     val damage = (enemy.calculateDamage(null, true) * enemy.getDamageMultiplier()).toInt()
                     val dmgWithDef = (damage * (1 - player.defense)).toInt()
                     player.currentHealth = (player.currentHealth - dmgWithDef)
-                    messageSystem.addMessage("${enemy.name} dealt you $dmgWithDef dmg", Color.RED)
+                    val dmgMsg = "${enemy.name} dealt you $dmgWithDef dmg"
+                    messageSystem.addMessage(dmgMsg, Color.RED)
+                    addToBattleLog(dmgMsg)
 
                     if (enemy.enemyType == EnemyType.DARK) {
                         val stolen = enemy.tryLifeSteal(dmgWithDef)
                         if (stolen > 0) {
                             messageSystem.addMessage("${enemy.name} крадет $stolen здоровья!", Color.PURPLE)
+                            addToBattleLog("${enemy.name} steals $stolen HP")
                         }
                     }
 
                     applyEnemyDebuff(enemy)
                 } else {
                     messageSystem.addMessage("${enemy.name} missed", Color.YELLOW)
+                    addToBattleLog("${enemy.name} missed")
                 }
 
                 enemy.processDebuffs()
@@ -589,6 +648,7 @@ class BattleScene(
         val debuffDmg = player.processDebuffs()
         if (debuffDmg > 0) {
             messageSystem.addMessage("player took $debuffDmg damage!", Color.FIREBRICK)
+            addToBattleLog("Debuff damage: -$debuffDmg HP")
         }
 
         if (player.currentHealth <= 0) {
@@ -602,9 +662,11 @@ class BattleScene(
             if (fleeTurnsLeft <= 0) {
                 endBattleAndClearEnemy()
                 isFleeing = false
+                addToBattleLog("You escaped!")
                 return
             } else {
                 messageSystem.addMessage("$fleeTurnsLeft more turns until escape", Color.CYAN)
+                addToBattleLog("$fleeTurnsLeft turns to escape")
             }
         }
     }
@@ -628,30 +690,37 @@ class BattleScene(
             EnemyType.POISON -> {
                 player.applyDebuff(DebuffType.POISON, 3, 1.0, 1)
                 messageSystem.addMessage("Игрок отравлен!", Color.GREEN)
+                addToBattleLog("Poisoned!")
             }
             EnemyType.FIRE -> {
                 player.applyDebuff(DebuffType.BURN, 3, 1.0)
                 messageSystem.addMessage("Игрок горит!", Color.FIREBRICK)
+                addToBattleLog("Burning!")
             }
             EnemyType.ICE -> {
                 player.applyDebuff(DebuffType.FREEZE, 1, 1.0)
                 messageSystem.addMessage("Игрок заморожен!", Color.CYAN)
+                addToBattleLog("Frozen!")
             }
             EnemyType.ELECTRIC -> {
                 player.applyDebuff(DebuffType.PARALYSIS, 2, 0.8)
                 messageSystem.addMessage("Игрок парализован!", Color.YELLOW)
+                addToBattleLog("Paralyzed!")
             }
             EnemyType.CURSED -> {
                 player.applyDebuff(DebuffType.CURSE, 3, 0.7)
                 messageSystem.addMessage("Проклятие падает на игрока!", Color.PURPLE)
+                addToBattleLog("Cursed!")
             }
             EnemyType.WATER -> {
                 player.applyDebuff(DebuffType.WET, 3, 1.0)
                 messageSystem.addMessage("Игрок промок! (+25% урон от молний)", Color.CYAN)
+                addToBattleLog("Wet!")
             }
             EnemyType.BLOOD -> {
                 player.applyDebuff(DebuffType.BLEED, 3, 1.0, 1)
                 messageSystem.addMessage("Игрок истекает кровью!", Color.RED)
+                addToBattleLog("Bleeding!")
             }
             else -> {}
         }
@@ -670,35 +739,37 @@ class BattleScene(
 
         if (manaRegen > 0 && player.currentMana < player.maxMana) {
             messageSystem.addMessage("Восстановлено $manaRegen маны", Color.CYAN)
+            addToBattleLog("+$manaRegen MP")
         }
 
         if (isActive && enemies.isNotEmpty() && player.currentHealth > 0) {
             enemyTurn()
         }
     }
+
     private fun flee() {
         if (isFleeing) {
             isFleeing = false
             fleeTurnsLeft = 0
             madeMoveThisTurn = true
             messageSystem.addMessage("canceling attempt of escaping. TURN IS WASTED BTWWWW", Color.CORAL)
+            addToBattleLog("Escape canceled! Turn wasted.")
             return
         }
         isFleeing = true
         fleeTurnsLeft = 2
         madeMoveThisTurn = true
         messageSystem.addMessage("player is escaping! $fleeTurnsLeft turns left till escape!", Color.CYAN)
+        addToBattleLog("Attempting to escape...")
     }
-    private fun skipTurn() {
-        madeMoveThisTurn = true
-        messageSystem.addMessage("skipped a turn", Color.FIREBRICK)
-    }
+
     fun update(delta: Float) {
         if (!isActive) return
         if (::messageSystem.isInitialized) {
             messageSystem.update(delta)
         }
     }
+
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player) {
         stateTime += Gdx.graphics.deltaTime
 
@@ -719,29 +790,39 @@ class BattleScene(
         val rectX = screenWidth - rectWidth - space
         batch.draw(BGArena, 0f, 0f, screenWidth, screenHeight)
 
-        val buttonWidth = 150f
-        val buttonHeight = 70f
+        // НОВЫЕ КНОПКИ с текстурами 64x64
+        // НОВЫЕ КНОПКИ с текстурами 150x150, расположенные вертикально справа
+        val buttonSize = 150f
         val buttonSpacing = 30f
-        val buttonY = 50f
+        val rightMargin = 20f
+        val bottomMargin = 50f
 
-        val totalWidth = buttonWidth * 4 + buttonSpacing * 3
-        val startX = (screenWidth - totalWidth) / 2
-        val attackX = startX
-        val turnX = startX + buttonWidth + buttonSpacing
-        val skipX = startX + (buttonWidth + buttonSpacing) * 2
-        val fleeX = startX + (buttonWidth + buttonSpacing) * 3
+// Координата X фиксирована – прижата к правому краю
+        val startX = screenWidth - buttonSize - rightMargin
 
-        attackButtonRect.set(attackX, buttonY, buttonWidth, buttonHeight)
-        nextTurnButtonRect.set(turnX, buttonY, buttonWidth, buttonHeight)
-        skipButtonRect.set(skipX, buttonY, buttonWidth, buttonHeight)
-        fleeButtonRect.set(fleeX, buttonY, buttonWidth, buttonHeight)
+        // Размещаем кнопки снизу вверх
+        val attackY = bottomMargin
+        val nextTurnY = attackY + buttonSize + buttonSpacing
+        val fleeY = nextTurnY + buttonSize + buttonSpacing
+        val logsY = fleeY + buttonSize + buttonSpacing
 
+        attackButtonRect.set(startX, attackY, buttonSize, buttonSize)
+        nextTurnButtonRect.set(startX, nextTurnY, buttonSize, buttonSize)
+        fleeButtonRect.set(startX, fleeY, buttonSize, buttonSize)
+        logsButtonRect.set(startX, logsY, buttonSize, buttonSize)
+
+        batch.color = Color.WHITE
+        batch.draw(attackTexture, attackButtonRect.x, attackButtonRect.y, buttonSize, buttonSize)
+        batch.draw(nextTurnTexture, nextTurnButtonRect.x, nextTurnButtonRect.y, buttonSize, buttonSize)
+        batch.draw(fleeTexture, fleeButtonRect.x, fleeButtonRect.y, buttonSize, buttonSize)
+        batch.draw(logsTexture, logsButtonRect.x, logsButtonRect.y, buttonSize, buttonSize)
+
+        // Далее старый код отрисовки врагов и т.д. (без изменений)
         batch.color = Color.BLUE
         batch.draw(whitePixel, space + 400f, rectY - 100f, rectWidth, rectHeight)
 
         if (enemies.isNotEmpty()) {
             val enemyStartX = rectX - 400f
-
             when (enemies.size) {
                 1 -> {
                     val enemyY = rectY - 100f
@@ -763,20 +844,15 @@ class BattleScene(
                     drawEnemy(batch, whitePixel, enemies[1], enemyStartX, enemyY2, rectWidth, rectHeight, enemyIndex == 1)
                     drawEnemy(batch, whitePixel, enemies[2], enemyStartX - 85f, enemyY3 + 50f, rectWidth, rectHeight, enemyIndex == 2)
                 }
-                else -> {
-                    println("idk")
-                    return
-                }
+                else -> return
             }
 
-            // Отрисовка общих баров игрока (с оригинальными цветами)
             drawPlayerBars(batch, playerHealthBar, playerManaBar, barTexture, gap = 1f)
 
-            // --- СТАТИСТИКА ИГРОКА ---
+            // Статистика игрока
             font.data.setScale(1.4f)
             val statsX = 20f
             val statsY = playerManaBar.y - 15f
-
             val damageText = "ATK: ${player.damage}"
             val defenseText = "DEF: ${(player.defense * 100).toInt()}%"
             val levelText = "LVL: ${player.level}"
@@ -787,22 +863,14 @@ class BattleScene(
                 font.color = color
                 font.draw(batch, text, x, y)
             }
-
             drawStatWithShadow(batch, levelText, statsX, statsY, Color.GOLD)
             drawStatWithShadow(batch, damageText, statsX + 120f, statsY, Color.ORANGE)
             drawStatWithShadow(batch, defenseText, statsX + 260f, statsY, Color.CYAN)
-
             font.data.setScale(1.0f)
 
             // Дебаффы врагов
             enemies.forEachIndexed { index, enemy ->
                 if (!enemy.debuffManager.isEmpty()) {
-                    val rectHeight = 150f
-                    val rectWidth = 100f
-                    val space = screenWidth * 0.1f
-                    val rectY = (screenHeight - rectHeight) / 2
-                    val rectX = screenWidth - rectWidth - space
-                    val enemyStartX = rectX - 400f
                     val enemyY = when (enemies.size) {
                         1 -> rectY - 100f
                         2 -> if (index == 0) rectY - 100f - 90f else rectY - 100f + 90f
@@ -832,20 +900,18 @@ class BattleScene(
             }
         }
 
-        // ===== КНОПКА ОТКРЫТИЯ МЕНЮ НАВЫКОВ =====
+        // Кнопка открытия меню навыков
         val skillsBtnX = screenWidth - skillsMenuButtonSize - 20f
         val skillsBtnY = screenHeight - skillsMenuButtonSize - 20f
         skillsMenuButtonRect.set(skillsBtnX, skillsBtnY, skillsMenuButtonSize, skillsMenuButtonSize)
 
         batch.color = Color.PURPLE
         batch.draw(whitePixel, skillsBtnX, skillsBtnY, skillsMenuButtonSize, skillsMenuButtonSize)
-
         batch.color = Color.WHITE
         batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY - 2f, skillsMenuButtonSize + 4f, 2f)
         batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY + skillsMenuButtonSize, skillsMenuButtonSize + 4f, 2f)
         batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY, 2f, skillsMenuButtonSize)
         batch.draw(whitePixel, skillsBtnX + skillsMenuButtonSize, skillsBtnY, 2f, skillsMenuButtonSize)
-
         font.color = Color.WHITE
         font.data.setScale(1.5f)
         layout.setText(font, "⚔")
@@ -854,29 +920,7 @@ class BattleScene(
             skillsBtnY + skillsMenuButtonSize/2 + layout.height/2)
         font.data.setScale(1f)
 
-        // ===== ОСНОВНЫЕ КНОПКИ =====
-        batch.color = if (!madeMoveThisTurn && !isFleeing) Color.GREEN else Color.DARK_GRAY
-        batch.draw(whitePixel, attackX, buttonY, buttonWidth, buttonHeight)
-        font.color = Color.WHITE
-        font.draw(batch, "ATTACK", attackX + 35f, buttonY + 42f)
-
-        batch.color = if (madeMoveThisTurn) Color.ORANGE else Color.DARK_GRAY
-        batch.draw(whitePixel, turnX, buttonY, buttonWidth, buttonHeight)
-        font.draw(batch, "NEXT TURN", turnX + 15f, buttonY + 42f)
-
-        batch.color = if (!madeMoveThisTurn) Color.GRAY else Color.DARK_GRAY
-        batch.draw(whitePixel, skipX, buttonY, buttonWidth, buttonHeight)
-        font.draw(batch, "SKIP TURN", skipX + 17f, buttonY + 42f)
-
-        batch.color = when {
-            madeMoveThisTurn -> Color.DARK_GRAY
-            isFleeing -> Color.YELLOW
-            else -> Color.RED
-        }
-        batch.draw(whitePixel, fleeX, buttonY, buttonWidth, buttonHeight)
-        font.draw(batch, if (!isFleeing) "ESCAPE" else "CANCEL", fleeX + 35f, buttonY + 42f)
-
-        // ===== КНОПКА getDmg (отладочная) =====
+        // --- Отладочная кнопка урона (можно оставить) ---
         val l_btnX = screenWidth / 2 - 100f
         val l_btnY = 300f
         getDmgButtonRect.set(l_btnX, l_btnY, 200f, 60f)
@@ -885,7 +929,7 @@ class BattleScene(
         font.color = Color.WHITE
         font.draw(batch, "getDmg", l_btnX + 30f, l_btnY + 35f)
 
-        // ===== ДЕБАФФЫ ИГРОКА =====
+        // Дебаффы игрока
         fun renderDebuffs(batch: SpriteBatch, player: Player) {
             if (!player.debuffManager.isEmpty()) {
                 debuffRenderer.renderDebuffs(
@@ -899,20 +943,18 @@ class BattleScene(
         }
         renderDebuffs(batch, player)
 
-        // ===== ИНДИКАТОР ОЖИДАНИЯ ЦЕЛИ =====
+        // Индикатор выбора цели
         if (waitingForSkillTarget && selectedSkill != null) {
             font.color = Color.YELLOW
             font.data.setScale(1.2f)
             val text = ">>> Выбери цель для ${selectedSkill!!.name} <<<"
             layout.setText(font, text)
-
             batch.color = Color(0f, 0f, 0f, 0.5f)
             batch.draw(whitePixel,
                 screenWidth/2 - layout.width/2 - 10f,
                 screenHeight - 60f,
                 layout.width + 20f,
                 40f)
-
             batch.color = Color.WHITE
             font.color = Color.YELLOW
             font.draw(batch, text,
@@ -921,11 +963,18 @@ class BattleScene(
             font.data.setScale(1f)
         }
 
+        // Система сообщений
         if (::messageSystem.isInitialized) {
             messageSystem.render(batch)
         }
 
+        // Радиальное меню навыков
         drawSkillWheel(batch, whitePixel)
+
+        // Окно логов (если открыто)
+        if (showLogs) {
+            drawLogWindow(batch, whitePixel)
+        }
 
         font.data.setScale(1f)
         font.color = Color.WHITE
@@ -944,24 +993,18 @@ class BattleScene(
             val max = if (bar.color == Color.RED) player.maxHealth else player.maxMana
             bar.render(batch, texture, whitePixel, current, max)
         }
-
         font.data.setScale(scale)
         layout.setText(font, text)
-
         val textX = bar.x + (bar.width - layout.width) / 2
         val textY = bar.y + (bar.height + layout.height) / 2
-
         font.color = Color.BLACK
         font.draw(batch, text, textX + 2f, textY - 2f)
-
         font.color = Color.WHITE
         font.draw(batch, text, textX, textY)
-
         font.data.setScale(1.0f)
         font.color = Color.WHITE
     }
 
-    // ===== ОБЩАЯ ПОДЛОЖКА ДЛЯ БАРОВ ИГРОКА (с сохранением оригинальных цветов) =====
     fun drawPlayerBars(
         batch: SpriteBatch,
         hpBar: StatBar,
@@ -991,9 +1034,9 @@ class BattleScene(
         val mpFullW = mpBar.width + 85f
         val mpFillW = mpBar.width * mpRatio + 85f
 
-        batch.color = hpBar.color  // оригинальный цвет здоровья
+        batch.color = hpBar.color
         batch.draw(whitePixel, hpFillX, hpFillY, hpFillW, fillHeight)
-        batch.color = mpBar.color  // оригинальный цвет маны
+        batch.color = mpBar.color
         batch.draw(whitePixel, mpFillX, mpFillY, mpFillW, fillHeight)
         batch.color = Color.WHITE
 
@@ -1031,9 +1074,43 @@ class BattleScene(
         }
         drawCentered("${player.currentHealth}/${player.maxHealth}", hpFillX, hpFillY, hpFullW, fillHeight)
         drawCentered("${player.currentMana}/${player.maxMana}", mpFillX, mpFillY, mpFullW, fillHeight)
-
         font.data.setScale(1f)
         font.color = Color.WHITE
+    }
+
+    private fun drawLogWindow(batch: SpriteBatch, whitePixel: Texture) {
+        val winWidth = 500f
+        val winHeight = 400f
+        val winX = screenWidth - winWidth - 20f
+        val winY = 80f
+
+        batch.color = Color(0f, 0f, 0f, 0.85f)
+        batch.draw(whitePixel, winX, winY, winWidth, winHeight)
+
+        font.color = Color.YELLOW
+        font.data.setScale(1.2f)
+        font.draw(batch, "Battle Log", winX + 10f, winY + winHeight - 20f)
+
+        font.data.setScale(0.9f)
+        font.color = Color.WHITE
+        val startY = winY + winHeight - 50f
+        battleLog.reversed().take(15).forEachIndexed { i, msg ->
+            if (i > 14) return@forEachIndexed
+            font.draw(batch, msg, winX + 10f, startY - i * 25f)
+        }
+        font.data.setScale(1f)
+
+        // Кнопка закрытия окна
+        val closeSize = 30f
+        val closeX = winX + winWidth - closeSize - 5f
+        val closeY = winY + winHeight - closeSize - 5f
+        batch.color = Color.RED
+        batch.draw(whitePixel, closeX, closeY, closeSize, closeSize)
+        font.color = Color.WHITE
+        font.data.setScale(0.8f)
+        font.draw(batch, "X", closeX + 10f, closeY + 20f)
+        font.data.setScale(1f)
+        batch.color = Color.WHITE
     }
 
     private val squareSize = 24 * 2f
@@ -1042,18 +1119,13 @@ class BattleScene(
 
     private fun buildSkillWheel() {
         skillWheelButtons.clear()
-
         val skills = player.skills
         if (skills.isEmpty()) return
-
         val angleStep = 360.0 / skills.size
-
         skills.forEachIndexed { index, skill ->
             val angle = Math.toRadians(index * angleStep - 90.0)
-
             val buttonX = (skillWheelCenterX + skillWheelRadius * Math.cos(angle)).toFloat() - skillWheelButtonSize / 2
             val buttonY = (skillWheelCenterY + skillWheelRadius * Math.sin(angle)).toFloat() - skillWheelButtonSize / 2
-
             val rect = Rectangle(buttonX, buttonY, skillWheelButtonSize, skillWheelButtonSize)
             skillWheelButtons.add(SkillWheelButton(skill, rect, angle))
         }
@@ -1061,52 +1133,40 @@ class BattleScene(
 
     private fun drawSkillWheel(batch: SpriteBatch, whitePixel: Texture) {
         if (!showSkillWheel) return
-
         batch.color = Color(0f, 0f, 0f, 0.7f)
         batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
-
         batch.color = Color.DARK_GRAY
         batch.draw(whitePixel, skillWheelCenterX - 60f, skillWheelCenterY - 60f, 120f, 120f)
-
         batch.color = Color.GRAY
         skillWheelButtons.forEach { button ->
             val endX = button.rect.x + skillWheelButtonSize / 2
             val endY = button.rect.y + skillWheelButtonSize / 2
         }
-
         skillWheelButtons.forEachIndexed { index, button ->
             val skill = button.skill
-
             val color = when {
                 !skill.canUse(player, enemies) -> Color(0.3f, 0.3f, 0.3f, 1f)
                 skill.isOnCooldown() -> Color(0.5f, 0.5f, 0.5f, 1f)
                 index == skillWheelSelectedIndex -> Color.GOLD
                 else -> Color.SKY
             }
-
             batch.color = color
             batch.draw(whitePixel, button.rect.x, button.rect.y, button.rect.width, button.rect.height)
-
             batch.color = Color.WHITE
-
             font.data.setScale(1.5f)
             font.color = Color.WHITE
-
             val text = when {
                 skill.isOnCooldown() -> "${skill.currentCooldown}"
                 skill.manaCost > 0 -> "${skill.manaCost} MP"
                 else -> skill.name.take(3)
             }
-
             layout.setText(font, text)
             val textX = button.rect.x + (button.rect.width - layout.width) / 2
             val textY = button.rect.y + (button.rect.height + layout.height) / 2
-
             font.color = Color.BLACK
             font.draw(batch, text, textX + 2f, textY - 2f)
             font.color = Color.WHITE
             font.draw(batch, text, textX, textY)
-
             font.data.setScale(1.3f)
             layout.setText(font, skill.name)
             val nameX = button.rect.x + (button.rect.width - layout.width) / 2
@@ -1116,7 +1176,6 @@ class BattleScene(
             font.color = Color.YELLOW
             font.draw(batch, skill.name, nameX, nameY)
         }
-
         batch.color = Color.RED
         batch.draw(whitePixel, skillWheelCenterX - 30f, skillWheelCenterY - 30f, 60f, 60f)
         font.data.setScale(0.8f)
@@ -1126,25 +1185,21 @@ class BattleScene(
         font.draw(batch, closeText,
             skillWheelCenterX - layout.width / 2,
             skillWheelCenterY + layout.height / 2)
-
         font.data.setScale(1f)
         batch.color = Color.WHITE
     }
 
     private fun handleSkillWheelInput(touchX: Float, touchY: Float): Boolean {
         if (!showSkillWheel) return false
-
         val centerRect = Rectangle(skillWheelCenterX - 45f, skillWheelCenterY - 45f, 90f, 90f)
         if (centerRect.contains(touchX, touchY)) {
             showSkillWheel = false
             skillWheelSelectedIndex = -1
             return true
         }
-
         skillWheelButtons.forEachIndexed { index, button ->
             if (button.rect.contains(touchX, touchY)) {
                 val skill = button.skill
-
                 if (skill.canUse(player, enemies)) {
                     if (skill is TargetableSkill) {
                         selectedSkill = skill
@@ -1192,12 +1247,10 @@ class BattleScene(
         isSelected: Boolean
     ) {
         if (!enemy.isAlive()) return
-
         if (isSelected) {
             batch.color = Color(1f, 1f, 0f, 0.4f)
             batch.draw(whitePixel, x - 5f, y - 5f, width + 10f, height + 10f)
         }
-
         font.color = Color.WHITE
         val typeShort = when (enemy.enemyType) {
             EnemyType.NO_TYPE -> ""
@@ -1218,7 +1271,6 @@ class BattleScene(
         }
         batch.color = Color.WHITE
         val currentFrame = slimeIdleAnimation?.getKeyFrame(stateTime)
-
         if (currentFrame != null) {
             batch.draw(currentFrame, x, y, width, height)
         } else {
@@ -1227,7 +1279,6 @@ class BattleScene(
         }
         font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
         font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)
-
         font.color = Color.WHITE
     }
 
@@ -1245,18 +1296,15 @@ class BattleScene(
                 }
             }
         }
-
         player.skills.forEach { skill ->
             skill.currentCooldown = 0
         }
-
         isActive = false
         madeMoveThisTurn = false
         isFleeing = false
         fleeTurnsLeft = 0
         enemies.clear()
         enemyCells = emptyList()
-
         SoundManager.stopMusic()
         SoundManager.resumePlaylist()
     }

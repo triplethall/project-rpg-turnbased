@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
@@ -53,8 +52,14 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private PlayerClasses selectedPlayerClass = null;
     private ShopMenu shopMenu;
 
-    // Новый объект для отрисовки HUD (бары + кнопк
+    // Новый объект для отрисовки HUD (бары + кнопки)
     private MainUI mainUI;
+
+    // Текстуры для кнопок боя
+    private Texture attackTexture;
+    private Texture nextTurnTexture;
+    private Texture fleeTexture;
+    private Texture logsTexture;
 
     @Override
     public void create() {
@@ -131,12 +136,39 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             barTexture = whitePixel;
         }
 
+        // Загрузка текстур кнопок боя
+        try {
+            attackTexture = new Texture("arena_gui/attackbtn.png");
+            nextTurnTexture = new Texture("arena_gui/nextturnbtn.png");
+            fleeTexture = new Texture("arena_gui/escapebtn.png");
+            logsTexture = new Texture("arena_gui/logsbtn.png");
+        } catch (Exception e) {
+            Gdx.app.error("RPG", "Failed to load battle button textures, using whitePixel");
+            attackTexture = whitePixel;
+            nextTurnTexture = whitePixel;
+            fleeTexture = whitePixel;
+            logsTexture = whitePixel;
+        }
+
         SoundManager.playMusic("music/mainMenu.mp3", true);
 
         uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        battleScene = new BattleScene(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), gameMap, BGArena, whitePixel, barTexture);
+        // Создаём BattleScene с текстурными кнопками
+        battleScene = new BattleScene(
+            font,
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            gameMap,
+            BGArena,
+            whitePixel,
+            barTexture,
+            attackTexture,
+            nextTurnTexture,
+            fleeTexture,
+            logsTexture
+        );
         battleScene.loadAssets();
 
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(),
@@ -358,5 +390,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         if (BGArena != null) BGArena.dispose();
         if (classSelectionMenu != null) classSelectionMenu.dispose();
         if (mainMenu != null) mainMenu.dispose();
+        if (attackTexture != null) attackTexture.dispose();
+        if (nextTurnTexture != null) nextTurnTexture.dispose();
+        if (fleeTexture != null) fleeTexture.dispose();
+        if (logsTexture != null) logsTexture.dispose();
     }
 }
