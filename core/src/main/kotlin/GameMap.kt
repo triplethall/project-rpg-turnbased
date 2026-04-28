@@ -29,6 +29,8 @@ class GameMap(
 
     private val terrain = Array(width) { Array(height) { TerrainType.WATER } }
     private val explored = Array(width) { BooleanArray(height) { false } }
+    // хранит размер мимика. если ничего нет - обычный сундук
+    private val mimicSizes = mutableMapOf<Pair<Int, Int>, Int>()
 
     fun markExplored(x: Int, y: Int) {
         explored[x][y] = true
@@ -45,8 +47,7 @@ class GameMap(
         }
     }
 
-
-     // Возвращает список координат всех клеток с типом ENEMY
+    // Возвращает список координат всех клеток с типом ENEMY
     fun getAllEnemyCells(): List<Pair<Int, Int>> {
         val cells = mutableListOf<Pair<Int, Int>>()
         for (x in 0 until width) {
@@ -59,8 +60,7 @@ class GameMap(
         return cells
     }
 
-     //Возвращает список координат врагов в радиусе от центра
-
+    // Возвращает список координат врагов в радиусе от центра
     fun getEnemiesNear(centerX: Int, centerY: Int, radius: Int): List<Pair<Int, Int>> {
         val cells = mutableListOf<Pair<Int, Int>>()
         for (dx in -radius..radius) {
@@ -75,8 +75,7 @@ class GameMap(
         return cells
     }
 
-      // Проверяет, есть ли хотя бы один враг на карте
-
+    // Проверяет, есть ли хотя бы один враг на карте
     fun hasEnemies(): Boolean {
         for (x in 0 until width) {
             for (y in 0 until height) {
@@ -86,7 +85,7 @@ class GameMap(
         return false
     }
 
-     //Удаляет всех врагов с карты (превращает обратно в исходный тип местности)
+    // Удаляет всех врагов с карты (превращает обратно в исходный тип местности)
     fun clearAllEnemies() {
         for (x in 0 until width) {
             for (y in 0 until height) {
@@ -102,6 +101,22 @@ class GameMap(
     fun getTerrain(x: Int, y: Int): TerrainType {
         if (x !in 0 until width || y !in 0 until height) return TerrainType.WATER
         return terrain[x][y]
+    }
+
+    fun isMimicChest(x: Int, y: Int): Boolean = mimicSizes.containsKey(Pair(x, y))
+
+    fun getMimicSize(x: Int, y: Int): Int = mimicSizes[Pair(x, y)] ?: 0
+
+    fun setMimicSize(x: Int, y: Int, size: Int)
+    {
+        if (size > 0)
+        {
+            mimicSizes[Pair(x, y)] = size
+        }
+        else
+        {
+            mimicSizes.remove(Pair(x,y))
+        }
     }
     fun setTerrain(x: Int, y: Int, type: TerrainType)
     {
@@ -357,6 +372,16 @@ class GameMap(
             val (cx, cy) = possibleCells.random(random)
             // Не проверяем на LAND, ставим на любую подходящую клетку
             terrain[cx][cy] = TerrainType.Chest
+            // 30% шанс на мимика
+            if (random.nextDouble() < 0.3)
+            {
+                val size = when {
+                    random.nextDouble() < 0.6 -> 1 // 60%  на маленького мимика
+                    random.nextDouble() < 0.9 -> 2 // 30% на среднего
+                    else -> 3 // 10% на большого
+                }
+                setMimicSize(cx, cy, size)
+            }
         }
     }
     fun collectChest(x: Int, y: Int): Boolean {
@@ -364,7 +389,7 @@ class GameMap(
 
         if (terrain[x][y] == TerrainType.Chest) {
             terrain[x][y] = TerrainType.OpenedChest // Теперь он открыт
-            chestMenu?.show()
+            mimicSizes.remove(Pair(x,y))
             return true
         }
         return false
@@ -1144,6 +1169,15 @@ class GameMap(
 
                 if (hasNorth && hasSouth && hasWest && hasEast) {
                     terrain[x][y] = TerrainType.Chest
+                    if (random.nextDouble() < 0.3)
+                    {
+                        val size = when {
+                            random.nextDouble() < 0.6 -> 1
+                            random.nextDouble() < 0.9 -> 2
+                            else -> 3
+                        }
+                        setMimicSize(x, y, size)
+                    }
                     chestPlaced = true
                     break
                 }

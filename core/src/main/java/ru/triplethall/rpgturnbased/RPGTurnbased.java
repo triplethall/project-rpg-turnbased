@@ -66,7 +66,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
         chestClosed = new Texture("bg/chest_closed.png");
         chestOpen = new Texture("bg/chest_open.png");
-        chestMenu = new ChestMenu(font);
 
         cityMenu = new CityMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         // Инициализация CaveMenu (проверь конструктор, если нужны параметры)
@@ -158,6 +157,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
 
+        chestMenu = new ChestMenu(font, player, gameMap, battleScene);
 
         player.setOnEnterForest(new Player.OnEnterForestListener() {
             @Override
@@ -199,7 +199,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         // Обработка меню
         boolean menuClicked = pauseMenu.handleInput(player);
         isPaused = pauseMenu.isVisible();
-        boolean chestClicked = chestMenu.handleInput();
+        chestMenu.handleInput();
         boolean cityMenuClicked = cityMenu.handleInput();
         boolean caveMenuClicked = caveMenu.handleInput();
         boolean shopClicked = false;
@@ -346,26 +346,14 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 }
                 return;
             }
-            if (player.tryMoveTo(targetX, targetY, gameMap, CELL_SIZE, CELL_GAP))  {
+            if (player.tryMoveTo(targetX, targetY, gameMap, CELL_SIZE, CELL_GAP))
+            {
                 SoundManager.playSound("sounds/step.mp3");
 
-                if (gameMap.collectChest(targetX, targetY)) {
-                    SoundManager.playSound("sounds/openSunduk.mp3");
-                    chestMenu.show();
-
-                    List<Pair<Integer, Integer>> enemyCells = null;
-                    List<BattleEnemy> enemiesList = null;
-                    if (gameMap.hasEnemies()) {
-                        enemyCells = gameMap.getEnemiesNear(targetX, targetY, 2);
-                        enemiesList = new ArrayList<>();
-                        for (int i = 0; i < enemyCells.size(); i++) {
-                            BattleEnemy enemy = BattleEnemy.Companion.createRandomEnemies(1).get(0);
-                            enemiesList.add(enemy);
-                        }
-                        battleScene.startBattleWithEnemies(enemiesList, enemyCells);
-                        chestMenu.hide();
-                    }
-                    
+                if (gameMap.getTerrain(targetX, targetY) == TerrainType.Chest)
+                {
+                    int mimicSize = gameMap.getMimicSize(targetX, targetY);
+                    chestMenu.show(targetX, targetY, mimicSize);
                 }
             }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {

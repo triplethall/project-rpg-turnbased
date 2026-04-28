@@ -305,7 +305,7 @@ class Player(
 
             x = targetX; y = targetY // Логические координаты меняем сразу
 
-            if (gameMap.collectChest(targetX, targetY)) { /* логика сундука */ }
+            //if (gameMap.collectChest(targetX, targetY)) { /* логика сундука */ }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.FOREST) {
                 if (Random.nextFloat() < 0.1f) onEnterForestListener?.onEnterForest(targetX, targetY)
             }

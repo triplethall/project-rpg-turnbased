@@ -59,7 +59,6 @@ enum class EnemyType(
         specialEffect = "Лечит союзников на 5% здоровья каждый ход"
     ),
 
-    // NEW: Добавлены 5 новых типов врагов для разнообразия геймплея
     DARK(
         displayName = "Темный",
         specialEffect = "Крадет 10% нанесенного урона в здоровье"
@@ -90,8 +89,7 @@ enum class EnemyType(
 
 // враги
 enum class Enemy
-    ( // NEW: Исправлено форматирование скобки
-    // Базовые характеристики врага
+    (
     val displayEnemyName: String,                     // Имя врага
     val baseEnemyDamage: Int = 20,                    // Урон
     val baseEnemyMageDamage: Int = 10,                // урон магии
@@ -105,7 +103,7 @@ enum class Enemy
     val enemyType: EnemyType = EnemyType.NO_TYPE,
     val spritePath: String? = null
 ) {
-    // ===== СЛИЗНИ ===== // NEW: Добавлена группирующая метка
+    // ===== СЛИЗНИ =====
     GREEN_SLIME(
         displayEnemyName = "Green Slime",
         baseEnemyDamage = 10,                    // Урон
@@ -229,7 +227,7 @@ enum class Enemy
         enemyType = EnemyType.HOLY
     ),
 
-    // ===== ЭЛЕМЕНТАЛИ ===== // NEW: Добавлена новая группа врагов - элементали
+    // ===== ЭЛЕМЕНТАЛИ =====
     FIRE_ELEMENTAL(
         displayEnemyName = "Fire Elemental",
         baseEnemyDamage = 35,
@@ -351,7 +349,7 @@ enum class Enemy
         isElite = true
     ),
 
-    // ===== СКЕЛЕТЫ ===== // NEW: Добавлена новая группа врагов - скелеты
+    // ===== СКЕЛЕТЫ =====
     SKELETON_WARRIOR(
         displayEnemyName = "Skeleton Warrior",
         baseEnemyDamage = 22,
@@ -407,7 +405,7 @@ enum class Enemy
 
 
 
-    // ===== ГОБЛИНЫ ===== // NEW: Добавлена новая группа врагов - гоблины
+    // ===== ГОБЛИНЫ =====
     GOBLIN_SCOUT(
         displayEnemyName = "Goblin Scout",
         baseEnemyDamage = 15,
@@ -474,7 +472,7 @@ enum class Enemy
         isElite = true
     ),
 
-    // ===== ПАУКИ ===== // NEW: Добавлена новая группа врагов - пауки
+    // ===== ПАУКИ =====
     SPIDER_HATCHLING(
         displayEnemyName = "Spider Hatchling",
         baseEnemyDamage = 12,
@@ -540,7 +538,7 @@ enum class Enemy
         enemyType = EnemyType.DARK
     ),
 
-    // ===== ТРОЛЛИ ===== // NEW: Добавлена новая группа врагов - тролли
+    // ===== ТРОЛЛИ =====
     FOREST_TROLL(
         displayEnemyName = "Forest Troll",
         baseEnemyDamage = 35,
@@ -568,7 +566,7 @@ enum class Enemy
         isElite = true
     ),
 
-    // ===== ОРКИ ===== // NEW: Добавлена новая группа врагов - орки
+    // ===== ОРКИ =====
     ORC_GRUNT(
         displayEnemyName = "Orc Grunt",
         baseEnemyDamage = 30,
@@ -608,7 +606,7 @@ enum class Enemy
         enemyType = EnemyType.FIRE
     ),
 
-    // ===== КРОЛИКИ ===== // NEW: Добавлена новая группа врагов - кролики
+    // ===== КРОЛИКИ =====
     RABBIT(
         displayEnemyName = "Wild Rabbit",
         baseEnemyDamage = 8,
@@ -662,7 +660,7 @@ enum class Enemy
         isElite = true
     ),
 
-    // ===== ВОЛКИ ===== // NEW: Добавлена новая группа врагов - волки
+    // ===== ВОЛКИ =====
     WOLF(
         displayEnemyName = "Wolf",
         baseEnemyDamage = 22,
@@ -793,6 +791,40 @@ enum class Enemy
         baseEnemyCritChance = 0.12,
         enemyType = EnemyType.BERSERK
     ),
+    // ===== МИМИКИ ===== // NEW: Добавлена новая группа врагов - мимики
+    SMALL_MIMIC(
+        displayEnemyName = "Small Mimic",
+        baseEnemyDamage = 18,
+        baseEnemyMageDamage = 5,
+        baseEnemyMaxHealth = 80,
+        baseEnemyDefense = 0.30,
+        baseEnemyAttackSpeed = 0.7,
+        baseEnemyAccuracy = 0.85,
+        baseEnemyWill = 0.05,
+        baseEnemyCritChance = 0.03
+    ),
+    MEDIUM_MIMIC(
+        displayEnemyName = "Medium Mimic",
+        baseEnemyDamage = 25,
+        baseEnemyMageDamage = 10,
+        baseEnemyMaxHealth = 130,
+        baseEnemyDefense = 0.40,
+        baseEnemyAttackSpeed = 0.65,
+        baseEnemyAccuracy = 0.88,
+        baseEnemyWill = 0.10,
+        baseEnemyCritChance = 0.04
+    ),
+    LARGE_MIMIC(
+        displayEnemyName = "Large Mimic",
+        baseEnemyDamage = 35,
+        baseEnemyMageDamage = 15,
+        baseEnemyMaxHealth = 200,
+        baseEnemyDefense = 0.50,
+        baseEnemyAttackSpeed = 0.6,
+        baseEnemyAccuracy = 0.90,
+        baseEnemyWill = 0.15,
+        baseEnemyCritChance = 0.05,
+    )
 }
 
 
