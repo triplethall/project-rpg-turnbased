@@ -39,8 +39,7 @@ class Inventory(
 
 
     // Кнопка открытия инвентаря
-
-    private val inventoryButtonRect = Rectangle(130f, screenHeight - 180, 120f, 120f)
+    private val inventoryButtonRect = Rectangle(140f, screenHeight - 140f, 120f, 120f)
 
 
 

@@ -22,7 +22,7 @@ class PauseMenu(
         private set
 
 
-    private val pauseButtonRect = Rectangle(0f, screenHeight - 180f, 120f, 120f)
+    private val pauseButtonRect = Rectangle(10f, screenHeight - 140f, 120f, 120f)
 
 
     var isStatsVisible = false
@@ -279,7 +279,7 @@ class PauseMenu(
         font.color = Color.YELLOW
         font.data.setScale(1.8f)
         font.draw(batch, "Player Statistics", statsX + 30f, statsY + statsH - 40f)
-        font.data.setScale(1.2f)
+        font.data.setScale(1.4f)
 
         val healthMod = player.getCorruptionHealthModifier()
         val damageMod = player.getCorruptionDamageModifier()
@@ -310,9 +310,9 @@ class PauseMenu(
         batch.draw(whitePixel, closeButtonRect.x, closeButtonRect.y,
             closeButtonRect.width, closeButtonRect.height)
         font.color = Color.WHITE
-        font.data.setScale(1f)
+        font.data.setScale(2f)
         font.draw(batch, "CLOSE", closeButtonRect.x + 20f, closeButtonRect.y + 28f)
-        font.data.setScale(1.2f)
+        font.data.setScale(1.4f)
     }
 
     private fun renderSettings(batch: SpriteBatch, whitePixel: Texture) {

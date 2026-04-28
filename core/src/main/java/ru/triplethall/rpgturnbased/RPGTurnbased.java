@@ -147,11 +147,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
         inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventoryButtonTexture);
 
-        int margin = 20;
-        float btnSize = 120;
-        float startY = Gdx.graphics.getHeight() - btnSize;
-        statsButtonRect = new Rectangle(2 * btnSize + margin, startY, btnSize, btnSize);
-
+        float btnSize = 120f;
+        float startY = Gdx.graphics.getHeight() - 140f;
+        statsButtonRect = new Rectangle(270f, startY, btnSize, btnSize);
         player = new Player();
         player.loadMapModel();
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
@@ -253,58 +251,81 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         pauseMenu.render(batch, whitePixel, player);
         inventory.render(batch, whitePixel, player);
 
-        // Ручная отрисовка баров (ТВОИ ПРАВКИ)
+        // Ручная отрисовка баров
         if (!battleScene.isActive()) {
+            // Параметры расположения и размеров (подобраны, чтобы не перекрывать кнопки)
             float bgX = 20f;
-            float bgY = Gdx.graphics.getHeight() - 220f;
+            float bgY = Gdx.graphics.getHeight() - 250f;
             float bgWidth = 500f;
-            float bgHeight = 160f;
+            float bgHeight = 140f;
+
+            // Рисуем фон (текстура бара)
             batch.draw(barTexture, bgX, bgY, bgWidth, bgHeight);
 
-            float paddingX = bgWidth * 0.165f;
-            float paddingY = bgHeight * 0.35f;
-            float innerWidth = bgWidth - paddingX * 2;
-            float innerHeight = bgHeight - paddingY * 2;
-            float innerX = bgX + paddingX;
-            float innerY = bgY + paddingY;
-            float barHeight = innerHeight * 0.4f;
-            float barSpacing = innerHeight * 0.1f;
-            float healthBarY = innerY + innerHeight - barHeight;
-            float manaBarY = healthBarY - barHeight - barSpacing;
+            // Параметры заливки (как в BattleScene)
+            float fillXOffset = 35f;      // отступ слева для полоски
+            float fillHeight = 40f;       // высота цветной заливки
+            float hpFillYOffset = 23f;    // смещение полоски HP внутри фона
+            float mpFillYOffset = 55f;    // смещение полоски MP
 
-            float healthPercent = (float) player.getCurrentHealth() / player.getMaxHealth();
+            // --- HP ---
+            float hpFillX = bgX + fillXOffset;
+            float hpFillY = bgY + hpFillYOffset;
+            float hpFullW = bgWidth - fillXOffset * 2;
+            float hpPercent = (float) player.getCurrentHealth() / player.getMaxHealth();
+            float hpFillW = hpFullW * hpPercent;
+
+            // Чёрный фон под полоской HP
             batch.setColor(Color.BLACK);
-            batch.draw(whitePixel, innerX, healthBarY, innerWidth, barHeight);
+            batch.draw(whitePixel, hpFillX, hpFillY, hpFullW, fillHeight);
+            // Красная полоска HP
             batch.setColor(Color.RED);
-            batch.draw(whitePixel, innerX, healthBarY, innerWidth * healthPercent, barHeight);
+            batch.draw(whitePixel, hpFillX, hpFillY, hpFillW, fillHeight);
+            // Эффект объёма для HP (тёмная полоска сверху, светлая снизу)
+            batch.setColor(new Color(0f, 0f, 0f, 0.2f));
+            batch.draw(whitePixel, hpFillX, hpFillY, hpFillW, fillHeight / 2f);
+            batch.setColor(new Color(1f, 1f, 1f, 0.25f));
+            batch.draw(whitePixel, hpFillX, hpFillY + fillHeight * 0.75f, hpFillW, fillHeight / 4f);
 
-            float manaPercent = (float) player.getCurrentMana() / player.getMaxMana();
+            // --- MP ---
+            float mpFillX = bgX + fillXOffset;
+            float mpFillY = bgY + mpFillYOffset;
+            float mpFullW = bgWidth - fillXOffset * 2;
+            float mpPercent = (float) player.getCurrentMana() / player.getMaxMana();
+            float mpFillW = mpFullW * mpPercent;
+
             batch.setColor(Color.BLACK);
-            batch.draw(whitePixel, innerX, manaBarY, innerWidth, barHeight);
+            batch.draw(whitePixel, mpFillX, mpFillY, mpFullW, fillHeight);
             batch.setColor(Color.BLUE);
-            batch.draw(whitePixel, innerX, manaBarY, innerWidth * manaPercent, barHeight);
+            batch.draw(whitePixel, mpFillX, mpFillY, mpFillW, fillHeight);
+            batch.setColor(new Color(0f, 0f, 0f, 0.2f));
+            batch.draw(whitePixel, mpFillX, mpFillY, mpFillW, fillHeight / 2f);
+            batch.setColor(new Color(1f, 1f, 1f, 0.25f));
+            batch.draw(whitePixel, mpFillX, mpFillY + fillHeight * 0.75f, mpFillW, fillHeight / 4f);
 
+            // Текст с тенью (как в BattleScene)
             GlyphLayout layout = new GlyphLayout();
             font.getData().setScale(1.2f);
 
-            String healthText = player.getCurrentHealth() + "/" + player.getMaxHealth();
-            layout.setText(font, healthText);
-            float healthTextX = innerX + (innerWidth - layout.width) / 2;
-            float healthTextY = healthBarY + (barHeight + layout.height) / 2;
+            String hpText = player.getCurrentHealth() + "/" + player.getMaxHealth();
+            layout.setText(font, hpText);
+            float hpTextX = hpFillX + (hpFullW - layout.width) / 2;
+            float hpTextY = hpFillY + (fillHeight + layout.height) / 2;
             font.setColor(Color.BLACK);
-            font.draw(batch, healthText, healthTextX + 2f, healthTextY - 2f);
+            font.draw(batch, hpText, hpTextX + 2f, hpTextY - 2f);
             font.setColor(Color.WHITE);
-            font.draw(batch, healthText, healthTextX, healthTextY);
+            font.draw(batch, hpText, hpTextX, hpTextY);
 
-            String manaText = player.getCurrentMana() + "/" + player.getMaxMana();
-            layout.setText(font, manaText);
-            float manaTextX = innerX + (innerWidth - layout.width) / 2;
-            float manaTextY = manaBarY + (barHeight + layout.height) / 2;
+            String mpText = player.getCurrentMana() + "/" + player.getMaxMana();
+            layout.setText(font, mpText);
+            float mpTextX = mpFillX + (mpFullW - layout.width) / 2;
+            float mpTextY = mpFillY + (fillHeight + layout.height) / 2;
             font.setColor(Color.BLACK);
-            font.draw(batch, manaText, manaTextX + 2f, manaTextY - 2f);
+            font.draw(batch, mpText, mpTextX + 2f, mpTextY - 2f);
             font.setColor(Color.WHITE);
-            font.draw(batch, manaText, manaTextX, manaTextY);
+            font.draw(batch, mpText, mpTextX, mpTextY);
 
+            // Сброс цвета и масштаба
             batch.setColor(Color.WHITE);
             font.getData().setScale(1f);
         }
