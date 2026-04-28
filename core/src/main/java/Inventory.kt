@@ -326,8 +326,8 @@ class Inventory(
 
 
         // 1. Рисуем кнопку инвентаря (всегда видна)
-        batch.draw(invbutt, inventoryButtonRect.x, inventoryButtonRect.y,
-            inventoryButtonRect.width, inventoryButtonRect.height)
+        //batch.draw(invbutt, inventoryButtonRect.x, inventoryButtonRect.y,
+          //  inventoryButtonRect.width, inventoryButtonRect.height)
 
         if (!isVisible) return
 

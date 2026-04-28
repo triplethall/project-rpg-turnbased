@@ -19,7 +19,7 @@ class BattleScene(
     private val gameMap: GameMap,
     private val BGArena: Texture,
     private val whitePixel: Texture,
-    private val barTexture : Texture
+    private val barTexture: Texture
 ) {
     var isActive = false
         private set
@@ -45,13 +45,11 @@ class BattleScene(
             slimeAtlas = TextureAtlas(atlasFile)
             val frames = com.badlogic.gdx.utils.Array<TextureRegion>()
 
-            // ЛОГИРОВАНИЕ: Выводим все имена, которые реально есть в атласе
             Gdx.app.log("BATTLE_DEBUG", "--- Список регионов в атласе ---")
             slimeAtlas?.regions?.forEach {
                 Gdx.app.log("BATTLE_DEBUG", "Найдено имя: '${it.name}'")
             }
 
-            // Попытка найти кадры (пробуем разные варианты имен)
             val namesToTry = arrayOf("idle1", "idle2", "idle_1", "idle_2", "idle")
 
             for (name in namesToTry) {
@@ -73,7 +71,6 @@ class BattleScene(
             attackFrames.add(slimeAtlas?.findRegion("attack1"))
             attackFrames.add(slimeAtlas?.findRegion("attack2"))
             attackFrames.add(slimeAtlas?.findRegion("attack3"))
-// Animation.PlayMode.NORMAL (проиграть один раз и остановиться на последнем кадре)
             slimeAttackAnimation = Animation(0.1f, attackFrames, Animation.PlayMode.NORMAL)
 
         } catch (e: Exception) {
@@ -140,8 +137,9 @@ class BattleScene(
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
 
-        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color.RED) // NEW: Цвет изменён на явный Color.RED (было 0.5f, 0.15f, 0.1f, 1f)
-        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color.BLUE)   // NEW: Цвет изменён на явный Color.BLUE (было 0.129f, 0.216f, 0.471f, 1f)
+        // Оригинальные цвета из первого файла
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color(0.5f, 0.15f, 0.1f, 1f))
+        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color(0.129f, 0.216f, 0.471f, 1f))
 
         updateEnemyBars()
         if (player.skills.isEmpty()) {
@@ -176,10 +174,11 @@ class BattleScene(
         val playerBarX = 20f
         val playerHealthY = screenHeight * 0.9f
         val playerManaY = playerHealthY - squareSize - (padding * 2) - verticalGap
-        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 20f, Color.RED) // NEW: Цвет изменён на явный Color.RED
-        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 20f, Color.BLUE)   // NEW: Цвет изменён на явный Color.BLUE
-        updateEnemyBars()
+        // Унифицируем высоту баров для общей подложки, цвета оставляем оригинальными
+        playerHealthBar = StatBar(playerBarX, playerHealthY, 400f, 100f, Color(0.5f, 0.15f, 0.1f, 1f))
+        playerManaBar = StatBar(playerBarX, playerManaY, 400f, 100f, Color(0.129f, 0.216f, 0.471f, 1f))
 
+        updateEnemyBars()
         if (player.skills.isEmpty()) {
             player.learnSkillsForClass()
         }
@@ -216,13 +215,12 @@ class BattleScene(
 
         val barWidth = rectWidth
         val barHeight = 55f
-        val gapAboveEnemy = 15f // Расстояние между врагом и полоской
+        val gapAboveEnemy = 15f
 
         enemies.forEachIndexed { index, enemy ->
             var barX = enemyStartX
             var barY = 0f
 
-            // Дублируем логику координат из getEnemyPos
             when (enemies.size) {
                 1 -> {
                     barY = rectY - 100f + rectHeight + gapAboveEnemy
@@ -253,7 +251,6 @@ class BattleScene(
                     }
                 }
             }
-
             enemyBars.add(StatBar(barX, barY, barWidth, barHeight, Color.RED))
         }
     }
@@ -280,7 +277,6 @@ class BattleScene(
         val touchY = Gdx.input.y.toFloat()
         val yInverted = screenHeight - touchY
 
-        // Обновляем ховер для радиального меню
         if (showSkillWheel) {
             updateSkillWheelHover(touchX, yInverted)
         }
@@ -296,19 +292,16 @@ class BattleScene(
         }
 
         if (Gdx.input.justTouched()) {
-            // ===== 1. РАДИАЛЬНОЕ МЕНЮ НАВЫКОВ =====
             if (showSkillWheel) {
                 return handleSkillWheelInput(touchX, yInverted)
             }
 
-            // ===== 2. КНОПКА ОТКРЫТИЯ МЕНЮ НАВЫКОВ =====
             if (!madeMoveThisTurn && skillsMenuButtonRect.contains(touchX, yInverted)) {
                 showSkillWheel = true
                 buildSkillWheel()
                 return true
             }
 
-            // ===== 3. ВЫБОР ЦЕЛИ ДЛЯ НАВЫКА =====
             if (waitingForSkillTarget && selectedSkill != null) {
                 val clickedIndex = getEnemyPos(touchX, yInverted)
                 if (clickedIndex != -1 && enemies.getOrNull(clickedIndex)?.isAlive() == true) {
@@ -324,7 +317,6 @@ class BattleScene(
                 }
             }
 
-            // ===== 4. ВЫБОР ВРАГА =====
             if (!madeMoveThisTurn && !waitingForSkillTarget) {
                 val clickedIndex = getEnemyPos(touchX, yInverted)
                 if (clickedIndex != -1 && enemies.getOrNull(clickedIndex)?.isAlive() == true) {
@@ -333,30 +325,25 @@ class BattleScene(
                 }
             }
 
-            // ===== 5. КНОПКА АТАКИ =====
             if (!madeMoveThisTurn && attackButtonRect.contains(touchX, yInverted)) {
                 performAttack()
                 return true
             }
 
-            // ===== 6. КНОПКА СЛЕДУЮЩИЙ ХОД =====
             if (madeMoveThisTurn && nextTurnButtonRect.contains(touchX, yInverted)) {
                 nextTurn()
                 return true
             }
 
-            // ===== 7. КНОПКА ПРОПУСКА ХОДА =====
             if (!madeMoveThisTurn && skipButtonRect.contains(touchX, yInverted)) {
                 skipTurn()
                 return true
             }
-            // ===== 8. КНОПКА ПОБЕГА =====
             if (!madeMoveThisTurn && fleeButtonRect.contains(touchX, yInverted)) {
                 flee()
                 return true
             }
         }
-
         return false
     }
     fun getEnemyPos(x: Float, y: Float): Int {
@@ -400,13 +387,13 @@ class BattleScene(
 
     private fun victoryScreen() {
         println("victory")
-        SoundManager.playSound("sounds/victorySound.mp3") // Звук победы
+        SoundManager.playSound("sounds/victorySound.mp3")
         showVictoryScreen = true
     }
 
     private fun defeatScreen() {
         println("defeat")
-        SoundManager.playSound("sounds/battleFail.mp3")   // Звук поражения
+        SoundManager.playSound("sounds/battleFail.mp3")
         val lostExp = (player.experience * 0.2).toInt().coerceAtLeast(1)
         println("lostExp = $lostExp")
         player.experience = (player.experience - lostExp).coerceAtLeast(0)
@@ -474,7 +461,6 @@ class BattleScene(
         }
         val target = enemies[enemyIndex]
 
-        // ===== ПРОВЕРКА УКЛОНЕНИЯ ВРАГА (для WIND и BUNNY) ===== // NEW: Добавлена механика уклонения
         if (target.canDodge(isPhysical = true)) {
             messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
             SoundManager.playSound("sounds/miss.mp3")
@@ -482,9 +468,8 @@ class BattleScene(
             return
         }
 
-        // ===== ПРОВЕРКА УКЛОНЕНИЯ ВРАГА (для типа WIND) ===== // NEW: Дополнительная проверка уклонения для ветряных врагов
         if (target.enemyType == EnemyType.WIND) {
-            val dodgeChance = 0.25 // 25% уклонение от физических атак
+            val dodgeChance = 0.25
             if (Random.nextDouble() < dodgeChance) {
                 messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
                 madeMoveThisTurn = true
@@ -496,29 +481,25 @@ class BattleScene(
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val totalDamage = (baseDamage * randomMultiplier).toInt()
         var targetDefense = target.defense
-        val dmgWithDef = (totalDamage * (1 - targetDefense.coerceAtMost(0.8))).toInt() // Ограничим защиту 80% // NEW: Добавлено ограничение защиты до 80%
+        val dmgWithDef = (totalDamage * (1 - targetDefense.coerceAtMost(0.8))).toInt()
 
-        // NEW: Увеличение защиты для земляных врагов
         if (target.enemyType == EnemyType.EARTH) {
             targetDefense += 0.3
         }
 
-        // Наносим урон и проверяем, попала ли атака
-        val attackHit = target.takeDamage(dmgWithDef, EnemyType.NO_TYPE, false) // NEW: Проверка попадания через takeDamage
+        val attackHit = target.takeDamage(dmgWithDef, EnemyType.NO_TYPE, false)
 
         if (!attackHit) {
-            // Атака не нанесла урон (уклонение кролика от первой атаки)
             messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
             madeMoveThisTurn = true
             return
         }
 
         target.takeDamage(dmgWithDef)
-        SoundManager.playSound("sounds/atack.mp3") // звук атаки
+        SoundManager.playSound("sounds/atack.mp3")
         messageSystem.addMessage("dealt $dmgWithDef dmg to ${target.name}", Color.GREEN)
 
         if (!target.isAlive()) {
-            // Проверяем воскрешение нежити // NEW: Добавлена механика воскрешения нежити
             if (target.tryResurrect()) {
                 messageSystem.addMessage("${target.name} воскрес!", Color.PURPLE)
                 return
@@ -530,7 +511,6 @@ class BattleScene(
             messageSystem.addMessage("got $gainExp from ${target.name}", Color.GOLD)
             enemies.removeAt(enemyIndex)
 
-            // Проклятый враг накладывает проклятие при смерти
             if (target.enemyType == EnemyType.CURSED) {
                 player.applyDebuff(DebuffType.CURSE, 3, 0.7)
                 messageSystem.addMessage("${target.name} cursed you!", Color.PURPLE)
@@ -572,7 +552,6 @@ class BattleScene(
                     return@forEach
                 }
 
-                // Лечение от HOLY типа
                 if (enemy.enemyType == EnemyType.HOLY && enemy.isAlive()) {
                     val healAmount = (enemy.maxHealth * 0.05).toInt()
                     enemies.filter { it.isAlive() && it != enemy }.forEach { ally ->
@@ -591,7 +570,6 @@ class BattleScene(
                     player.currentHealth = (player.currentHealth - dmgWithDef)
                     messageSystem.addMessage("${enemy.name} dealt you $dmgWithDef dmg", Color.RED)
 
-                    // Кража жизни для DARK типа // NEW: Добавлена механика кражи жизни для тёмных врагов
                     if (enemy.enemyType == EnemyType.DARK) {
                         val stolen = enemy.tryLifeSteal(dmgWithDef)
                         if (stolen > 0) {
@@ -599,7 +577,6 @@ class BattleScene(
                         }
                     }
 
-                    // Применяем дебаффы от атаки врага
                     applyEnemyDebuff(enemy)
                 } else {
                     messageSystem.addMessage("${enemy.name} missed", Color.YELLOW)
@@ -634,17 +611,16 @@ class BattleScene(
 
     private fun applyEnemyDebuff(enemy: BattleEnemy) {
         val debuffChance = when (enemy.enemyType) {
-            EnemyType.WATER -> 0.20    // 20% на мокроту
-            EnemyType.ICE -> 0.25      // 25% на заморозку
-            EnemyType.ELECTRIC -> 0.20 // 20% на паралич
-            EnemyType.CURSED -> 0.15   // 15% на проклятие (при атаке, но основное при смерти)
-            EnemyType.POISON -> 0.25   // 25% на отравление
-            EnemyType.BLOOD -> 0.30    // Кровавый тип - 30% шанс на кровотечение // NEW: Добавлен дебафф для BLOOD типа
-            EnemyType.FIRE -> 0.25     // 25% на горение
+            EnemyType.WATER -> 0.20
+            EnemyType.ICE -> 0.25
+            EnemyType.ELECTRIC -> 0.20
+            EnemyType.CURSED -> 0.15
+            EnemyType.POISON -> 0.25
+            EnemyType.BLOOD -> 0.30
+            EnemyType.FIRE -> 0.25
             else -> 0.0
         }
 
-        // Проверка на сопротивление (воля игрока)
         val finalChance = debuffChance * (1.0 - player.will)
         if (Random.nextDouble() >= finalChance) return
 
@@ -673,7 +649,7 @@ class BattleScene(
                 player.applyDebuff(DebuffType.WET, 3, 1.0)
                 messageSystem.addMessage("Игрок промок! (+25% урон от молний)", Color.CYAN)
             }
-            EnemyType.BLOOD -> { // NEW: Обработка кровотечения
+            EnemyType.BLOOD -> {
                 player.applyDebuff(DebuffType.BLEED, 3, 1.0, 1)
                 messageSystem.addMessage("Игрок истекает кровью!", Color.RED)
             }
@@ -683,19 +659,15 @@ class BattleScene(
 
     private fun nextTurn() {
         madeMoveThisTurn = false
-        player.skills.forEach { it.reduceCooldown() } // Уменьшаем кулдауны
-        // Базовое восстановление маны
+        player.skills.forEach { it.reduceCooldown() }
         var manaRegen = 10
 
-        // Бонус от баффов (если есть бесконечная мана) // NEW: Добавлен бонус восстановления маны от баффов
         if (DebuffApplier.hasInfiniteMana(player.debuffManager.getAllDebuff())) {
-            manaRegen = player.maxMana // Полное восстановление
+            manaRegen = player.maxMana
         }
 
-        // Применяем восстановление с проверкой на максимум
         player.currentMana = (player.currentMana + manaRegen).coerceAtMost(player.maxMana)
 
-        // Сообщение о восстановлении маны // NEW: Добавлено сообщение о регенерации маны
         if (manaRegen > 0 && player.currentMana < player.maxMana) {
             messageSystem.addMessage("Восстановлено $manaRegen маны", Color.CYAN)
         }
@@ -728,7 +700,7 @@ class BattleScene(
         }
     }
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player) {
-        stateTime += Gdx.graphics.deltaTime // Обновляем время анимации
+        stateTime += Gdx.graphics.deltaTime
 
         if (showVictoryScreen) {
             drawVictoryScreen(batch, whitePixel)
@@ -797,9 +769,8 @@ class BattleScene(
                 }
             }
 
-            // NEW: Заменён сложный метод drawPlayerBars на универсальный drawBarWithText
-            drawBarWithText(batch, playerHealthBar, "${player.currentHealth}/${player.maxHealth}", 2f, barTexture)
-            drawBarWithText(batch, playerManaBar, "${player.currentMana}/${player.maxMana}", 2f, barTexture)
+            // Отрисовка общих баров игрока (с оригинальными цветами)
+            drawPlayerBars(batch, playerHealthBar, playerManaBar, barTexture, gap = 1f)
 
             // --- СТАТИСТИКА ИГРОКА ---
             font.data.setScale(1.4f)
@@ -869,7 +840,6 @@ class BattleScene(
         batch.color = Color.PURPLE
         batch.draw(whitePixel, skillsBtnX, skillsBtnY, skillsMenuButtonSize, skillsMenuButtonSize)
 
-        // Белая рамка
         batch.color = Color.WHITE
         batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY - 2f, skillsMenuButtonSize + 4f, 2f)
         batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY + skillsMenuButtonSize, skillsMenuButtonSize + 4f, 2f)
@@ -936,7 +906,6 @@ class BattleScene(
             val text = ">>> Выбери цель для ${selectedSkill!!.name} <<<"
             layout.setText(font, text)
 
-            // Фон для текста
             batch.color = Color(0f, 0f, 0f, 0.5f)
             batch.draw(whitePixel,
                 screenWidth/2 - layout.width/2 - 10f,
@@ -944,7 +913,6 @@ class BattleScene(
                 layout.width + 20f,
                 40f)
 
-            // Текст
             batch.color = Color.WHITE
             font.color = Color.YELLOW
             font.draw(batch, text,
@@ -953,17 +921,16 @@ class BattleScene(
             font.data.setScale(1f)
         }
 
-        // ===== СООБЩЕНИЯ БОЯ =====
         if (::messageSystem.isInitialized) {
             messageSystem.render(batch)
         }
 
-        // ===== РАДИАЛЬНОЕ МЕНЮ (поверх всего) =====
         drawSkillWheel(batch, whitePixel)
 
         font.data.setScale(1f)
         font.color = Color.WHITE
     }
+
     private fun drawBarWithText(
         batch: SpriteBatch,
         bar: StatBar,
@@ -972,32 +939,100 @@ class BattleScene(
         texture: Texture,
         drawBar: Boolean = true
     ) {
-        // Рисуем сам бар, если это нужно (для игрока)
         if (drawBar) {
-            // Здесь используем актуальные статы игрока в зависимости от цвета бара
             val current = if (bar.color == Color.RED) player.currentHealth else player.currentMana
             val max = if (bar.color == Color.RED) player.maxHealth else player.maxMana
             bar.render(batch, texture, whitePixel, current, max)
         }
 
-        // Настраиваем шрифт
         font.data.setScale(scale)
         layout.setText(font, text)
 
-        // Вычисляем центр
         val textX = bar.x + (bar.width - layout.width) / 2
         val textY = bar.y + (bar.height + layout.height) / 2
 
-        // РИСУЕМ ТЕНЬ (черный текст со смещением на 2 пикселя)
         font.color = Color.BLACK
         font.draw(batch, text, textX + 2f, textY - 2f)
 
-        // РИСУЕМ ОСНОВНОЙ ТЕКСТ (поверх тени)
         font.color = Color.WHITE
         font.draw(batch, text, textX, textY)
 
-        // Сбрасываем масштаб и цвет для остального рендера
         font.data.setScale(1.0f)
+        font.color = Color.WHITE
+    }
+
+    // ===== ОБЩАЯ ПОДЛОЖКА ДЛЯ БАРОВ ИГРОКА (с сохранением оригинальных цветов) =====
+    fun drawPlayerBars(
+        batch: SpriteBatch,
+        hpBar: StatBar,
+        mpBar: StatBar,
+        bgTexture: Texture,
+        gap: Float = 1f
+    ) {
+        val bgY = mpBar.y
+        val bgHeight = hpBar.height + mpBar.height + gap
+        batch.draw(bgTexture, hpBar.x - 85f, bgY - 40f, hpBar.width * 1.8f, bgHeight * 1.4f)
+
+        val hpFillYOffset = hpBar.height * 0.23f
+        val mpFillYOffset = mpBar.height * 0.45f
+        val fillXOffset = hpBar.width * 0.0875f
+        val fillHeight = hpBar.height / 2.4f
+
+        val hpRatio = (player.currentHealth.toFloat() / player.maxHealth).coerceIn(0f, 1f)
+        val mpRatio = (player.currentMana.toFloat() / player.maxMana).coerceIn(0f, 1f)
+
+        val hpFillX = hpBar.x + fillXOffset
+        val hpFillY = hpBar.y + hpFillYOffset
+        val hpFullW = hpBar.width + 85f
+        val hpFillW = hpBar.width * hpRatio + 85f
+
+        val mpFillX = mpBar.x + fillXOffset
+        val mpFillY = mpBar.y + mpFillYOffset
+        val mpFullW = mpBar.width + 85f
+        val mpFillW = mpBar.width * mpRatio + 85f
+
+        batch.color = hpBar.color  // оригинальный цвет здоровья
+        batch.draw(whitePixel, hpFillX, hpFillY, hpFillW, fillHeight)
+        batch.color = mpBar.color  // оригинальный цвет маны
+        batch.draw(whitePixel, mpFillX, mpFillY, mpFillW, fillHeight)
+        batch.color = Color.WHITE
+
+        fun addVolume(fillX: Float, fillY: Float, fillW: Float, fillH: Float) {
+            batch.color = Color(0f, 0f, 0f, 0.2f)
+            batch.draw(whitePixel, fillX, fillY, fillW, fillH / 2f)
+            batch.color = Color(1f, 1f, 1f, 0.25f)
+            batch.draw(whitePixel, fillX, fillY + fillH * 0.75f, fillW, fillH / 4f)
+            batch.color = Color.WHITE
+        }
+        addVolume(hpFillX, hpFillY, hpFillW, fillHeight)
+        addVolume(mpFillX, mpFillY, mpFillW, fillHeight)
+
+        fun drawOverflow(fillX: Float, fillY: Float, fillH: Float, fullW: Float, current: Int, max: Int) {
+            if (current > max) {
+                val overflowRatio = (current - max).toFloat() / max
+                val overflowW = (fullW * overflowRatio).coerceAtMost(fullW)
+                batch.color = Color(1f, 1f, 1f, 0.4f)
+                batch.draw(whitePixel, fillX, fillY, overflowW, fillH)
+                batch.color = Color.WHITE
+            }
+        }
+        drawOverflow(hpFillX, hpFillY, fillHeight, hpFullW, player.currentHealth, player.maxHealth)
+        drawOverflow(mpFillX, mpFillY, fillHeight, mpFullW, player.currentMana, player.maxMana)
+
+        font.data.setScale(3f)
+        fun drawCentered(text: String, fillX: Float, fillY: Float, fullW: Float, fillH: Float) {
+            layout.setText(font, text)
+            val cx = fillX + (fullW - layout.width) / 2
+            val cy = fillY + (fillH + layout.height) / 2 + 2f
+            font.color = Color.BLACK
+            font.draw(batch, text, cx + 2f, cy - 2f)
+            font.color = Color.WHITE
+            font.draw(batch, text, cx, cy)
+        }
+        drawCentered("${player.currentHealth}/${player.maxHealth}", hpFillX, hpFillY, hpFullW, fillHeight)
+        drawCentered("${player.currentMana}/${player.maxMana}", mpFillX, mpFillY, mpFullW, fillHeight)
+
+        font.data.setScale(1f)
         font.color = Color.WHITE
     }
 
@@ -1014,7 +1049,7 @@ class BattleScene(
         val angleStep = 360.0 / skills.size
 
         skills.forEachIndexed { index, skill ->
-            val angle = Math.toRadians(index * angleStep - 90.0) // -90 чтобы первый был сверху
+            val angle = Math.toRadians(index * angleStep - 90.0)
 
             val buttonX = (skillWheelCenterX + skillWheelRadius * Math.cos(angle)).toFloat() - skillWheelButtonSize / 2
             val buttonY = (skillWheelCenterY + skillWheelRadius * Math.sin(angle)).toFloat() - skillWheelButtonSize / 2
@@ -1027,26 +1062,21 @@ class BattleScene(
     private fun drawSkillWheel(batch: SpriteBatch, whitePixel: Texture) {
         if (!showSkillWheel) return
 
-        // Затемнённый фон
         batch.color = Color(0f, 0f, 0f, 0.7f)
         batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
 
-        // Центральный круг
         batch.color = Color.DARK_GRAY
         batch.draw(whitePixel, skillWheelCenterX - 60f, skillWheelCenterY - 60f, 120f, 120f)
 
-        // Линии от центра к кнопкам
         batch.color = Color.GRAY
         skillWheelButtons.forEach { button ->
             val endX = button.rect.x + skillWheelButtonSize / 2
             val endY = button.rect.y + skillWheelButtonSize / 2
         }
 
-        // Кнопки навыков
         skillWheelButtons.forEachIndexed { index, button ->
             val skill = button.skill
 
-            // Цвет кнопки в зависимости от состояния
             val color = when {
                 !skill.canUse(player, enemies) -> Color(0.3f, 0.3f, 0.3f, 1f)
                 skill.isOnCooldown() -> Color(0.5f, 0.5f, 0.5f, 1f)
@@ -1057,11 +1087,8 @@ class BattleScene(
             batch.color = color
             batch.draw(whitePixel, button.rect.x, button.rect.y, button.rect.width, button.rect.height)
 
-            // Рамка кнопки
             batch.color = Color.WHITE
-            // Здесь можно нарисовать рамку
 
-            // Текст на кнопке
             font.data.setScale(1.5f)
             font.color = Color.WHITE
 
@@ -1075,13 +1102,11 @@ class BattleScene(
             val textX = button.rect.x + (button.rect.width - layout.width) / 2
             val textY = button.rect.y + (button.rect.height + layout.height) / 2
 
-            // Тень текста
             font.color = Color.BLACK
             font.draw(batch, text, textX + 2f, textY - 2f)
             font.color = Color.WHITE
             font.draw(batch, text, textX, textY)
 
-            // Название навыка под кнопкой
             font.data.setScale(1.3f)
             layout.setText(font, skill.name)
             val nameX = button.rect.x + (button.rect.width - layout.width) / 2
@@ -1092,7 +1117,6 @@ class BattleScene(
             font.draw(batch, skill.name, nameX, nameY)
         }
 
-        // Кнопка закрытия в центре
         batch.color = Color.RED
         batch.draw(whitePixel, skillWheelCenterX - 30f, skillWheelCenterY - 30f, 60f, 60f)
         font.data.setScale(0.8f)
@@ -1110,7 +1134,6 @@ class BattleScene(
     private fun handleSkillWheelInput(touchX: Float, touchY: Float): Boolean {
         if (!showSkillWheel) return false
 
-        // Проверяем кнопку закрытия в центре
         val centerRect = Rectangle(skillWheelCenterX - 45f, skillWheelCenterY - 45f, 90f, 90f)
         if (centerRect.contains(touchX, touchY)) {
             showSkillWheel = false
@@ -1118,20 +1141,17 @@ class BattleScene(
             return true
         }
 
-        // Проверяем кнопки навыков
         skillWheelButtons.forEachIndexed { index, button ->
             if (button.rect.contains(touchX, touchY)) {
                 val skill = button.skill
 
                 if (skill.canUse(player, enemies)) {
-                    // Если навык требует цели, ждём выбора врага
                     if (skill is TargetableSkill) {
                         selectedSkill = skill
                         waitingForSkillTarget = true
                         showSkillWheel = false
                         messageSystem.addMessage("Choose target for ${skill.name}", Color.YELLOW)
                     } else {
-                        // Иначе сразу применяем
                         useSkill(skill)
                         showSkillWheel = false
                     }
@@ -1147,7 +1167,6 @@ class BattleScene(
                 return true
             }
         }
-        // Клик вне меню - закрываем
         showSkillWheel = false
         skillWheelSelectedIndex = -1
         return true
@@ -1174,9 +1193,8 @@ class BattleScene(
     ) {
         if (!enemy.isAlive()) return
 
-        // 1. Рисуем тень/выделение под врагом, если он выбран
         if (isSelected) {
-            batch.color = Color(1f, 1f, 0f, 0.4f) // Желтая подсветка
+            batch.color = Color(1f, 1f, 0f, 0.4f)
             batch.draw(whitePixel, x - 5f, y - 5f, width + 10f, height + 10f)
         }
 
@@ -1192,51 +1210,42 @@ class BattleScene(
             EnemyType.ELECTRIC -> " [Electric]"
             EnemyType.POISON -> " [Poison]"
             EnemyType.HOLY -> " [Holy]"
-            EnemyType.DARK -> " [Dark]"      // NEW: Отображение нового типа
-            EnemyType.BLOOD -> " [Blood]"    // NEW: Отображение нового типа
-            EnemyType.BERSERK -> " [Berserk]" // NEW: Отображение нового типа
-            EnemyType.UNDEAD -> " [Undead]"   // NEW: Отображение нового типа
-            EnemyType.BUNNY -> " [Bunny]"     // NEW: Отображение нового типа
+            EnemyType.DARK -> " [Dark]"
+            EnemyType.BLOOD -> " [Blood]"
+            EnemyType.BERSERK -> " [Berserk]"
+            EnemyType.UNDEAD -> " [Undead]"
+            EnemyType.BUNNY -> " [Bunny]"
         }
-        // 2. Получаем кадр анимации
         batch.color = Color.WHITE
         val currentFrame = slimeIdleAnimation?.getKeyFrame(stateTime)
 
         if (currentFrame != null) {
-            // Рисуем спрайт слайма
             batch.draw(currentFrame, x, y, width, height)
         } else {
-            // Резервный вариант, если атлас не подгрузился
             batch.color = Color.GREEN
             batch.draw(whitePixel, x, y, width, height)
         }
         font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
         font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)
 
-        //font.data.setScale(oldScaleX, oldScaleY)
         font.color = Color.WHITE
     }
 
     fun endBattleAndClearEnemy() {
         if (isActive && showVictoryScreen) {
-            // Только победа удаляет врагов
             if (enemyCells.isNotEmpty()) {
-                // Бой через сундук – удаляем всех врагов из списка
                 for ((x, y) in enemyCells) {
                     if (x in 0 until gameMap.width && y in 0 until gameMap.height) {
                         gameMap.restoreAfterBattle(x, y)
                     }
                 }
             } else {
-                // Обычный бой с одним врагом – удаляем клетку, с которой начался бой
                 if (enemyX in 0 until gameMap.width && enemyY in 0 until gameMap.height) {
                     gameMap.restoreAfterBattle(enemyX, enemyY)
                 }
             }
         }
-        // При побеге или поражении ничего не восстанавливаем – враг остаётся
 
-        // сброс кд навыков
         player.skills.forEach { skill ->
             skill.currentCooldown = 0
         }
