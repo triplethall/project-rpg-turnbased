@@ -1,0 +1,9 @@
+slime1-attack.png
+size:2048,512
+repeat:none
+attack1
+bounds:760,2,377,256
+attack2
+bounds:381,2,377,256
+attack3
+bounds:2,2,377,256
