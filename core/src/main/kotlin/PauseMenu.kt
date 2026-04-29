@@ -224,12 +224,8 @@ class PauseMenu(
     }
 
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player? = null) {
-        // Кнопка паузы
-        if (!isVisible) {
-            batch.color = Color.WHITE
-            batch.draw(pauseButtonTexture, pauseButtonRect.x, pauseButtonRect.y,
-                pauseButtonRect.width, pauseButtonRect.height)
-        }
+
+
 
         // Затемнение фона
         if (isVisible || isStatsVisible || isSettingsVisible) {
