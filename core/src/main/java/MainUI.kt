@@ -1,5 +1,6 @@
 package ru.triplethall.rpgturnbased
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
@@ -60,7 +61,9 @@ class MainUI(
      * @return true, если касание было обработано (клик по одной из кнопок)
      */
     fun handleInput(touchX: Float, touchY: Float): Boolean {
-        // Инвертируем Y, так как входные координаты идут от верхнего левого угла
+        // Реагируем только на начало касания (один раз за клик)
+        if (!Gdx.input.justTouched()) return false
+
         val invertedY = screenHeight - touchY
 
         if (pauseButtonRect.contains(touchX, invertedY)) {
