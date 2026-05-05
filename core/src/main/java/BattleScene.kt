@@ -132,7 +132,7 @@ class BattleScene(
         messageSystem.addMessage("start", Color.YELLOW)
         this.enemyX = enemyCellX
         this.enemyY = enemyCellY
-        this.enemies = BattleEnemy.createRandomEnemies(enemyCount.coerceIn(1, 3))
+        this.enemies = BattleEnemy.createRandomEnemies(enemyCount.coerceIn(1, 8))
         isActive = true
         madeMoveThisTurn = false
         enemyIndex = 0
@@ -493,6 +493,7 @@ class BattleScene(
     fun isShowingEndScreen(): Boolean = showVictoryScreen || showDefeatScreen
 
     private fun performAttack() {
+        if (enemies.isEmpty()) return // по идее чтобы игра не крашилась если врагов нету
         if (isFleeing) {
             messageSystem.addMessage("trying to escape! can't attack!", Color.RED)
             addToBattleLog("Can't attack while escaping!")
@@ -550,6 +551,16 @@ class BattleScene(
                 addToBattleLog("${target.name} resurrected!")
                 return
             }
+            enemies.removeAt(enemyIndex)
+
+            if (enemies.isEmpty()) {
+                messageSystem.addMessage("victory🕺")
+                addToBattleLog("Victory!")
+                victoryScreen()
+                return
+            }
+
+
 
             messageSystem.addMessage("${target.name} is ded", Color.ORANGE)
             addToBattleLog("${target.name} died")
@@ -578,6 +589,10 @@ class BattleScene(
             if (enemyIndex >= enemies.size) {
                 enemyIndex = 0
             }
+
+            updateEnemyBars() // Обновляем полоски
+            madeMoveThisTurn = true // Помечаем, что ход сделан
+            return
         }
         madeMoveThisTurn = true
     }

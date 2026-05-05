@@ -563,9 +563,9 @@ class Inventory(
 
     private fun renderItems(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float) {
         val startX = panelX + 50f
-        val startY = panelY + panelH - 150f
-        val itemSize = 80f
-        val padding = 20f
+        val startY = panelY + panelH - 180f // Опустили чуть ниже
+        val itemSize = 120f  // Было 80, стало 120
+        val padding = 50f    // Было 20, стало 50
         val itemsPerRow = 4
 
         itemRects.clear()
@@ -578,39 +578,46 @@ class Inventory(
             val itemRect = Rectangle(x, y - itemSize, itemSize, itemSize)
             itemRects.add(itemRect)
 
+            // Обводка выбранного предмета
             if (index == selectedItemIndex) {
                 batch.color = Color.YELLOW
                 batch.draw(whitePixel, x - 5f, y - itemSize - 5f, itemSize + 10f, itemSize + 10f)
             }
 
+            // Фон ячейки
             batch.color = if (item.isEquipped) Color.GOLD else Color.GRAY
             batch.draw(whitePixel, x, y - itemSize, itemSize, itemSize)
 
+            // Цветная иконка предмета
             batch.color = when {
                 item.isEquippable -> Color.ORANGE
                 item.name.contains("Potion") -> Color.RED
                 else -> Color.CYAN
             }
-            batch.draw(whitePixel, x + 10f, y - itemSize + 10f, itemSize - 20f, itemSize - 20f)
+            batch.draw(whitePixel, x + 15f, y - itemSize + 15f, itemSize - 30f, itemSize - 30f)
 
+            // КОЛИЧЕСТВО (увеличил шрифт)
             if (item.quantity > 1) {
                 font.color = Color.WHITE
-                font.data.setScale(1f)
-                font.draw(batch, "x${item.quantity}", x + itemSize - 30f, y - 10f)
+                font.data.setScale(1.2f)
+                font.draw(batch, "x${item.quantity}", x + itemSize - 45f, y - 10f)
             }
 
+            // Метка надетого предмета (увеличил шрифт)
             if (item.isEquipped) {
                 font.color = Color.GREEN
-                font.data.setScale(1f)
-                font.draw(batch, "E", x + 5f, y - 15f)
+                font.data.setScale(1.3f)
+                font.draw(batch, "E", x + 10f, y - 15f)
             }
 
+            // НАЗВАНИЕ ПРЕДМЕТА (увеличил шрифт до 1.2f и поднял над ячейкой)
             font.color = Color.WHITE
-            font.data.setScale(0.6f)
-            val shortName = if (item.name.length > 12) item.name.take(10) + ".." else item.name
-            font.draw(batch, shortName, x + 5f, y - itemSize + 15f)
+            font.data.setScale(1.2f)
+            // Теперь рисуем имя НАД ячейкой, чтобы оно не перекрывалось
+            font.draw(batch, item.name, x, y + 30f)
         }
     }
+
 
     private fun renderItemDetails(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, item: Item) {
         val detailsW = 400f
@@ -622,12 +629,14 @@ class Inventory(
         batch.draw(whitePixel, detailsX, detailsY, detailsW, detailsH)
 
         font.color = Color.YELLOW
-        font.data.setScale(1.5f)
+        font.data.setScale(1.8f) // Увеличил заголовок
         font.draw(batch, item.name, detailsX + 20f, detailsY + detailsH - 20f)
 
         font.color = Color.WHITE
-        font.data.setScale(1.2f)
-        font.draw(batch, item.description, detailsX + 20f, detailsY + detailsH - 60f)
+        font.data.setScale(1.4f) // Увеличил описание
+        font.draw(batch, item.description, detailsX + 20f, detailsY + detailsH - 70f)
+
+        font.data.setScale(1.3f)
 
         val buttonY = detailsY + 50f
         val buttonW = 120f

@@ -9,11 +9,14 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion
 import kotlin.math.pow
 import kotlin.random.Random
 
-class Player(
+class Player @JvmOverloads constructor(
     var x: Int = 0,
     var y: Int = 0,
-    var playerClass: PlayerClasses = PlayerClasses.ADVENTURIST // класс по умолчанию
+    var playerClass: PlayerClasses = PlayerClasses.ADVENTURIST, // класс по умолчанию
+    val inventory: Inventory,
+    val gameMap: GameMap
 ) {
+
     // Базовые характеристики
     var damage: Int = 30                    // Урон
     var mageDamage: Int = 10                // урон магии
@@ -53,6 +56,7 @@ class Player(
         if (moveProgress >= 1f) {
             moveProgress = 1f; isMoving = false
             currentPixelX = targetPixelX; currentPixelY = targetPixelY
+            gameMap.clearOpenedChests(x, y)
         }
     }
 

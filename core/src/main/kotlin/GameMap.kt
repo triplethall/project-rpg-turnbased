@@ -1,5 +1,6 @@
 package ru.triplethall.rpgturnbased
 
+import com.badlogic.gdx.Gdx
 import kotlin.random.Random
 
 // Типы местности
@@ -31,6 +32,8 @@ class GameMap(
     private val explored = Array(width) { BooleanArray(height) { false } }
     // хранит размер мимика. если ничего нет - обычный сундук
     private val mimicSizes = mutableMapOf<Pair<Int, Int>, Int>()
+    val chestLoot = mutableMapOf<Pair<Int, Int>, MutableList<Item>>()
+
 
     fun markExplored(x: Int, y: Int) {
         explored[x][y] = true
@@ -346,6 +349,46 @@ class GameMap(
             }
         }
     }
+    fun getEnemiesAround(cx: Int, cy: Int, radius: Int = 2): Int {
+        var count = 0
+        // Проходим по квадрату вокруг сундука
+        for (x in (cx - radius)..(cx + radius)) {
+            for (y in (cy - radius)..(cy + radius)) {
+                // Проверка границ карты
+                if (x in 0 until width && y in 0 until height) {
+                    // Если в этой клетке стоит враг
+                    if (terrain[x][y] == TerrainType.ENEMY) {
+                        count++
+                        // Опционально: можно удалять врага с карты, так как бой начался
+                        terrain[x][y] = TerrainType.LAND
+                    }
+                }
+            }
+        }
+        return count
+    }
+
+    fun clearOpenedChests(playerX: Int, playerY: Int) {
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.OpenedChest) {
+                    // Вычисляем расстояние (по клеткам)
+                    val dist = Math.sqrt(
+                        Math.pow((x - playerX).toDouble(), 2.0) +
+                            Math.pow((y - playerY).toDouble(), 2.0)
+                    )
+
+                    // Если расстояние больше 2 блоков (можно поставить 2.5 для мягкости)
+                    if (dist > 2.5) {
+                        terrain[x][y] = TerrainType.LAND
+                    }
+                }
+            }
+        }
+    }
+
+
+
 
     private fun placeChests() {
         val random = Random
@@ -366,22 +409,31 @@ class GameMap(
         }
 
         if (possibleCells.isEmpty()) return
+        val loot = mutableListOf<Item>()
+        loot.add(Item("Health Potion", "Restores 50 HP", 1, false))
+
 
         val chestCount = random.nextInt(4, minOf(7, possibleCells.size / 10 + 5))
         repeat(chestCount) {
             val (cx, cy) = possibleCells.random(random)
-            // Не проверяем на LAND, ставим на любую подходящую клетку
             terrain[cx][cy] = TerrainType.Chest
-            // 30% шанс на мимика
-            if (random.nextDouble() < 0.3)
-            {
-                val size = when {
-                    random.nextDouble() < 0.6 -> 1 // 60%  на маленького мимика
-                    random.nextDouble() < 0.9 -> 2 // 30% на среднего
-                    else -> 3 // 10% на большого
-                }
-                setMimicSize(cx, cy, size)
+
+            // Генерируем лут для этого конкретного сундука
+            val loot = mutableListOf<Item>()
+
+            // 70% шанс на зелье здоровья
+            if (random.nextDouble() < 0.7) {
+                loot.add(Item("Health Potion", "Restores 50 HP", 1, false))
             }
+            // 20% шанс на железный шлем
+            if (random.nextDouble() < 0.2) {
+                loot.add(Item("Iron Helmet", "Basic helmet. Defense +10%", 1, true, false, EquipmentDatabase.IRON_HELMET))
+            }
+
+            chestLoot[Pair(cx, cy)] = loot
+
+            if (random.nextDouble() < 0.3) { setMimicSize(cx, cy, 1) }
+            Gdx.app.log("MAP_DEBUG", "Сундук на [$cx, $cy] создан с лутом: ${loot.size} предметов")
         }
     }
     fun collectChest(x: Int, y: Int): Boolean {

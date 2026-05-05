@@ -75,9 +75,11 @@ class ChestMenu(
                     if (mimicSize > 0) {
                         applyMimicTrapAndBattle()
                     } else {
+                        giveLoot() // Сначала даем вещи
                         gameMap.collectChest(chestX, chestY)
                         SoundManager.playSound("sounds/openSunduk.mp3")
                     }
+
                     isVisible = false
                 }
 
@@ -86,13 +88,25 @@ class ChestMenu(
                         battleScene.startMimicBattle(chestX, chestY, mimicSize)
                         gameMap.collectChest(chestX, chestY)
                     } else {
-                        gameMap.collectChest(chestX, chestY)
-                        if (Math.random() < 0.5) {
-                            Gdx.app.log("CHEST_DEBUG", "loot destroyed")
+                        // 1. Сначала ищем врагов вокруг сундука
+                        val enemiesNearby = gameMap.getEnemiesAround(chestX, chestY, 2)
+
+                        if (enemiesNearby > 0) {
+                            // 2. Если враги есть, начинаем бой
+                            battleScene.startBattle(chestX, chestY, enemiesNearby)
+                            Gdx.app.log("CHEST_DEBUG", "Ambushed by $enemiesNearby enemies!")
                         } else {
-                            SoundManager.playSound("sounds/openSunduk.mp3")
-                            Gdx.app.log("CHEST_DEBUG", "loot obtained")
+                            // 3. Если врагов нет, просто открываем или ломаем
+                            if (Math.random() < 0.5) {
+                                Gdx.app.log("CHEST_DEBUG", "loot destroyed")
+                            } else {
+                                SoundManager.playSound("sounds/openSunduk.mp3")
+                                Gdx.app.log("CHEST_DEBUG", "loot obtained")
+                                giveLoot()
+                                gameMap.collectChest(chestX, chestY)
+                            }
                         }
+                        gameMap.collectChest(chestX, chestY)
                     }
                     isVisible = false
                 }
@@ -154,4 +168,22 @@ class ChestMenu(
         font.draw(batch, "OPEN", openBtnRect.x + 35, openBtnRect.y + 40)
         font.draw(batch, "ATTACK", attackBtnRect.x + 35, attackBtnRect.y + 40)
     }
+    private fun giveLoot() {
+        val coords = Pair(chestX, chestY)
+        val itemsInChest = gameMap.chestLoot[coords]
+
+        if (!itemsInChest.isNullOrEmpty()) {
+            // Показываем окно с лутом
+            lootWindow.show(itemsInChest)
+
+            // Добавляем в инвентарь
+            itemsInChest.forEach { item ->
+                player.inventory.addItem(item)
+            }
+        }
+        gameMap.chestLoot.remove(coords)
+    }
+
+
+
 }

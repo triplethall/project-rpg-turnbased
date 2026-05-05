@@ -38,6 +38,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private float mapWidthPixels;
     private float mapHeightPixels;
     private BattleScene battleScene;
+    private LootWindow lootWindow;
     private ChestMenu chestMenu;
     private Texture chestClosed;
     private Texture chestOpen;
@@ -71,6 +72,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
     @Override
     public void create() {
+        lootWindow = new LootWindow(font);
         font = new BitmapFont();
         font.setColor(Color.YELLOW);
         font.getData().setScale(1.5f);
@@ -182,7 +184,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
         inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventoryButtonTexture);
 
-        player = new Player();
+        player = new Player(0, 0, PlayerClasses.ADVENTURIST, inventory, gameMap);
         player.loadMapModel();
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
@@ -227,7 +229,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             }
             return;
         }
-
+        lootWindow.render(batch, whitePixel);
         // ---------- Выбор класса ----------
         if (isSelectingClass) {
             ScreenUtils.clear(0.05f, 0.05f, 0.1f, 1f);
@@ -301,7 +303,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         batch.end();
     }
 
-    private void handlePlayerInput() {
+    private void handlePlayerInput() {lootWindow.handleInput();
         if (player.isMoving()) return;
         if (Gdx.input.justTouched() && !cameraControl.isDragging()) {
             Vector3 grid = screenToGrid(Gdx.input.getX(), Gdx.input.getY());
