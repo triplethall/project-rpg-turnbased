@@ -8,7 +8,6 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 
@@ -52,14 +51,23 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private PlayerClasses selectedPlayerClass = null;
     private ShopMenu shopMenu;
 
-    // Новый объект для отрисовки HUD (бары + кнопки)
     private MainUI mainUI;
 
-    // Текстуры для кнопок боя
     private Texture attackTexture;
     private Texture nextTurnTexture;
     private Texture fleeTexture;
     private Texture logsTexture;
+
+    // ---  метод для проверки открытых окон ---
+    private boolean isAnyModalOpen() {
+        return isPaused
+            || (inventory != null && inventory.isVisible())
+            || (pauseMenu != null && pauseMenu.isStatsVisible())
+            || (chestMenu != null && chestMenu.isVisible())
+            || (cityMenu != null && cityMenu.isVisible())
+            || (shopMenu != null && shopMenu.isVisible())
+            || (caveMenu != null && caveMenu.isVisible());
+    }
 
     @Override
     public void create() {
@@ -136,7 +144,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             barTexture = whitePixel;
         }
 
-        // Загрузка текстур кнопок боя
         try {
             attackTexture = new Texture("arena_gui/attackbtn.png");
             nextTurnTexture = new Texture("arena_gui/nextturnbtn.png");
@@ -155,7 +162,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        // Создаём BattleScene с текстурными кнопками
         battleScene = new BattleScene(
             font,
             Gdx.graphics.getWidth(),
@@ -192,7 +198,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         player.syncRenderPos(CELL_SIZE, CELL_GAP);
         battleScene.setPlayer(player);
 
-        // Инициализация MainUI
         mainUI = new MainUI(
             font,
             Gdx.graphics.getWidth(),
@@ -245,7 +250,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         }
         boolean shopMenuClicked = shopMenu.handleInput();
 
-        // Обработка UI кнопок (бары, пауза, инвентарь, статистика) через MainUI
         float touchX = Gdx.input.getX();
         float touchY = Gdx.input.getY();
         boolean uiHandled = false;
@@ -257,14 +261,17 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         if (battleScene.isActive()) {
             battleScene.update(Gdx.graphics.getDeltaTime());
             battleScene.handleInput(player);
-        } else if (!isPaused && !menuClicked && !chestMenu.isVisible() && !cityMenu.isVisible() && !shopMenu.isVisible() && !caveMenu.isVisible() && !uiHandled) {
+        } else if (!isPaused && !menuClicked && !chestMenu.isVisible() && !cityMenu.isVisible() && !shopMenu.isVisible() && !caveMenu.isVisible() && !uiHandled && !isAnyModalOpen()) {
             handlePlayerInput();
         }
         player.updateMovement(Gdx.graphics.getDeltaTime());
 
         // ---------- Рендер мира ----------
         ScreenUtils.clear(0.1f, 0.1f, 0.2f, 1f);
-        if (!isPaused) cameraControl.update();
+        // Обновляем камеру только если нет модальных окон и не на паузе
+        if (!isPaused && !isAnyModalOpen()) {
+            cameraControl.update();
+        }
         mapRenderer.update(Gdx.graphics.getDeltaTime());
 
         if (!battleScene.isShowingEndScreen()) {
@@ -279,7 +286,6 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
 
-        // Отрисовка основного HUD (бары + кнопки)
         if (!battleScene.isActive()) {
             mainUI.render(batch);
         }
