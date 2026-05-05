@@ -24,8 +24,10 @@ class BattleScene(
     private val attackTexture: Texture,
     private val nextTurnTexture: Texture,
     private val fleeTexture: Texture,
-    private val logsTexture: Texture
+    private val logsTexture: Texture,
+    private val lootWindow: LootWindow
 ) {
+    var lootAfterBattle: List<Item>? = null
     var isActive = false
         private set
     private lateinit var player: Player
@@ -426,8 +428,19 @@ class BattleScene(
         SoundManager.playSound("sounds/victorySound.mp3")
         showVictoryScreen = true
         addToBattleLog("VICTORY!")
-    }
 
+        // ПРОВЕРЯЕМ ЛУТ ИЗ СУНДУКА
+        lootAfterBattle?.let { items ->
+            // Показываем наше новое красивое окно
+            lootWindow.show(items)
+
+            // Добавляем предметы игроку
+            items.forEach { player.inventory.addItem(it) }
+
+            // Очищаем, чтобы не выдать второй раз
+            lootAfterBattle = null
+        }
+    }
     private fun defeatScreen() {
         println("defeat")
         SoundManager.playSound("sounds/battleFail.mp3")

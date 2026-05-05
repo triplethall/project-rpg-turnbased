@@ -11,7 +11,8 @@ class ChestMenu(
     private val font: BitmapFont,
     private val player: Player,
     private val gameMap: GameMap,
-    private val battleScene: BattleScene
+    private val battleScene: BattleScene,
+    private val lootWindow: LootWindow
 ) {
     var isVisible = false
 
@@ -92,16 +93,22 @@ class ChestMenu(
                         val enemiesNearby = gameMap.getEnemiesAround(chestX, chestY, 2)
 
                         if (enemiesNearby > 0) {
-                            // 2. Если враги есть, начинаем бой
+                            // 1. Сохраняем предметы сундука в переменную боя
+                            battleScene.lootAfterBattle = gameMap.chestLoot[Pair(chestX, chestY)]
+
+                            // 2. Начинаем бой
                             battleScene.startBattle(chestX, chestY, enemiesNearby)
-                            Gdx.app.log("CHEST_DEBUG", "Ambushed by $enemiesNearby enemies!")
+
+                            // 3. Убираем сундук с карты (он уже "вскрыт" засадой)
+                            gameMap.collectChest(chestX, chestY)
+
+                            Gdx.app.log("CHEST_DEBUG", "Ambushed! Loot saved for later.")
                         } else {
-                            // 3. Если врагов нет, просто открываем или ломаем
+                            // Если врагов нет — выдаем сразу
                             if (Math.random() < 0.5) {
                                 Gdx.app.log("CHEST_DEBUG", "loot destroyed")
                             } else {
                                 SoundManager.playSound("sounds/openSunduk.mp3")
-                                Gdx.app.log("CHEST_DEBUG", "loot obtained")
                                 giveLoot()
                                 gameMap.collectChest(chestX, chestY)
                             }

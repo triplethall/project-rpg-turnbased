@@ -36,7 +36,8 @@ class LootWindow(private val font: BitmapFont) {
 
     fun render(batch: SpriteBatch, whitePixel: Texture) {
         if (!isVisible) return
-
+        val ownedBatch = !batch.isDrawing
+        if (ownedBatch) batch.begin()
         // Фон окна
         batch.color = Color(0.1f, 0.1f, 0.1f, 0.95f)
         batch.draw(whitePixel, windowRect.x, windowRect.y, windowRect.width, windowRect.height)
@@ -64,5 +65,7 @@ class LootWindow(private val font: BitmapFont) {
         batch.color = Color.GRAY
         batch.draw(whitePixel, closeBtnRect.x, closeBtnRect.y, closeBtnRect.width, closeBtnRect.height)
         font.draw(batch, "OK", closeBtnRect.x + 45f, closeBtnRect.y + 35f)
+        if (ownedBatch) batch.end()
+
     }
 }

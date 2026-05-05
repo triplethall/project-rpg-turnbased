@@ -72,8 +72,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
     @Override
     public void create() {
-        lootWindow = new LootWindow(font);
         font = new BitmapFont();
+        lootWindow = new LootWindow(font);
         font.setColor(Color.YELLOW);
         font.getData().setScale(1.5f);
 
@@ -175,7 +175,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             attackTexture,
             nextTurnTexture,
             fleeTexture,
-            logsTexture
+            logsTexture,
+            lootWindow
         );
         battleScene.loadAssets();
 
@@ -189,7 +190,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
 
-        chestMenu = new ChestMenu(font, player, gameMap, battleScene);
+        chestMenu = new ChestMenu(font, player, gameMap, battleScene, lootWindow);
 
         player.setOnEnterForest(new Player.OnEnterForestListener() {
             @Override
@@ -229,7 +230,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             }
             return;
         }
-        lootWindow.render(batch, whitePixel);
+
         // ---------- Выбор класса ----------
         if (isSelectingClass) {
             ScreenUtils.clear(0.05f, 0.05f, 0.1f, 1f);
@@ -299,6 +300,10 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         cityMenu.render(batch, shapeRenderer);
         caveMenu.render(batch, shapeRenderer);
         shopMenu.render(batch, shapeRenderer, whitePixel);
+
+        if (lootWindow.isVisible()) {
+            lootWindow.render(batch, whitePixel);
+        }
 
         batch.end();
     }
