@@ -450,4 +450,6 @@ class Player(
 
         initMapModel(bodyDown, bodyUp, bodyLeft, bodyRight, leg)
     }
+    fun setkX(value: Int) { x = value }
+    fun setkY(value: Int) { y = value }
 }
