@@ -1,0 +1,9 @@
+wolf1-idle.png
+size:256,128
+repeat:none
+wolf1_idle
+index:1
+bounds:2,2,98,72
+wolf1_idle
+index:2
+bounds:102,2,98,72

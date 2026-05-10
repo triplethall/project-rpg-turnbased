@@ -1,0 +1,8 @@
+wolf1-attack.png
+size:256,128
+repeat:none
+attack1
+bounds:102,5,98,69
+wolf1_idle
+index:2
+bounds:2,2,98,72

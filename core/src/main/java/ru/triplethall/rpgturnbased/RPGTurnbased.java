@@ -186,7 +186,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             fleeTexture,
             logsTexture
         );
-        battleScene.loadAssets();
+
 
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(),
             pauseButtonTexture, statsBackgroundTexture, continueButtonTexture, exitButtonTexture, pauseBackgroundTexture, settingsButtonTexture);

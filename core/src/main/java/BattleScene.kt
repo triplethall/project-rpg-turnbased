@@ -36,52 +36,48 @@ class BattleScene(
     private var slimeIdleAnimation: Animation<TextureRegion>? = null
     private var slimeAttackAnimation: Animation<TextureRegion>? = null
     private var stateTime = 0f
-    private val getDmgButtonRect = Rectangle()
-    fun loadAssets() {
-        try {
-            val atlasPath = "npc/enemy/slime1/slime1-idle.atlas"
-            val atlasFile = Gdx.files.internal(atlasPath)
 
-            if (!atlasFile.exists()) {
-                Gdx.app.error("BATTLE_DEBUG", "ФАЙЛ НЕ НАЙДЕН: $atlasPath")
-                return
-            }
+    data class EnemyAssets(
+        val idle: Animation<TextureRegion>,
+        val moving: Animation<TextureRegion>,
+        val attack: Animation<TextureRegion>
+    )
 
-            slimeAtlas = TextureAtlas(atlasFile)
-            val frames = com.badlogic.gdx.utils.Array<TextureRegion>()
+    private val assetsCache = mutableMapOf<String, EnemyAssets>()
 
-            Gdx.app.log("BATTLE_DEBUG", "--- Список регионов в атласе ---")
-            slimeAtlas?.regions?.forEach {
-                Gdx.app.log("BATTLE_DEBUG", "Найдено имя: '${it.name}'")
-            }
 
-            val namesToTry = arrayOf("idle1", "idle2", "idle_1", "idle_2", "idle")
+    fun loadEnemyAssets(name: String): EnemyAssets {
+        if (assetsCache.containsKey(name)) return assetsCache[name]!!
+        val path = "npc/enemy/"
 
-            for (name in namesToTry) {
-                val region = slimeAtlas?.findRegion(name)
-                if (region != null) {
-                    frames.add(region)
-                    Gdx.app.log("BATTLE_DEBUG", "Добавлен кадр: $name")
-                }
-            }
+        val idleAtlas   = TextureAtlas(Gdx.files.internal("${path}${name}-idle.atlas"))
+        val movingAtlas = TextureAtlas(Gdx.files.internal("${path}${name}-moving.atlas"))
+        val attackAtlas = TextureAtlas(Gdx.files.internal("${path}${name}-attack.atlas"))
 
-            if (frames.size > 0) {
-                slimeIdleAnimation = Animation(0.2f, frames, Animation.PlayMode.LOOP)
-                Gdx.app.log("BATTLE_DEBUG", "АНИМАЦИЯ СОЗДАНА. Кадров: ${frames.size}")
-            } else {
-                Gdx.app.error("BATTLE_DEBUG", "ОШИБКА: Не удалось собрать ни одного кадра для анимации!")
-            }
-
-            val attackFrames = com.badlogic.gdx.utils.Array<TextureRegion>()
-            attackFrames.add(slimeAtlas?.findRegion("attack1"))
-            attackFrames.add(slimeAtlas?.findRegion("attack2"))
-            attackFrames.add(slimeAtlas?.findRegion("attack3"))
-            slimeAttackAnimation = Animation(0.1f, attackFrames, Animation.PlayMode.NORMAL)
-
-        } catch (e: Exception) {
-            Gdx.app.error("BATTLE_DEBUG", "КРАШ ПРИ ЗАГРУЗКЕ: ${e.message}")
-            e.printStackTrace()
+        val assets = EnemyAssets(
+            buildAnimation(idleAtlas,   0.2f, true),
+            buildAnimation(movingAtlas, 0.15f, true),
+            buildAnimation(attackAtlas, 0.1f, false)
+        )
+        assetsCache[name] = assets
+        return assets
+    }
+    private fun resolveAssetKey(enemy: BattleEnemy): String {
+        // Берем имя из enum Enemy. Если поле называется иначе (напр. enemy.baseType), поправь
+        val enumName = enemy.type?.name ?: enemy.name.uppercase()
+        return when {
+            enumName.contains("WOLF", ignoreCase = true) -> "wolf1"
+            enumName.contains("SLIME", ignoreCase = true) -> "slime1"
+            else -> "slime1" // фоллбэк
         }
+    }
+    private fun buildAnimation(atlas: TextureAtlas, duration: Float, loop: Boolean): Animation<TextureRegion> {
+        // Берём ВСЕ регионы, сортируем по имени (чтобы кадры 1,2,10 шли в правильном порядке)
+        val frames = atlas.regions.sortedBy { it.name }
+        val gdxArray = com.badlogic.gdx.utils.Array<TextureRegion>()
+        for (frame in frames) {gdxArray.add(frame)}
+
+        return Animation(duration, gdxArray, if (loop) Animation.PlayMode.LOOP else Animation.PlayMode.NORMAL)
     }
 
     private var waitingForSkillTarget = false
@@ -920,14 +916,7 @@ class BattleScene(
             skillsBtnY + skillsMenuButtonSize/2 + layout.height/2)
         font.data.setScale(1f)
 
-        // --- Отладочная кнопка урона (можно оставить) ---
-        val l_btnX = screenWidth / 2 - 100f
-        val l_btnY = 300f
-        getDmgButtonRect.set(l_btnX, l_btnY, 200f, 60f)
-        batch.color = Color.GRAY
-        batch.draw(whitePixel, l_btnX, l_btnY, 200f, 60f)
-        font.color = Color.WHITE
-        font.draw(batch, "getDmg", l_btnX + 30f, l_btnY + 35f)
+
 
         // Дебаффы игрока
         fun renderDebuffs(batch: SpriteBatch, player: Player) {
@@ -1236,46 +1225,42 @@ class BattleScene(
         }
     }
 
-    private fun drawEnemy(
-        batch: SpriteBatch,
-        whitePixel: Texture,
-        enemy: BattleEnemy,
-        x: Float,
-        y: Float,
-        width: Float,
-        height: Float,
-        isSelected: Boolean
-    ) {
+    private fun drawEnemy(batch: SpriteBatch, whitePixel: Texture, enemy: BattleEnemy, x: Float, y: Float, width: Float, height: Float, isSelected: Boolean) {
         if (!enemy.isAlive()) return
+
+        // Подсветка выделения
         if (isSelected) {
             batch.color = Color(1f, 1f, 0f, 0.4f)
             batch.draw(whitePixel, x - 5f, y - 5f, width + 10f, height + 10f)
         }
+
+        // 1. Определяем ассет и берем из кэша (загрузка будет 1 раз, дальше возврат из памяти)
+        val assetKey = resolveAssetKey(enemy)
+        val assets = loadEnemyAssets(assetKey)
+
+        // 2. Рисуем кадр анимации (idle, loop=true)
+        batch.color = Color.WHITE
+        val frame = assets.idle.getKeyFrame(stateTime, true)
+        batch.draw(frame, x, y, width, height)
+
+        // 3. Текст (твой старый блок, без изменений)
         font.color = Color.WHITE
         val typeShort = when (enemy.enemyType) {
-            EnemyType.NO_TYPE -> ""
-            EnemyType.FIRE -> " [Fire]"
-            EnemyType.WATER -> " [Water]"
-            EnemyType.WIND -> " [Wind]"
-            EnemyType.EARTH -> " [Earth]"
-            EnemyType.ICE -> " [Ice]"
-            EnemyType.CURSED -> " [Cursed]"
-            EnemyType.ELECTRIC -> " [Electric]"
-            EnemyType.POISON -> " [Poison]"
-            EnemyType.HOLY -> " [Holy]"
-            EnemyType.DARK -> " [Dark]"
-            EnemyType.BLOOD -> " [Blood]"
-            EnemyType.BERSERK -> " [Berserk]"
-            EnemyType.UNDEAD -> " [Undead]"
-            EnemyType.BUNNY -> " [Bunny]"
-        }
-        batch.color = Color.WHITE
-        val currentFrame = slimeIdleAnimation?.getKeyFrame(stateTime)
-        if (currentFrame != null) {
-            batch.draw(currentFrame, x, y, width, height)
-        } else {
-            batch.color = Color.GREEN
-            batch.draw(whitePixel, x, y, width, height)
+            EnemyType.NO_TYPE -> " "
+            EnemyType.FIRE -> " [Fire] "
+            EnemyType.WATER -> " [Water] "
+            EnemyType.WIND -> " [Wind] "
+            EnemyType.EARTH -> " [Earth] "
+            EnemyType.ICE -> " [Ice] "
+            EnemyType.CURSED -> " [Cursed] "
+            EnemyType.ELECTRIC -> " [Electric] "
+            EnemyType.POISON -> " [Poison] "
+            EnemyType.HOLY -> " [Holy] "
+            EnemyType.DARK -> " [Dark] "
+            EnemyType.BLOOD -> " [Blood] "
+            EnemyType.BERSERK -> " [Berserk] "
+            EnemyType.UNDEAD -> " [Undead] "
+            EnemyType.BUNNY -> " [Bunny] "
         }
         font.draw(batch, "${enemy.name}$typeShort", x + 20f, y - 20f)
         font.draw(batch, "${enemy.currentHealth}/${enemy.maxHealth}", x + 20f, y + height - 50f)

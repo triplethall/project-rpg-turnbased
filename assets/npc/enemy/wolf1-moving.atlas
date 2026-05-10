@@ -1,0 +1,11 @@
+wolf1-moving.png
+size:1024,128
+repeat:none
+run1
+bounds:543,10,171,116
+run2
+bounds:2,2,176,124
+run3
+bounds:361,14,180,112
+run4
+bounds:180,7,179,119
