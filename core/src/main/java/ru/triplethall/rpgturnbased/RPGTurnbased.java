@@ -32,6 +32,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private Texture pauseBackgroundTexture;
     private Texture statsBackgroundTexture;
     private Texture settingsButtonTexture;
+    private Texture openButtonTexture;
+    private Texture attackButtonTexture;
+    private Texture ignoreButtonTexture;
     private Texture BGArena;
     private final int CELL_SIZE = 32;
     private final int CELL_GAP = 4;
@@ -147,6 +150,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         exitButtonTexture = new Texture("menus/buttons/exit.png");
         settingsButtonTexture = new Texture("menus/buttons/options.png");
         pauseBackgroundTexture = new Texture("menus/bgs/menubg.png");
+        openButtonTexture = new Texture("menus/buttons/OPEN_BUTTON.png");
+        attackButtonTexture = new Texture("menus/buttons/ATTACK_BUTTON.png");
+        ignoreButtonTexture = new Texture("menus/buttons/CLOSE_BUTTON.png");
 
         try {
             barTexture = new Texture("playerbarsbg.png");
@@ -198,7 +204,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);
 
-        chestMenu = new ChestMenu(font, player, gameMap, battleScene);
+        chestMenu = new ChestMenu(font, player, gameMap, battleScene, openButtonTexture, attackButtonTexture, ignoreButtonTexture, statsBackgroundTexture);
 
         player.setOnEnterForest(new Player.OnEnterForestListener() {
             @Override
@@ -496,5 +502,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         if (nextTurnTexture != null) nextTurnTexture.dispose();
         if (fleeTexture != null) fleeTexture.dispose();
         if (logsTexture != null) logsTexture.dispose();
+        if (openButtonTexture != null) openButtonTexture.dispose();
+        if (attackButtonTexture != null) attackButtonTexture.dispose();
+        if (ignoreButtonTexture != null) ignoreButtonTexture.dispose();
     }
 }
