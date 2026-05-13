@@ -333,6 +333,7 @@ class MapRenderer (
                             TerrainType.CITY -> continue
                             TerrainType.ENEMY -> Color.RED
                             TerrainType.TRAP -> Color.GRAY
+                            TerrainType.TRAP_TRIGGERED -> Color.DARK_GRAY
                             TerrainType.UPGRADE -> continue
                             TerrainType.OUTPOST -> Color.CORAL
                             TerrainType.FOREST -> continue

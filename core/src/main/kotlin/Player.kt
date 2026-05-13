@@ -193,7 +193,6 @@ class Player(
         val expNeeded = getExpForNextLevel()
         experience -= expNeeded
         level++
-        println("!!!LEVEL UP!!!")
         // Stats up за уровень
         recalculateStats()
         currentMana = maxMana  // восстановление маны за ур
@@ -305,6 +304,18 @@ class Player(
 
             x = targetX; y = targetY // Логические координаты меняем сразу
 
+            if (gameMap.getTerrain(x, y) == TerrainType.TRAP)
+            {
+                if (!TrapManager.evadeTrap(this))
+                {
+                    val type = gameMap.getTrapType(x, y)
+                    if (type != null)
+                    {
+                        TrapManager.applyTrap(this, type)
+                    }
+                }
+                gameMap.triggerTrap(x, y)
+            }
             //if (gameMap.collectChest(targetX, targetY)) { /* логика сундука */ }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.FOREST) {
                 if (Random.nextFloat() < 0.1f) onEnterForestListener?.onEnterForest(targetX, targetY)

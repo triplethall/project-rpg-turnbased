@@ -12,6 +12,7 @@ enum class TerrainType {
     CITYANCHOR,
     ENEMY,
     TRAP,
+    TRAP_TRIGGERED,
     UPGRADE,
     OUTPOST,
     OpenedChest,
@@ -31,7 +32,24 @@ class GameMap(
     private val explored = Array(width) { BooleanArray(height) { false } }
     // хранит размер мимика. если ничего нет - обычный сундук
     private val mimicSizes = mutableMapOf<Pair<Int, Int>, Int>()
+    // хранит тип ловушки
+    private val trapTypes = mutableMapOf<Pair<Int, Int>, TrapType>()
 
+    fun setTrapType(x: Int, y: Int, type: TrapType)
+    {
+        trapTypes[Pair(x, y)] = type
+    }
+
+    fun getTrapType(x: Int, y: Int): TrapType? = trapTypes[Pair(x,y)]
+
+    fun triggerTrap(x: Int, y: Int)
+    {
+        if (terrain[x][y] == TerrainType.TRAP)
+        {
+            terrain[x][y] = TerrainType.TRAP_TRIGGERED
+            trapTypes.remove(Pair(x,y))
+        }
+    }
     fun markExplored(x: Int, y: Int) {
         explored[x][y] = true
     }
@@ -132,6 +150,7 @@ class GameMap(
         return t == TerrainType.LAND ||
             t == TerrainType.ENEMY ||
             t == TerrainType.TRAP ||
+            t == TerrainType.TRAP_TRIGGERED ||
             t == TerrainType.UPGRADE ||
             t == TerrainType.OUTPOST ||
             t == TerrainType.Chest ||
@@ -920,6 +939,7 @@ class GameMap(
             {
                 val (x, y) = shuffled[i]
                 terrain[x][y] = TerrainType.TRAP
+                setTrapType(x, y, TrapManager.randomTrapType())
                 placed++
             }
         }
