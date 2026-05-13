@@ -316,7 +316,10 @@ class Player(
                 }
                 gameMap.triggerTrap(x, y)
             }
-            //if (gameMap.collectChest(targetX, targetY)) { /* логика сундука */ }
+            if (gameMap.getTerrain(x,y) == TerrainType.UPGRADE)
+            {
+                UpgradeSystem.collectUpgrade(this, gameMap, x, y)
+            }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.FOREST) {
                 if (Random.nextFloat() < 0.1f) onEnterForestListener?.onEnterForest(targetX, targetY)
             }
