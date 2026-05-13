@@ -504,7 +504,6 @@ class BattleScene(
         if (target.canDodge(isPhysical = true)) {
             messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
             addToBattleLog("${target.name} dodged attack!")
-            SoundManager.playSound("sounds/miss.mp3")
             madeMoveThisTurn = true
             return
         }
