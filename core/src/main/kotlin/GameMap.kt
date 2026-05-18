@@ -17,8 +17,8 @@ enum class TerrainType {
     OUTPOST,
     OpenedChest,
     FOREST,
-    CAVEENTRANCE
-
+    CAVEENTRANCE,
+    QUEST_GIVER     // NEW
 }
 
 class GameMap(
@@ -27,7 +27,7 @@ class GameMap(
     var chestMenu: ChestMenu? = null
 ) {
     private val originalTerrain = Array(width) { Array(height) { TerrainType.LAND } }
-
+    private val questGivers = mutableMapOf<Pair<Int, Int>, QuestGiver>()        // NEW
     private val terrain = Array(width) { Array(height) { TerrainType.WATER } }
     private val explored = Array(width) { BooleanArray(height) { false } }
     // хранит размер мимика. если ничего нет - обычный сундук
@@ -39,6 +39,8 @@ class GameMap(
     {
         trapTypes[Pair(x, y)] = type
     }
+
+    fun getQuestGiver(x: Int, y: Int): QuestGiver? = questGivers[Pair(x, y)]        // NEW
 
     fun getTrapType(x: Int, y: Int): TrapType? = trapTypes[Pair(x,y)]
 
@@ -76,6 +78,49 @@ class GameMap(
             }
         }
         return cells
+    }
+
+// NEW
+    private fun canPlaceQuestGiver(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean {
+        if (terrain[x][y] != TerrainType.LAND) return false
+        // Не слишком близко к старту
+        if (isPlayerStartPosition(x, y, playerStartX, playerStartY, 6)) return false
+        // Не рядом с важными объектами
+        for (dx in -1..1) {
+            for (dy in -1..1) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height) {
+                    when (terrain[nx][ny]) {
+                        TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.OUTPOST,
+                        TerrainType.UPGRADE, TerrainType.Chest, TerrainType.ENEMY,
+                        TerrainType.MOUNTAIN, TerrainType.TRAP, TerrainType.WATER,
+                        TerrainType.CAVEENTRANCE -> return false        // NEW / UPDATE
+                        else -> {}
+                    }
+                }
+            }
+        }
+        return true
+    }
+
+    // NEW
+    private fun placeQuestGivers(playerStartX: Int, playerStartY: Int) {
+        val random = Random
+        val count = random.nextInt(2, 5) // 2..4
+        var placed = 0
+        var attempts = 0
+        val maxAttempts = 1000
+        while (placed < count && attempts < maxAttempts) {
+            attempts++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceQuestGiver(x, y, playerStartX, playerStartY)) {
+                terrain[x][y] = TerrainType.QUEST_GIVER
+                questGivers[Pair(x, y)] = QuestGiver(x, y)
+                placed++
+            }
+        }
     }
 
     // Возвращает список координат врагов в радиусе от центра
@@ -155,7 +200,8 @@ class GameMap(
             t == TerrainType.OUTPOST ||
             t == TerrainType.Chest ||
             t == TerrainType.OpenedChest ||
-            t == TerrainType.FOREST
+            t == TerrainType.FOREST     ||
+            t == TerrainType.QUEST_GIVER
     }
 
     fun generate(playerStartX: Int = 1, playerStartY: Int = 1) {
@@ -174,6 +220,7 @@ class GameMap(
         placeUpgrade()
         placeOutpost()
         ensureStartAreaIsLand(playerStartX, playerStartY)
+        placeQuestGivers(playerStartX, playerStartY)        // NEW
     }
 
     // --- Логика генерации ---
