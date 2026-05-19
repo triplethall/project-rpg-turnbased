@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 
 public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionListener {
     private SpriteBatch batch;
+    private QuestGiverMenu questGiverMenu;      // NEW
     private CameraControl cameraControl;
     private MapRenderer mapRenderer;
     private Inventory inventory;
@@ -73,7 +74,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             || (chestMenu != null && chestMenu.isVisible())
             || (cityMenu != null && cityMenu.isVisible())
             || (shopMenu != null && shopMenu.isVisible())
-            || (caveMenu != null && caveMenu.isVisible());
+            || (caveMenu != null && caveMenu.isVisible())
+            || (questGiverMenu != null && questGiverMenu.isVisible());      // NEW
     }
 
     @Override
@@ -84,6 +86,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
         chestClosed = new Texture("bg/chest_closed.png");
         chestOpen = new Texture("bg/chest_open.png");
+
+        questGiverMenu = new QuestGiverMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());   // NEW
 
         cityMenu = new CityMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         caveMenu = new CaveMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -126,7 +130,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         camera.update();
         cameraControl = new CameraControl(camera, mapWidthPixels, mapHeightPixels);
 
-        mapRenderer = new MapRenderer(gameMap, CELL_SIZE, CELL_GAP, chestClosed, chestOpen);
+        mapRenderer = new MapRenderer(gameMap, CELL_SIZE, CELL_GAP, chestClosed, chestOpen, font);
 
         com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
         pixmap.setColor(com.badlogic.gdx.graphics.Color.WHITE);
@@ -264,6 +268,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 shopClicked = true;
             }
             boolean shopMenuClicked = shopMenu.handleInput();
+            boolean questMenuClicked = questGiverMenu.handleInput();    // NEW
 
             float touchX = Gdx.input.getX();
             float touchY = Gdx.input.getY();
@@ -327,8 +332,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         cityMenu.render(batch, shapeRenderer);
         caveMenu.render(batch, shapeRenderer);
         shopMenu.render(batch, shapeRenderer, whitePixel);
+        questGiverMenu.render(batch, shapeRenderer, whitePixel);        // NEW
 
-        batch.end();
+        if (batch.isDrawing()) batch.end();
     }
 
     // Обработка ввода на поверхности
@@ -360,11 +366,16 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 }
                 return;
             }
+            // NEW / UPDATE
+            TerrainType terrain = gameMap.getTerrain(targetX, targetY);
             if (player.tryMoveTo(targetX, targetY, gameMap, CELL_SIZE, CELL_GAP)) {
                 SoundManager.playSound("sounds/step.mp3");
-                if (gameMap.getTerrain(targetX, targetY) == TerrainType.Chest) {
+                if (terrain == TerrainType.Chest) {
                     int mimicSize = gameMap.getMimicSize(targetX, targetY);
                     chestMenu.show(targetX, targetY, mimicSize);
+                } else if (terrain == TerrainType.QUEST_GIVER) {
+                    QuestGiver qg = gameMap.getQuestGiver(targetX, targetY);
+                    if (qg != null) questGiverMenu.show(qg);
                 }
             }
             if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
