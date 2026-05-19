@@ -990,20 +990,41 @@ class GameMap(
     private fun placeUpgrade()
     {
         val random = Random
-        if (random.nextFloat() > 0.5f)
+        val min = 2
+        val max = 5
+        var placed = 0
+        val lands = mutableListOf<Pair<Int, Int>>() // все подходящие клетки куда можно разместить
+        for (x in 0 until width)
         {
-            return
+            for (y in 0 until height)
+            {
+                if (canPlaceUpgrade(x, y))
+                {
+                    lands.add(Pair(x, y))
+                }
+            }
         }
-        var attemps = 0
-        while (attemps < 1000)
+        val shuffled = lands.shuffled(random)
+        for ((x, y) in shuffled)
         {
-            attemps++
-            val x = random.nextInt(0, width)
-            val y = random.nextInt(0, height)
-            if (canPlaceUpgrade(x, y))
+            if (placed >= min)
+            {
+                break
+            }
+            terrain[x][y] = TerrainType.UPGRADE
+            placed++
+        }
+        while (placed < max && random.nextDouble() < 0.5f && placed < shuffled.size)
+        {
+            val (x, y) = shuffled[placed]
+            if (terrain[x][y] == TerrainType.LAND)
             {
                 terrain[x][y] = TerrainType.UPGRADE
-                return
+                placed++
+            }
+            else
+            {
+                continue
             }
         }
     }

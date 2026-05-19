@@ -90,7 +90,7 @@ object SoundManager {
     private val playlistTracks = listOf(
         "music/mainMusic_1.mp3",
         "music/mainMusic_2.mp3",
-        "music/mainMusic_3.flac",
+        "music/mainMusic_3.mp3",
         "music/mainMusic_4.mp3",
         "music/mainMusic_5.mp3"
     )
