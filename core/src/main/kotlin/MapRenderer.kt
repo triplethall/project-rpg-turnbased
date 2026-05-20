@@ -46,6 +46,8 @@ class MapRenderer (
     private lateinit var decoTextures: Array<TextureRegion>
     private data class DecoItem(val idx: Int, val mirror: Boolean, val w: Float, val h: Float, val offX: Float, val offY: Float)
     // Кэш: [x][y][side] -> 0..2 декорации в зазоре
+    private data class DeletingChestExemplar (var x: Float, var y: Float, var tick: Int)
+    private var delChestCache = Array<DeletingChestExemplar> (10) { DeletingChestExemplar(-999f,-999f,0) }
     private val decoCache = Array(gameMap.width) {
         Array(gameMap.height) {
             Array(4) { mutableListOf<DecoItem>() }
@@ -286,11 +288,12 @@ class MapRenderer (
 
                 val terrain = gameMap.getTerrain(x, y)
                 if (distance > 8 && terrain == TerrainType.ENEMY) continue
+                val light = if (cacheValid) lightCache[x][y] else 1.0f
+                chestDeletingRender(batch, light, x.toFloat(), y.toFloat())
                 if (terrain == TerrainType.WATER || terrain == TerrainType.LAND) continue
 
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
-                val light = if (cacheValid) lightCache[x][y] else 1.0f
 
 
                 when (terrain) {
@@ -301,6 +304,10 @@ class MapRenderer (
                             batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
                             batch.draw(forestTexture, posX - cellSize*0.2f, posY, cellSize*1.4f, cellSize*1.4f)
                         } else {
+                            if (gameMap.checkDeleteOpenChest(x, y, player.x, player.y)) {
+                                chestDeletingRender(batch, light, x.toFloat(), y.toFloat(), 60)
+                            }
+
 
                             val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
                             batch.color = Color(light, light, light, 1f)
@@ -660,4 +667,53 @@ class MapRenderer (
         // Разрешаем только если ОБА тайла — LAND или ENEMY
         return (t1 == TerrainType.LAND || t1 == TerrainType.ENEMY) &&
             (t2 == TerrainType.LAND || t2 == TerrainType.ENEMY)
-}}
+    }
+
+    //рендер пропадающего сундука (когда он уже удален с карты). Для прогона передаем координаты проверяемой клетки - кэш пропадающих сундуков в памяти хранится.
+    //для добавления сундука в карту сразу после удаления сундука передаем сюда координаты сундука, а также tick = 60 (исчезновение за секунду)
+
+    fun chestDeletingRender (batch: SpriteBatch, light: Float, x: Float, y: Float, tick: Int = 0): Int {
+        val tex = chestOpen
+        var newone = true
+        val posX = x * (cellSize + cellGap)
+        val posY = y * (cellSize + cellGap)
+        for (hiding in delChestCache) {
+            if (hiding.tick > 0){
+            println(hiding)
+            print(x)
+            print(y)}
+            if (hiding.x == x && hiding.y == y && hiding.tick > 0) {
+                val revtick = 1f - (1f/hiding.tick.toFloat())
+                println (hiding.tick)
+
+                batch.color = Color(light, light, light, revtick)
+                batch.draw(tex, posX+3f, posY + 3f, cellSize - 4f, cellSize - 4f)
+                hiding.tick = hiding.tick -1
+                newone = false
+                return tick - 1
+            }
+            else if (hiding.x == x && hiding.y == y && hiding.tick <= 0) {
+                hiding.x = -999f
+                hiding.y = -999f
+                hiding.tick = 0
+                newone = false
+            }
+
+        }
+        if (newone && tick > 0) {
+            for (hiding in delChestCache) {
+                if (hiding.x == -999f) {
+                    hiding.x = x
+                    hiding.y = y
+                    hiding.tick = tick
+                    println (hiding)
+                    return 0
+                }
+            }
+
+        }
+
+        return 0
+
+    }
+}

@@ -1,5 +1,6 @@
 package ru.triplethall.rpgturnbased
 
+import kotlin.math.sqrt
 import kotlin.random.Random
 
 // Типы местности
@@ -460,6 +461,18 @@ class GameMap(
         }
         return false
     }
+
+    fun checkDeleteOpenChest(x: Int, y: Int, px: Int, py: Int): Boolean {
+        if (x !in 0 until width || y !in 0 until height) return false
+        val distanceToPlayer = (sqrt(((x-px)*(x-px)+ (y-py)*(y-py)).toDouble())).toInt()
+        if (terrain[x][y] == TerrainType.OpenedChest && distanceToPlayer > 4) {
+            terrain[x][y] = TerrainType.LAND
+            mimicSizes.remove(Pair(x,y))
+            return true
+        }
+        return false
+    }
+
     private fun countAdjacentMountains(x: Int, y: Int): Int {
         var count = 0
         for (dx in -1..1) {
