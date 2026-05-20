@@ -508,16 +508,6 @@ class BattleScene(
             return
         }
 
-        if (target.enemyType == EnemyType.WIND) {
-            val dodgeChance = 0.25
-            if (Random.nextDouble() < dodgeChance) {
-                messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
-                addToBattleLog("${target.name} dodged attack!")
-                madeMoveThisTurn = true
-                return
-            }
-        }
-
         val baseDamage = (player.damage * player.getDamageMultiplier()).toInt()
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val totalDamage = (baseDamage * randomMultiplier).toInt()
