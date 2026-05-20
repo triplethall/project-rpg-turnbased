@@ -537,7 +537,8 @@ class BattleScene(
             return
         }
 
-        target.takeDamage(dmgWithDef)
+//        target.takeDamage(dmgWithDef)
+        // из-за ^этой^ строки был "двойной" урон
         SoundManager.playSound("sounds/atack.mp3")
         val dmgMsg = "dealt $dmgWithDef dmg to ${target.name}"
         messageSystem.addMessage(dmgMsg, Color.GREEN)
@@ -761,6 +762,13 @@ class BattleScene(
         messageSystem.addMessage("player is escaping! $fleeTurnsLeft turns left till escape!", Color.CYAN)
         addToBattleLog("Attempting to escape...")
     }
+    // Функция в функции не самый лучший варик. Вынес ее сюда для оптимизации кода
+    private fun drawStatWithShadow(batch: SpriteBatch, text: String, x: Float, y: Float, color: Color) {
+        font.color = Color.BLACK
+        font.draw(batch, text, x + 1f, y - 1f)
+        font.color = color
+        font.draw(batch, text, x, y)
+    }
 
     fun update(delta: Float) {
         if (!isActive) return
@@ -856,12 +864,7 @@ class BattleScene(
             val defenseText = "DEF: ${(player.defense * 100).toInt()}%"
             val levelText = "LVL: ${player.level}"
 
-            fun drawStatWithShadow(batch: SpriteBatch, text: String, x: Float, y: Float, color: Color) {
-                font.color = Color.BLACK
-                font.draw(batch, text, x + 1f, y - 1f)
-                font.color = color
-                font.draw(batch, text, x, y)
-            }
+
             drawStatWithShadow(batch, levelText, statsX, statsY, Color.GOLD)
             drawStatWithShadow(batch, damageText, statsX + 120f, statsY, Color.ORANGE)
             drawStatWithShadow(batch, defenseText, statsX + 260f, statsY, Color.CYAN)
@@ -1301,12 +1304,19 @@ class BattleScene(
         isActive = false
         madeMoveThisTurn = false
         isFleeing = false
+        showLogs = false // мы не хотим чтобы при следующей битве окно с логами сразу открывалось
+        waitingForSkillTarget = false
+        selectedSkill = null
         fleeTurnsLeft = 0
         enemies.clear()
         enemyCells = emptyList()
         SoundManager.stopMusic()
         SoundManager.resumePlaylist()
     }
+    fun dispose()
+    {
+        slimeAtlas?.dispose()
+    } // утечка памяти
 }
 
 data class SkillWheelButton(

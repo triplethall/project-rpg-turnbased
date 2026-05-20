@@ -493,6 +493,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         shapeRenderer.dispose();
         mapRenderer.dispose();
         SoundManager.dispose();
+        battleScene.dispose();
 
         if (whitePixel != null) whitePixel.dispose();
         if (chestClosed != null) chestClosed.dispose();
