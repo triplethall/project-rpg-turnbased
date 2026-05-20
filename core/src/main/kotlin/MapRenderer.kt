@@ -3,10 +3,10 @@ package ru.triplethall.rpgturnbased
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.TextureRegion
 import kotlin.math.sqrt
-
 
 
 class MapRenderer (
@@ -14,7 +14,8 @@ class MapRenderer (
     cellSize: Int = 32,
     cellGap: Int = 4,
     private val chestClosed: Texture,
-    private val chestOpen: Texture
+    private val chestOpen: Texture,
+    private val font: BitmapFont
 ){
     private val pixelTexture: Texture
     private lateinit var beachTextures: Array<TextureRegion>
@@ -327,12 +328,19 @@ class MapRenderer (
                         batch.color = Color(1f, 1f, 1f, 1f).mul(light, light, light, 1f)
                         batch.draw(mtnTexture, posX - cellSize*0.2f, posY-cellGap, cellSize*1.4f, cellSize*1.5f)
                     }
+                    TerrainType.QUEST_GIVER -> {
+                        batch.color = Color(0.3f, 0.5f, 1f, 1f).mul(light, light, light, 1f)
+                        batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                        batch.color = Color.YELLOW
+                        font.draw(batch, "!", posX + cellSize/2 - 5f, posY + cellSize - 10f)
+                    }
                     else -> {
                         val color = when (terrain) {
                             TerrainType.MOUNTAIN -> continue
                             TerrainType.CITY -> continue
                             TerrainType.ENEMY -> Color.RED
                             TerrainType.TRAP -> Color.GRAY
+                            TerrainType.TRAP_TRIGGERED -> Color.DARK_GRAY
                             TerrainType.UPGRADE -> continue
                             TerrainType.OUTPOST -> Color.CORAL
                             TerrainType.FOREST -> continue

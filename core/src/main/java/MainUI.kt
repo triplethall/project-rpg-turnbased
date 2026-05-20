@@ -1,5 +1,6 @@
 package ru.triplethall.rpgturnbased
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
@@ -60,7 +61,9 @@ class MainUI(
      * @return true, если касание было обработано (клик по одной из кнопок)
      */
     fun handleInput(touchX: Float, touchY: Float): Boolean {
-        // Инвертируем Y, так как входные координаты идут от верхнего левого угла
+        // Реагируем только на начало касания (один раз за клик)
+        if (!Gdx.input.justTouched()) return false
+
         val invertedY = screenHeight - touchY
 
         if (pauseButtonRect.contains(touchX, invertedY)) {
@@ -78,14 +81,39 @@ class MainUI(
         return false
     }
 
-    fun render(batch: SpriteBatch) {
-        // Рисуем бары здоровья и маны
-        drawPlayerBars(batch)
 
-        // Рисуем кнопки
+    fun render(batch: SpriteBatch) {
+        drawPlayerBars(batch)
+        drawLevelAndExp(batch)
+
         batch.draw(pauseButtonTexture, pauseButtonRect.x, pauseButtonRect.y, buttonSize, buttonSize)
         batch.draw(inventoryButtonTexture, inventoryButtonRect.x, inventoryButtonRect.y, buttonSize, buttonSize)
         batch.draw(statsButtonTexture, statsButtonRect.x, statsButtonRect.y, buttonSize, buttonSize)
+    }
+
+    private fun drawLevelAndExp(batch: SpriteBatch) {
+        // Располагаем справа от полосок HP/MP
+        val infoX = barsX + barsWidth + 240f   // отступ от правого края баров
+        // Середина области баров по вертикали
+        val barsMiddleY = barsY - barsHeight / 2
+        val infoY = barsMiddleY + 50f         // небольшой сдвиг вверх
+
+        val levelText = "Level: ${player.level}"
+        val expText = "Exp: ${player.experience}/${player.getExpForNextLevel()} (${(player.getExpProgress() * 100).toInt()}%)"
+
+        // Сохраняем старые настройки шрифта
+        val oldColor = font.color
+        val oldScaleX = font.data.scaleX
+        val oldScaleY = font.data.scaleY
+
+        font.color = Color.YELLOW
+        font.data.setScale(2f)
+        font.draw(batch, levelText, infoX, infoY)
+        font.draw(batch, expText, infoX, infoY - 30f)
+
+        // Восстанавливаем
+        font.data.setScale(oldScaleX, oldScaleY)
+        font.color = oldColor
     }
 
     private fun drawPlayerBars(batch: SpriteBatch) {
