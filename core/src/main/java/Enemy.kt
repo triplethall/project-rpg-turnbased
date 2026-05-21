@@ -824,6 +824,19 @@ enum class Enemy
         baseEnemyAccuracy = 0.90,
         baseEnemyWill = 0.15,
         baseEnemyCritChance = 0.05,
+    ),
+    DRAGON_BOSS(
+        displayEnemyName = "Mary Ann",
+        baseEnemyDamage = 30,
+        baseEnemyMageDamage = 55,
+        baseEnemyMaxHealth = 500,
+        baseEnemyDefense = 0.91,
+        baseEnemyAttackSpeed = 0.5,
+        baseEnemyAccuracy = 0.7,
+        baseEnemyWill = 0.8,
+        baseEnemyCritChance = 0.2,
+        isElite = true,
+        enemyType = EnemyType.DARK
     )
 }
 
