@@ -38,50 +38,7 @@ class BossBattleScene(
     private var stateTime = 0f
     private val getDmgButtonRect = Rectangle()
     fun loadAssets() {
-        try {
-            val atlasPath = "npc/enemy/slime1/slime1-idle.atlas"
-            val atlasFile = Gdx.files.internal(atlasPath)
 
-            if (!atlasFile.exists()) {
-                Gdx.app.error("BATTLE_DEBUG", "ФАЙЛ НЕ НАЙДЕН: $atlasPath")
-                return
-            }
-
-            slimeAtlas = TextureAtlas(atlasFile)
-            val frames = com.badlogic.gdx.utils.Array<TextureRegion>()
-
-            Gdx.app.log("BATTLE_DEBUG", "--- Список регионов в атласе ---")
-            slimeAtlas?.regions?.forEach {
-                Gdx.app.log("BATTLE_DEBUG", "Найдено имя: '${it.name}'")
-            }
-
-            val namesToTry = arrayOf("idle1", "idle2", "idle_1", "idle_2", "idle")
-
-            for (name in namesToTry) {
-                val region = slimeAtlas?.findRegion(name)
-                if (region != null) {
-                    frames.add(region)
-                    Gdx.app.log("BATTLE_DEBUG", "Добавлен кадр: $name")
-                }
-            }
-
-            if (frames.size > 0) {
-                slimeIdleAnimation = Animation(0.2f, frames, Animation.PlayMode.LOOP)
-                Gdx.app.log("BATTLE_DEBUG", "АНИМАЦИЯ СОЗДАНА. Кадров: ${frames.size}")
-            } else {
-                Gdx.app.error("BATTLE_DEBUG", "ОШИБКА: Не удалось собрать ни одного кадра для анимации!")
-            }
-
-            val attackFrames = com.badlogic.gdx.utils.Array<TextureRegion>()
-            attackFrames.add(slimeAtlas?.findRegion("attack1"))
-            attackFrames.add(slimeAtlas?.findRegion("attack2"))
-            attackFrames.add(slimeAtlas?.findRegion("attack3"))
-            slimeAttackAnimation = Animation(0.1f, attackFrames, Animation.PlayMode.NORMAL)
-
-        } catch (e: Exception) {
-            Gdx.app.error("BATTLE_DEBUG", "КРАШ ПРИ ЗАГРУЗКЕ: ${e.message}")
-            e.printStackTrace()
-        }
     }
 
     private var waitingForSkillTarget = false
