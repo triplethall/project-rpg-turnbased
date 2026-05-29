@@ -1,11 +1,13 @@
 package ru.triplethall.rpgturnbased
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.TextureRegion
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import kotlin.math.sqrt
 
 
@@ -19,41 +21,35 @@ class MapRenderer (
 ){
     private val pixelTexture: Texture
     private lateinit var beachTextures: Array<TextureRegion>
-    private val BEACH_W = 32f
-    private val BEACH_H = 8f
-    private val sandTexture: Texture
+    private val beachW = 32f
+    private val beachH = 8f
     private val city1Texture: Texture
     private val upgradeTexture: Texture
     private val dirtTexture: Texture
     private val mtnTexture: Texture
     private val caveTexture: Texture
     private lateinit var beachCorner: TextureRegion
-    private val CORNER_W = 32f
-    private val CORNER_H = 32f
-
+    private val cornerW = 32f
+    private val cornerH = 32f
 
     private lateinit var cloudTextures: Array<TextureRegion>
     private val waterTextures = arrayOfNulls<Texture>(4)
     private var waterFrameIndex = 0
     private val forestTexture: Texture
     private var lastFrameTime = 0f
-    private val frameDuration = 0.5f //частота смены кадров фона
+    private val frameDuration = 0.5f
     private val bgTileSize = 1024f
 
     private val lightCache = Array(gameMap.width) { FloatArray(gameMap.height) }
     private val distCache = Array(gameMap.width) { FloatArray(gameMap.height) }
-    // Отслеживание последней позиции игрока
     private lateinit var decoTextures: Array<TextureRegion>
     private data class DecoItem(val idx: Int, val mirror: Boolean, val w: Float, val h: Float, val offX: Float, val offY: Float)
-    // Кэш: [x][y][side] -> 0..2 декорации в зазоре
-    private data class DeletingChestExemplar (var x: Float, var y: Float, var tick: Int)
-    private var delChestCache = Array<DeletingChestExemplar> (10) { DeletingChestExemplar(-999f,-999f,0) }
     private val decoCache = Array(gameMap.width) {
         Array(gameMap.height) {
             Array(4) { mutableListOf<DecoItem>() }
         }
     }
-    private val DECO_PROBABILITY = 0.12f
+    private val decoProbability = 0.12f
     private var lastPlayerX = -999
     private var lastPlayerY = -999
     private var cacheValid = false
@@ -61,7 +57,7 @@ class MapRenderer (
     private val cellSize = cellSize.toFloat()
     private val cellGap = cellGap.toFloat()
     private val cloudIndices = Array(gameMap.width) {
-        Array(gameMap.height) { (0..4).random() } // сразу генерируем 0-4
+        Array(gameMap.height) { (0..4).random() }
     }
     private val jitterRadius = 1f
     private val grassIndices = Array(gameMap.width) {
@@ -72,12 +68,14 @@ class MapRenderer (
     }
     private lateinit var grassSpoilers: Array<TextureRegion>
 
+    private var showTeleportMenu = false
+    private val menuWidth = 250f
+    private val menuHeight = 150f
 
-    init{
-        pixelTexture = Texture(1,1, Pixmap.Format.RGBA8888)
+    init {
+        pixelTexture = Texture(1, 1, Pixmap.Format.RGBA8888)
         val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
         pixmap.setColor(Color.WHITE)
-
         pixmap.fill()
         pixelTexture.draw(pixmap, 0, 0)
         pixmap.dispose()
@@ -94,7 +92,6 @@ class MapRenderer (
         dirtTexture = Texture("map_layers/dirt.png")
         city1Texture = Texture("towns/town1.png")
         forestTexture = Texture("map_layers/forest.png")
-        sandTexture = Texture("map_layers/sand_back_tile.png")
         cloudTextures = Array(5) { i ->
             TextureRegion(Texture("map_layers/clouds/clouds$i.png"))
         }
@@ -115,7 +112,6 @@ class MapRenderer (
             t?.dispose()
         }
         forestTexture.dispose()
-        sandTexture.dispose()
         city1Texture.dispose()
         dirtTexture.dispose()
         for (region in grassSpoilers) {
@@ -132,8 +128,20 @@ class MapRenderer (
         }
     }
 
+    fun updateTeleport(playerX: Int, playerY: Int) {
+        if (gameMap.getTerrain(playerX, playerY) == TerrainType.TELEPORT && !showTeleportMenu) {
+            showTeleportMenu = true
+            gameMap.setTerrain(playerX, playerY, TerrainType.LAND)
+        }
+
+        if (showTeleportMenu && Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
+            showTeleportMenu = false
+        }
+    }
+
+    fun isTeleportMenuVisible(): Boolean = showTeleportMenu
+
     private fun isChestInForest(x: Int, y: Int): Boolean {
-        // Проверяем, что сундук окружён лесом со всех 4 сторон
         val directions = listOf(
             Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0)
         )
@@ -150,6 +158,7 @@ class MapRenderer (
         }
         return true
     }
+
     val visibilityManager = VisibilityManager(gameMap)
 
     private fun getCloudJitter(x: Int, y: Int, time: Float): Pair<Float, Float> {
@@ -164,13 +173,11 @@ class MapRenderer (
     }
 
     fun render(batch: SpriteBatch, player: Player) {
-
         visibilityManager.updateVisibility(Pair(player.x, player.y))
         rebuildLightCache(player)
         val mapWidthPx = gameMap.width * (cellSize + cellGap)
         val mapHeightPx = gameMap.height * (cellSize + cellGap)
 
-        // 0 слой - вода
         val currentWaterTex = waterTextures[waterFrameIndex] ?: return
         batch.color = Color.WHITE
         val cols = (mapWidthPx / bgTileSize).toInt() + 2
@@ -181,10 +188,6 @@ class MapRenderer (
             }
         }
 
-
-
-
-        // слой 1 - базовая подложка, земля
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
                 if (!gameMap.isExplored(x, y)) continue
@@ -195,16 +198,16 @@ class MapRenderer (
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
                 val light = if (cacheValid) lightCache[x][y] else 1.0f
-                if (terrain != TerrainType.WATER) {
-                    renderBeaches(batch, x, y, posX, posY, light)
-                    renderBeachCorners(batch, x, y, posX, posY, light)
-                }
+                renderBeaches(batch, x, y, posX, posY, light)
+                renderBeachCorners(batch, x, y, posX, posY, light)
+
                 when (terrain) {
-                    TerrainType.LAND, TerrainType.UPGRADE,TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.MOUNTAIN, TerrainType.OpenedChest, TerrainType.Chest, TerrainType.FOREST, TerrainType.ENEMY -> {
+                    TerrainType.LAND, TerrainType.UPGRADE, TerrainType.CITY,
+                    TerrainType.CITYANCHOR, TerrainType.MOUNTAIN, TerrainType.OPENEDCHEST,
+                    TerrainType.CHEST, TerrainType.FOREST, TerrainType.ENEMY, TerrainType.TELEPORT -> {
                         batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                         batch.draw(dirtTexture, posX, posY, cellSize, cellSize)
                     }
-
                     else -> {
                         batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                         batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
@@ -213,12 +216,9 @@ class MapRenderer (
             }
         }
 
-
-
-        // слой 2 - сетка, ассеты травы и оставшийся декор
         val gapColor = Color(0.15f, 0.35f, 0.15f, 1f)
         val inset = 1f
-        val lineWider = cellGap + 2*inset
+        val lineWider = cellGap + 2 * inset
 
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
@@ -229,49 +229,34 @@ class MapRenderer (
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
 
-                // базовая зеленая сетка
                 batch.color = gapColor.cpy().mul(light, light, light, 1f)
-                batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap, lineWider, cellSize + 2*cellGap) // left
-                batch.draw(pixelTexture, posX + cellSize - inset, posY - cellGap, lineWider, cellSize + 2*cellGap)  // right
-                batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap - inset, cellSize + 2*cellGap + 2*inset, lineWider) // bottom
-                batch.draw(pixelTexture, posX - cellGap - inset, posY + cellSize - inset, cellSize + 2*cellGap + 2*inset, lineWider) // top
+                batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap, lineWider, cellSize + 2 * cellGap)
+                batch.draw(pixelTexture, posX + cellSize - inset, posY - cellGap, lineWider, cellSize + 2 * cellGap)
+                batch.draw(pixelTexture, posX - cellGap - inset, posY - cellGap - inset, cellSize + 2 * cellGap + 2 * inset, lineWider)
+                batch.draw(pixelTexture, posX - cellGap - inset, posY + cellSize - inset, cellSize + 2 * cellGap + 2 * inset, lineWider)
                 renderGrassBorders(batch, x, y, posX, posY, light)
-                // текстуры травы в клетках
+
                 batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                 val addition = 3f
-                // левая сторона
-                run {
-                    val side = 0
-                    val texIndex = grassIndices[x][y][side]
 
-                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 - addition * 1f, posY + cellSize/2 - addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 0, mirror = true)
-                }
-                // правая сторона
-                run {
-                    val side = 1
-                    val texIndex = grassIndices[x][y][side]
+                val side0TexIndex = grassIndices[x][y][0]
+                drawGrassSpoiler(batch, grassSpoilers[side0TexIndex], posX + cellSize/2 - addition, posY + cellSize/2 - addition * 1.5f, cellSize + addition * 2, cellGap + addition, side = 0, mirror = true)
 
-                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX + cellSize/2 + addition * 1f, posY - cellSize/2- addition * 1.5f, cellSize+addition*2, cellGap+addition, side = 1, mirror = true)
-                }
-                // нижняя сторона
-                run {
-                    val side = 2
-                    val texIndex = grassIndices[x][y][side]
-                    val mirror = grassMirrors[x][y][side]
-                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX - cellGap, posY + cellSize - cellGap, cellSize+addition*2, cellGap+addition, side = 2, mirror = mirror)
-                }
-                // верхняя сторона
-                run {
-                    val side = 3
-                    val texIndex = grassIndices[x][y][side]
-                    val mirror = grassMirrors[x][y][side]
-                    drawGrassSpoiler(batch, grassSpoilers[texIndex], posX - cellGap, posY + cellGap, cellSize+addition*2, cellGap+addition, side = 3, mirror = mirror)
-                }
+                val side1TexIndex = grassIndices[x][y][1]
+                drawGrassSpoiler(batch, grassSpoilers[side1TexIndex], posX + cellSize/2 + addition, posY - cellSize/2 - addition * 1.5f, cellSize + addition * 2, cellGap + addition, side = 1, mirror = true)
+
+                val side2TexIndex = grassIndices[x][y][2]
+                val mirror2 = grassMirrors[x][y][2]
+                drawGrassSpoiler(batch, grassSpoilers[side2TexIndex], posX - cellGap, posY + cellSize - cellGap, cellSize + addition * 2, cellGap + addition, side = 2, mirror = mirror2)
+
+                val side3TexIndex = grassIndices[x][y][3]
+                val mirror3 = grassMirrors[x][y][3]
+                drawGrassSpoiler(batch, grassSpoilers[side3TexIndex], posX - cellGap, posY + cellGap, cellSize + addition * 2, cellGap + addition, side = 3, mirror = mirror3)
             }
         }
+
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
-
                 if (gameMap.getTerrain(x, y) != TerrainType.WATER) {
                     val light = if (cacheValid) lightCache[x][y] else 1.0f
                     val posX = x * (cellSize + cellGap)
@@ -280,7 +265,7 @@ class MapRenderer (
                 }
             }
         }
-        // слой 3 - объекты
+
         for (x in 0 until gameMap.width) {
             for (y in gameMap.height - 1 downTo 0) {
                 if (!gameMap.isExplored(x, y)) continue
@@ -289,85 +274,89 @@ class MapRenderer (
                 val terrain = gameMap.getTerrain(x, y)
                 if (distance > 8 && terrain == TerrainType.ENEMY) continue
                 val light = if (cacheValid) lightCache[x][y] else 1.0f
-                chestDeletingRender(batch, light, x.toFloat(), y.toFloat())
-                if (terrain == TerrainType.WATER || terrain == TerrainType.LAND) continue
-
-                val posX = x * (cellSize + cellGap)
-                val posY = y * (cellSize + cellGap)
-
 
                 when (terrain) {
-                    TerrainType.Chest, TerrainType.OpenedChest -> {
-                        val shouldHideInForest = (terrain == TerrainType.Chest && isChestInForest(x, y))
-                        if (shouldHideInForest) {
-                            // Скрытый сундук в лесу - рисуем просто лес (тёмно-зелёный)
-                            batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
-                            batch.draw(forestTexture, posX - cellSize*0.2f, posY, cellSize*1.4f, cellSize*1.4f)
-                        } else {
-                            if (gameMap.checkDeleteOpenChest(x, y, player.x, player.y)) {
-                                chestDeletingRender(batch, light, x.toFloat(), y.toFloat(), 60)
-                            }
-
-
-                            val tex = if (terrain == TerrainType.Chest) chestClosed else chestOpen
-                            batch.color = Color(light, light, light, 1f)
-                            batch.draw(tex, posX+3f, posY+3f, cellSize - 4f, cellSize - 4f)
-                        }
-                    }
-                    TerrainType.UPGRADE -> {
-                        batch.color = Color(0.5f, 0.5f, 0.5f, 1f).mul(light, light, light, 1f)
-                        batch.draw(upgradeTexture, posX + 5.0f, posY+5f, cellSize*0.7f, cellSize*0.7f)
-                    }
-                    TerrainType.CAVEENTRANCE ->
-                    {
-                        batch.color = Color(1f, 1f, 1f, 1f).mul(light, light, light, 1f)
-                        batch.draw(caveTexture, posX - cellSize * 0.2f, posY - cellSize * 0.2f, cellSize * 1.4f, cellSize * 1.4f)
-                    }
-                    TerrainType.CITYANCHOR -> {
-                        batch.color = Color(0.5f, 0.5f, 0.5f, 1f).mul(light, light, light, 1f)
-                        batch.draw(city1Texture, posX - cellSize*0.3f, posY - 1f, cellSize*2.65f, cellSize*2.65f)
-                    }
-                    TerrainType.FOREST -> {
-                        batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
-                        batch.draw(forestTexture, posX - cellSize*0.2f, posY, cellSize*1.4f, cellSize*1.4f)
-                    }
-                    TerrainType.MOUNTAIN -> {
-                        batch.color = Color(1f, 1f, 1f, 1f).mul(light, light, light, 1f)
-                        batch.draw(mtnTexture, posX - cellSize*0.2f, posY-cellGap, cellSize*1.4f, cellSize*1.5f)
-                    }
-                    TerrainType.QUEST_GIVER -> {
-                        batch.color = Color(0.3f, 0.5f, 1f, 1f).mul(light, light, light, 1f)
-                        batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
-                        batch.color = Color.YELLOW
-                        font.draw(batch, "!", posX + cellSize/2 - 5f, posY + cellSize - 10f)
-                    }
+                    TerrainType.WATER, TerrainType.LAND -> continue
                     else -> {
-                        val color = when (terrain) {
-                            TerrainType.MOUNTAIN -> continue
-                            TerrainType.CITY -> continue
-                            TerrainType.ENEMY -> Color.RED
-                            TerrainType.TRAP -> Color.GRAY
-                            TerrainType.TRAP_TRIGGERED -> Color.DARK_GRAY
-                            TerrainType.UPGRADE -> continue
-                            TerrainType.OUTPOST -> Color.CORAL
-                            TerrainType.FOREST -> continue
-                            else -> Color.WHITE
+                        val posX = x * (cellSize + cellGap)
+                        val posY = y * (cellSize + cellGap)
+
+                        when (terrain) {
+                            TerrainType.CHEST, TerrainType.OPENEDCHEST -> {
+                                val shouldHideInForest = (terrain == TerrainType.CHEST && isChestInForest(x, y))
+                                if (shouldHideInForest) {
+                                    batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
+                                    batch.draw(forestTexture, posX - cellSize * 0.2f, posY, cellSize * 1.4f, cellSize * 1.4f)
+                                } else {
+                                    val tex = if (terrain == TerrainType.CHEST) chestClosed else chestOpen
+                                    batch.color = Color(light, light, light, 1f)
+                                    batch.draw(tex, posX + 3f, posY + 3f, cellSize - 4f, cellSize - 4f)
+                                }
+                            }
+                            TerrainType.TELEPORT -> {
+                                batch.color = Color(0.8f, 0.2f, 0.8f, 1f).mul(light, light, light, 1f)
+                                batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                                batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
+                                font.draw(batch, "T", posX + cellSize/2 - 5f, posY + cellSize/2 + 5f)
+                            }
+                            TerrainType.UPGRADE -> {
+                                batch.color = Color(0.5f, 0.5f, 0.5f, 1f).mul(light, light, light, 1f)
+                                batch.draw(upgradeTexture, posX + 5f, posY + 5f, cellSize * 0.7f, cellSize * 0.7f)
+                            }
+                            TerrainType.CAVEENTRANCE -> {
+                                batch.color = Color(1f, 1f, 1f, 1f).mul(light, light, light, 1f)
+                                batch.draw(caveTexture, posX - cellSize * 0.2f, posY - cellSize * 0.2f, cellSize * 1.4f, cellSize * 1.4f)
+                            }
+                            TerrainType.CITYANCHOR -> {
+                                batch.color = Color(0.5f, 0.5f, 0.5f, 1f).mul(light, light, light, 1f)
+                                batch.draw(city1Texture, posX - cellSize * 0.3f, posY - 1f, cellSize * 2.65f, cellSize * 2.65f)
+                            }
+                            TerrainType.FOREST -> {
+                                batch.color = Color(0.2f, 0.5f, 0.1f, 1f).mul(light, light, light, 1f)
+                                batch.draw(forestTexture, posX - cellSize * 0.2f, posY, cellSize * 1.4f, cellSize * 1.4f)
+                            }
+                            TerrainType.MOUNTAIN -> {
+                                batch.color = Color(1f, 1f, 1f, 1f).mul(light, light, light, 1f)
+                                batch.draw(mtnTexture, posX - cellSize * 0.2f, posY - cellGap, cellSize * 1.4f, cellSize * 1.5f)
+                            }
+                            TerrainType.QUEST_GIVER -> {
+                                batch.color = Color(0.3f, 0.5f, 1f, 1f).mul(light, light, light, 1f)
+                                batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                                batch.color = Color.YELLOW
+                                font.draw(batch, "!", posX + cellSize/2 - 5f, posY + cellSize - 10f)
+                            }
+                            TerrainType.ENEMY -> {
+                                batch.color = Color.RED.cpy().mul(light, light, light, 1f)
+                                batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                            }
+                            TerrainType.TRAP -> {
+                                batch.color = Color.GRAY.cpy().mul(light, light, light, 1f)
+                                batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                            }
+                            TerrainType.TRAP_TRIGGERED -> {
+                                batch.color = Color.DARK_GRAY.cpy().mul(light, light, light, 1f)
+                                batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                            }
+                            TerrainType.OUTPOST -> {
+                                batch.color = Color.CORAL.cpy().mul(light, light, light, 1f)
+                                batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                            }
+                            else -> {
+                                batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
+                                batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
+                            }
                         }
-                        batch.color = color.cpy().mul(light, light, light, 1f)
-                        batch.draw(pixelTexture, posX, posY, cellSize, cellSize)
                     }
                 }
             }
         }
 
-        // слой 4 - туман войны
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
                 if (gameMap.isExplored(x, y) || gameMap.getTerrain(x, y) == TerrainType.WATER) continue
 
                 val posX = x * (cellSize + cellGap)
                 val posY = y * (cellSize + cellGap)
-
 
                 batch.color = Color.WHITE
                 val cloudIdx = cloudIndices[x][y]
@@ -376,15 +365,40 @@ class MapRenderer (
             }
         }
 
+        if (showTeleportMenu) {
+            renderTeleportMenu(batch)
+        }
+
         batch.color = Color.WHITE
     }
 
+    private fun renderTeleportMenu(batch: SpriteBatch) {
+        val menuX = (Gdx.graphics.width / 2f) - menuWidth / 2
+        val menuY = (Gdx.graphics.height / 2f) - menuHeight / 2
 
+        batch.end()
 
+        val shapeRenderer = ShapeRenderer()
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.color = Color(0.1f, 0.1f, 0.1f, 0.95f)
+        shapeRenderer.rect(menuX, menuY, menuWidth, menuHeight)
+        shapeRenderer.color = Color(0.5f, 0.2f, 0.5f, 1f)
+        shapeRenderer.rect(menuX + 5, menuY + 5, menuWidth - 10, menuHeight - 10)
+        shapeRenderer.end()
 
+        batch.begin()
 
+        font.color = Color.WHITE
+        font.draw(batch, "ТЕЛЕПОРТ", menuX + menuWidth/2 - 40f, menuY + menuHeight - 25f)
+        font.draw(batch, "Вы нашли таинственный", menuX + 25f, menuY + menuHeight - 60f)
+        font.draw(batch, "телепорт!", menuX + 65f, menuY + menuHeight - 85f)
+        font.draw(batch, "Нажмите ESC", menuX + 70f, menuY + 30f)
 
-    fun drawGrassSpoiler(
+        font.color = Color.YELLOW
+        font.draw(batch, "[ESC]", menuX + 95f, menuY + 12f)
+    }
+
+    private fun drawGrassSpoiler(
         batch: SpriteBatch,
         region: TextureRegion,
         posX: Float, posY: Float,
@@ -424,7 +438,7 @@ class MapRenderer (
         }
     }
 
-    fun generateGrassVariations() {
+    private fun generateGrassVariations() {
         for (x in 0 until gameMap.width) {
             for (y in 0 until gameMap.height) {
                 for (side in 0..3) {
@@ -434,98 +448,84 @@ class MapRenderer (
             }
         }
     }
+
     private fun renderBeaches(batch: SpriteBatch, x: Int, y: Int, posX: Float, posY: Float, light: Float) {
-        // Проверяем 4 стороны
         val neighbors = listOf(
-            3 to Pair(0, 1),  // Top (y+1)
-            2 to Pair(0, -1), // Bottom (y-1)
-            0 to Pair(-1, 0), // Left (x-1)
-            1 to Pair(1, 0)   // Right (x+1)
+            3 to Pair(0, 1),
+            2 to Pair(0, -1),
+            0 to Pair(-1, 0),
+            1 to Pair(1, 0)
         )
 
         for ((side, offset) in neighbors) {
             val nx = x + offset.first
             val ny = y + offset.second
 
-            // Если сосед валиден и это вода — рисуем пляж
-            if (nx in -1 until gameMap.width +1 && ny in -1 until gameMap.height+1 &&
+            if (nx in -1 until gameMap.width + 1 && ny in -1 until gameMap.height + 1 &&
                 gameMap.getTerrain(nx, ny) == TerrainType.WATER) {
 
-                // Детерминированный выбор текстуры (чтобы не мерцала при каждом кадре)
                 val texIdx = kotlin.math.abs((x * 31 + y * 17) % 7)
                 val tex = beachTextures[texIdx]
 
                 batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
 
                 when (side) {
-                    3 -> { // вода сверху. Рисуем над тайлом.
-                        batch.draw(tex, posX - cellGap - 1f, posY + cellSize+cellGap, BEACH_W + 2*cellGap+2f, BEACH_H + cellGap*2)
-
+                    3 -> {
+                        batch.draw(tex, posX - cellGap - 1f, posY + cellSize + cellGap, beachW + 2 * cellGap + 2f, beachH + cellGap * 2)
                     }
-                    2 -> { // Bottom: вода снизу. Рисуем под тайлом, поворот 180.
-                        // pivot: Top-Center (16, 8) -> вешаем на нижнюю границу тайла
-                        batch.draw(tex, posX + 2*cellGap - 3.1f,  posY - cellGap - cellSize/2 - 1f, 16f, 8f, BEACH_W + 2*cellGap + 2f, BEACH_H + cellGap*2, 1f, 1f, 180f)
+                    2 -> {
+                        batch.draw(tex, posX + 2 * cellGap - 3.1f,  posY - cellGap - cellSize/2 - 1f, 16f, 8f, beachW + 2 * cellGap + 2f, beachH + cellGap * 2, 1f, 1f, 180f)
                     }
-                    0 -> { // Left: вода слева. Рисуем слева, поворот +90 (CCW).
-                        // pivot: Bottom-Left (0, 0) -> вешаем на левый нижний угол тайла
-                        batch.draw(tex, posX - 2*cellGap + 3f, posY - cellGap - 1f, 0f, 0f, BEACH_W + 2* cellGap + 2f, BEACH_H + cellGap*2, 1f, 1f, 90f)
+                    0 -> {
+                        batch.draw(tex, posX - 2 * cellGap + 3f, posY - cellGap - 1f, 0f, 0f, beachW + 2 * cellGap + 2f, beachH + cellGap * 2, 1f, 1f, 90f)
                     }
-                    1 -> { // Right: вода справа. Рисуем справа, поворот -90 (CW).
-                        // pivot: Top-Left (0, 8) -> вешаем на правый верхний угол тайла
-                        batch.draw(tex, posX + cellSize + 2*cellGap +4f, posY + cellSize/2 + 3*cellGap + 1f, 0f, 8f, BEACH_W+ 2* cellGap + 2f, BEACH_H+ cellGap*2, 1f, 1f, -90f)
+                    1 -> {
+                        batch.draw(tex, posX + cellSize + 2 * cellGap + 4f, posY + cellSize/2 + 3 * cellGap + 1f, 0f, 8f, beachW + 2 * cellGap + 2f, beachH + cellGap * 2, 1f, 1f, -90f)
                     }
                 }
             }
         }
     }
+
     private fun renderGrassBorders(batch: SpriteBatch, x: Int, y: Int, posX: Float, posY: Float, light: Float) {
-        // Проверяем 4 стороны
         val neighbors = listOf(
-            3 to Pair(0, 1),  // Top (y+1)
-            2 to Pair(0, -1), // Bottom (y-1)
-            0 to Pair(-1, 0), // Left (x-1)
-            1 to Pair(1, 0)   // Right (x+1)
+            3 to Pair(0, 1),
+            2 to Pair(0, -1),
+            0 to Pair(-1, 0),
+            1 to Pair(1, 0)
         )
 
         for ((side, offset) in neighbors) {
             val nx = x + offset.first
             val ny = y + offset.second
 
-            // Если сосед валиден и это вода — рисуем пляж
-            if (nx in -1 until gameMap.width +1 && ny in -1 until gameMap.height+1 &&
+            if (nx in -1 until gameMap.width + 1 && ny in -1 until gameMap.height + 1 &&
                 gameMap.getTerrain(nx, ny) == TerrainType.WATER) {
 
-                // Детерминированный выбор текстуры (чтобы не мерцала при каждом кадре)
-
                 val texIdx2 = kotlin.math.abs((x * 31 + y * 17) % 10)
-
                 val tex2 = grassSpoilers[texIdx2]
 
                 batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
 
                 when (side) {
-                    3 -> { // вода сверху. Рисуем над тайлом.
-
-                        batch.draw(tex2, posX - cellGap - 1f, posY + cellSize+cellGap, BEACH_W + 2*cellGap+2f, BEACH_H)
+                    3 -> {
+                        batch.draw(tex2, posX - cellGap - 1f, posY + cellSize + cellGap, beachW + 2 * cellGap + 2f, beachH)
                     }
-                    2 -> { // Bottom: вода снизу. Рисуем под тайлом, поворот 180.
-                        // pivot: Top-Center (16, 8) -> вешаем на нижнюю границу тайла
-                        batch.draw(tex2, posX + 2*cellGap - 3.1f,  posY - cellGap - cellSize/2 - 1f, 16f, 8f, BEACH_W + 2*cellGap + 2f, BEACH_H, 1f, 1f, 180f)
+                    2 -> {
+                        batch.draw(tex2, posX + 2 * cellGap - 3.1f,  posY - cellGap - cellSize/2 - 1f, 16f, 8f, beachW + 2 * cellGap + 2f, beachH, 1f, 1f, 180f)
                     }
-                    0 -> { // Left: вода слева. Рисуем слева, поворот +90 (CCW).
-                        // pivot: Bottom-Left (0, 0) -> вешаем на левый нижний угол тайла
-                        batch.draw(tex2, posX - 2*cellGap + 3f, posY - cellGap - 1f, 0f, 0f, BEACH_W + 2* cellGap + 2f, BEACH_H, 1f, 1f, 90f)
+                    0 -> {
+                        batch.draw(tex2, posX - 2 * cellGap + 3f, posY - cellGap - 1f, 0f, 0f, beachW + 2 * cellGap + 2f, beachH, 1f, 1f, 90f)
                     }
-                    1 -> { // Right: вода справа. Рисуем справа, поворот -90 (CW).
-                        // pivot: Top-Left (0, 8) -> вешаем на правый верхний угол тайла
-                        batch.draw(tex2, posX + cellSize + 2*cellGap +4f, posY + cellSize/2 + 3*cellGap + 1f, 0f, 8f, BEACH_W+ 2* cellGap + 2f, BEACH_H, 1f, 1f, -90f)
+                    1 -> {
+                        batch.draw(tex2, posX + cellSize + 2 * cellGap + 4f, posY + cellSize/2 + 3 * cellGap + 1f, 0f, 8f, beachW + 2 * cellGap + 2f, beachH, 1f, 1f, -90f)
                     }
                 }
             }
         }
     }
+
     private fun rebuildLightCache(player: Player) {
-        // Если игрок не сдвинулся — выходим
         if (player.x == lastPlayerX && player.y == lastPlayerY) {
             cacheValid = true
             return
@@ -538,11 +538,9 @@ class MapRenderer (
             for (y in 0 until gameMap.height) {
                 val dx = (x - player.x).toDouble()
                 val dy = (y - player.y).toDouble()
-                // Считаем дистанцию один раз
                 val dist = sqrt(dx * dx + dy * dy).toFloat()
                 distCache[x][y] = dist
 
-                // Сразу считаем свет
                 lightCache[x][y] = when {
                     dist <= 4.0f -> 1.0f
                     dist >= 8.0f -> 0.4f
@@ -555,21 +553,19 @@ class MapRenderer (
         }
         cacheValid = true
     }
+
     private fun renderBeachCorners(batch: SpriteBatch, x: Int, y: Int, posX: Float, posY: Float, light: Float) {
-        // Диагонали: (dx, dy, rotation)
-        // corner.png ориентирован как верх-правый угол (вода по диагонали TR)
         val diagonals = listOf(
-            Triple(1, 1, 0f),      // Top-Right: вода справа+сверху → 0°
-            Triple(1, -1, -90f),   // Bottom-Right: вода справа+снизу → -90° (по часовой)
-            Triple(-1, -1, 180f),  // Bottom-Left: вода слева+снизу → 180°
-            Triple(-1, 1, 90f)     // Top-Left: вода слева+сверху → +90° (против часовой)
+            Triple(1, 1, 0f),
+            Triple(1, -1, -90f),
+            Triple(-1, -1, 180f),
+            Triple(-1, 1, 90f)
         )
 
         for ((dx, dy, rotation) in diagonals) {
             val nx = x + dx
             val ny = y + dy
 
-            // Угол нужен, если диагональный сосед и оба прямых соседа — вода
             if (nx in -1 until gameMap.width + 1 && ny in -1 until gameMap.height + 1 &&
                 gameMap.getTerrain(nx, ny) == TerrainType.WATER &&
                 gameMap.getTerrain(x + dx, y) == TerrainType.WATER &&
@@ -577,43 +573,40 @@ class MapRenderer (
 
                 batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
 
-                // Позиция: внешний угол тайла
                 val cornerX = if (dx > 0) posX + cellSize else posX
                 val cornerY = if (dy > 0) posY + cellSize else posY
 
-                // pivot: 0,0 (левый нижний угол текстуры)
-                batch.draw(beachCorner, cornerX, cornerY, 0f, 0f, CORNER_W/1.5f, CORNER_H/1.5f, 1f, 1f, rotation)
+                batch.draw(beachCorner, cornerX, cornerY, 0f, 0f, cornerW/1.5f, cornerH/1.5f, 1f, 1f, rotation)
             }
         }
     }
-    fun generateDecoVariations() {
+
+    private fun generateDecoVariations() {
         val rand = kotlin.random.Random
         for (x in 0 until gameMap.width) {
             for (y in gameMap.height - 1 downTo 0) {
                 for (side in 0..3) {
-                    // 0..2 декорации в одном зазоре
                     if (!isValidDecoSide(x, y, side)) {
                         decoCache[x][y][side].clear()
                         continue
                     }
-                    val count = if (rand.nextFloat() < DECO_PROBABILITY) rand.nextInt(1, 2) else 0
-                    for (n in 0 until count) {
+                    val count = if (rand.nextFloat() < decoProbability) rand.nextInt(1, 2) else 0
+                    repeat(count) {
                         val idx = rand.nextInt(0, 17)
                         val tex = decoTextures[idx]
                         val origW = tex.regionWidth.toFloat()
                         val origH = tex.regionHeight.toFloat()
-                        val target = rand.nextFloat() * 6f + 10f // 10..16f
+                        val target = rand.nextFloat() * 6f + 10f
                         val scale = target / maxOf(origW, origH)
 
-                        // Рандомное смещение внутри прямоугольника зазора
                         val offX = when (side) {
                             0 -> -rand.nextFloat() * cellGap - cellGap
-                            1 -> rand.nextFloat() * cellGap - 2*cellGap
+                            1 -> rand.nextFloat() * cellGap - 2 * cellGap
                             else -> rand.nextFloat() * cellSize
                         }
                         val offY = when (side) {
                             2 -> -rand.nextFloat() * cellGap - cellGap
-                            3 -> rand.nextFloat() * cellGap - 2*cellGap
+                            3 -> rand.nextFloat() * cellGap - 2 * cellGap
                             else -> rand.nextFloat() * cellSize
                         }
 
@@ -625,95 +618,45 @@ class MapRenderer (
             }
         }
     }
+
     private fun renderDecoBorders(batch: SpriteBatch, x: Int, y: Int, posX: Float, posY: Float, light: Float) {
         for (side in 0..3) {
             for (deco in decoCache[x][y][side]) {
-                // Затемнение: сдвиг на -0.2f, но не ниже 0.2f (чтобы не уходило в черный)
                 val darkLight = (light - 0.2f).coerceAtLeast(0.2f)
                 batch.color = Color.WHITE.cpy().mul(darkLight, darkLight, darkLight, 1f)
 
-                // Rotation = 0, origin в центре для корректного зеркала
                 val ox = deco.w / 2f
                 val oy = deco.h / 2f
                 batch.draw(
                     decoTextures[deco.idx],
-                    posX + deco.offX, posY + deco.offY, // позиция внутри зазора
-                    ox, oy,                              // origin
-                    deco.w, deco.h,                      // размеры
-                    if (deco.mirror) -1f else 1f, 1f,    // scale
-                    0f                                   // rotation
+                    posX + deco.offX, posY + deco.offY,
+                    ox, oy,
+                    deco.w, deco.h,
+                    if (deco.mirror) -1f else 1f, 1f,
+                    0f
                 )
             }
         }
     }
+
     private fun isValidDecoSide(x: Int, y: Int, side: Int): Boolean {
         val (dx, dy) = when (side) {
-            0 -> -1 to 0  // Left
-            1 -> 1 to 0   // Right
-            2 -> 0 to -1  // Bottom
-            3 -> 0 to 1   // Top
+            0 -> -1 to 0
+            1 -> 1 to 0
+            2 -> 0 to -1
+            3 -> 0 to 1
             else -> return false
         }
 
         val nx = x + dx
         val ny = y + dy
 
-        // Если сосед за границей карты — нельзя ставить декор
         if (nx !in 0 until gameMap.width || ny !in 0 until gameMap.height) return false
 
         val t1 = gameMap.getTerrain(x, y)
         val t2 = gameMap.getTerrain(nx, ny)
 
-        // Разрешаем только если ОБА тайла — LAND или ENEMY
         return (t1 == TerrainType.LAND || t1 == TerrainType.ENEMY) &&
             (t2 == TerrainType.LAND || t2 == TerrainType.ENEMY)
-    }
-
-    //рендер пропадающего сундука (когда он уже удален с карты). Для прогона передаем координаты проверяемой клетки - кэш пропадающих сундуков в памяти хранится.
-    //для добавления сундука в карту сразу после удаления сундука передаем сюда координаты сундука, а также tick = 60 (исчезновение за секунду)
-
-    fun chestDeletingRender (batch: SpriteBatch, light: Float, x: Float, y: Float, tick: Int = 0): Int {
-        val tex = chestOpen
-        var newone = true
-        val posX = x * (cellSize + cellGap)
-        val posY = y * (cellSize + cellGap)
-        for (hiding in delChestCache) {
-            if (hiding.tick > 0){
-            println(hiding)
-            print(x)
-            print(y)}
-            if (hiding.x == x && hiding.y == y && hiding.tick > 0) {
-                val revtick = 1f - (1f/hiding.tick.toFloat())
-                println (hiding.tick)
-
-                batch.color = Color(light, light, light, revtick)
-                batch.draw(tex, posX+3f, posY + 3f, cellSize - 4f, cellSize - 4f)
-                hiding.tick = hiding.tick -1
-                newone = false
-                return tick - 1
-            }
-            else if (hiding.x == x && hiding.y == y && hiding.tick <= 0) {
-                hiding.x = -999f
-                hiding.y = -999f
-                hiding.tick = 0
-                newone = false
-            }
-
-        }
-        if (newone && tick > 0) {
-            for (hiding in delChestCache) {
-                if (hiding.x == -999f) {
-                    hiding.x = x
-                    hiding.y = y
-                    hiding.tick = tick
-                    println (hiding)
-                    return 0
-                }
-            }
-
-        }
-
-        return 0
-
     }
 }

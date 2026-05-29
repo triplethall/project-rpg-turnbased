@@ -3,23 +3,23 @@ package ru.triplethall.rpgturnbased
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-// Типы местности
 enum class TerrainType {
-    WATER,
     LAND,
+    WATER,
+    FOREST,
     MOUNTAIN,
-    Chest,
     CITY,
     CITYANCHOR,
+    CHEST,
+    OPENEDCHEST,
+    UPGRADE,
     ENEMY,
     TRAP,
     TRAP_TRIGGERED,
-    UPGRADE,
     OUTPOST,
-    OpenedChest,
-    FOREST,
     CAVEENTRANCE,
-    QUEST_GIVER     // NEW
+    QUEST_GIVER,
+    TELEPORT
 }
 
 class GameMap(
@@ -28,47 +28,42 @@ class GameMap(
     var chestMenu: ChestMenu? = null
 ) {
     private val originalTerrain = Array(width) { Array(height) { TerrainType.LAND } }
-    private val questGivers = mutableMapOf<Pair<Int, Int>, QuestGiver>()        // NEW
+    private val questGivers = mutableMapOf<Pair<Int, Int>, QuestGiver>()
     private val terrain = Array(width) { Array(height) { TerrainType.WATER } }
     private val explored = Array(width) { BooleanArray(height) { false } }
-    // хранит размер мимика. если ничего нет - обычный сундук
     private val mimicSizes = mutableMapOf<Pair<Int, Int>, Int>()
-    // хранит тип ловушки
     private val trapTypes = mutableMapOf<Pair<Int, Int>, TrapType>()
 
-    fun setTrapType(x: Int, y: Int, type: TrapType)
-    {
+    fun setTrapType(x: Int, y: Int, type: TrapType) {
         trapTypes[Pair(x, y)] = type
     }
 
-    fun getQuestGiver(x: Int, y: Int): QuestGiver? = questGivers[Pair(x, y)]        // NEW
+    fun getQuestGiver(x: Int, y: Int): QuestGiver? = questGivers[Pair(x, y)]
 
-    fun getTrapType(x: Int, y: Int): TrapType? = trapTypes[Pair(x,y)]
+    fun getTrapType(x: Int, y: Int): TrapType? = trapTypes[Pair(x, y)]
 
-    fun triggerTrap(x: Int, y: Int)
-    {
-        if (terrain[x][y] == TerrainType.TRAP)
-        {
+    fun triggerTrap(x: Int, y: Int) {
+        if (terrain[x][y] == TerrainType.TRAP) {
             terrain[x][y] = TerrainType.TRAP_TRIGGERED
-            trapTypes.remove(Pair(x,y))
+            trapTypes.remove(Pair(x, y))
         }
     }
+
     fun markExplored(x: Int, y: Int) {
         explored[x][y] = true
     }
 
     fun placeEnemyWithOriginal(x: Int, y: Int) {
-        originalTerrain[x][y] = getTerrain(x, y) // сохраняем что было (LAND или FOREST)
+        originalTerrain[x][y] = getTerrain(x, y)
         terrain[x][y] = TerrainType.ENEMY
     }
 
     fun restoreAfterBattle(x: Int, y: Int) {
         if (terrain[x][y] == TerrainType.ENEMY) {
-            terrain[x][y] = originalTerrain[x][y] // восстанавливаем исходный тип
+            terrain[x][y] = originalTerrain[x][y]
         }
     }
 
-    // Возвращает список координат всех клеток с типом ENEMY
     fun getAllEnemyCells(): List<Pair<Int, Int>> {
         val cells = mutableListOf<Pair<Int, Int>>()
         for (x in 0 until width) {
@@ -81,50 +76,6 @@ class GameMap(
         return cells
     }
 
-// NEW
-    private fun canPlaceQuestGiver(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean {
-        if (terrain[x][y] != TerrainType.LAND) return false
-        // Не слишком близко к старту
-        if (isPlayerStartPosition(x, y, playerStartX, playerStartY, 6)) return false
-        // Не рядом с важными объектами
-        for (dx in -1..1) {
-            for (dy in -1..1) {
-                val nx = x + dx
-                val ny = y + dy
-                if (nx in 0 until width && ny in 0 until height) {
-                    when (terrain[nx][ny]) {
-                        TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.OUTPOST,
-                        TerrainType.UPGRADE, TerrainType.Chest, TerrainType.ENEMY,
-                        TerrainType.MOUNTAIN, TerrainType.TRAP, TerrainType.WATER,
-                        TerrainType.CAVEENTRANCE -> return false        // NEW / UPDATE
-                        else -> {}
-                    }
-                }
-            }
-        }
-        return true
-    }
-
-    // NEW
-    private fun placeQuestGivers(playerStartX: Int, playerStartY: Int) {
-        val random = Random
-        val count = random.nextInt(2, 5) // 2..4
-        var placed = 0
-        var attempts = 0
-        val maxAttempts = 1000
-        while (placed < count && attempts < maxAttempts) {
-            attempts++
-            val x = random.nextInt(0, width)
-            val y = random.nextInt(0, height)
-            if (canPlaceQuestGiver(x, y, playerStartX, playerStartY)) {
-                terrain[x][y] = TerrainType.QUEST_GIVER
-                questGivers[Pair(x, y)] = QuestGiver(x, y)
-                placed++
-            }
-        }
-    }
-
-    // Возвращает список координат врагов в радиусе от центра
     fun getEnemiesNear(centerX: Int, centerY: Int, radius: Int): List<Pair<Int, Int>> {
         val cells = mutableListOf<Pair<Int, Int>>()
         for (dx in -radius..radius) {
@@ -139,7 +90,6 @@ class GameMap(
         return cells
     }
 
-    // Проверяет, есть ли хотя бы один враг на карте
     fun hasEnemies(): Boolean {
         for (x in 0 until width) {
             for (y in 0 until height) {
@@ -149,19 +99,18 @@ class GameMap(
         return false
     }
 
-    // Удаляет всех врагов с карты (превращает обратно в исходный тип местности)
     fun clearAllEnemies() {
         for (x in 0 until width) {
             for (y in 0 until height) {
                 if (terrain[x][y] == TerrainType.ENEMY) {
-                    terrain[x][y] = originalTerrain[x][y] // восстанавливаем ландшафт
+                    terrain[x][y] = originalTerrain[x][y]
                 }
             }
         }
     }
 
-
     fun isExplored(x: Int, y: Int): Boolean = explored[x][y]
+
     fun getTerrain(x: Int, y: Int): TerrainType {
         if (x !in 0 until width || y !in 0 until height) return TerrainType.WATER
         return terrain[x][y]
@@ -171,37 +120,31 @@ class GameMap(
 
     fun getMimicSize(x: Int, y: Int): Int = mimicSizes[Pair(x, y)] ?: 0
 
-    fun setMimicSize(x: Int, y: Int, size: Int)
-    {
-        if (size > 0)
-        {
+    fun setMimicSize(x: Int, y: Int, size: Int) {
+        if (size > 0) {
             mimicSizes[Pair(x, y)] = size
-        }
-        else
-        {
-            mimicSizes.remove(Pair(x,y))
+        } else {
+            mimicSizes.remove(Pair(x, y))
         }
     }
-    fun setTerrain(x: Int, y: Int, type: TerrainType)
-    {
-        if (x in 0 until width && y in 0 until height)
-        {
-            terrain[x][y] = type;
+
+    fun setTerrain(x: Int, y: Int, type: TerrainType) {
+        if (x in 0 until width && y in 0 until height) {
+            terrain[x][y] = type
         }
     }
 
     fun isWalkable(x: Int, y: Int): Boolean {
         val t = getTerrain(x, y)
-
         return t == TerrainType.LAND ||
             t == TerrainType.ENEMY ||
             t == TerrainType.TRAP ||
             t == TerrainType.TRAP_TRIGGERED ||
             t == TerrainType.UPGRADE ||
             t == TerrainType.OUTPOST ||
-            t == TerrainType.Chest ||
-            t == TerrainType.OpenedChest ||
-            t == TerrainType.FOREST     ||
+            t == TerrainType.CHEST ||
+            t == TerrainType.OPENEDCHEST ||
+            t == TerrainType.FOREST ||
             t == TerrainType.QUEST_GIVER
     }
 
@@ -221,20 +164,16 @@ class GameMap(
         placeUpgrade()
         placeOutpost()
         ensureStartAreaIsLand(playerStartX, playerStartY)
-        placeQuestGivers(playerStartX, playerStartY)        // NEW
+        placeQuestGivers(playerStartX, playerStartY)
     }
-
-    // --- Логика генерации ---
 
     private fun generateIslandShape() {
         val random = Random
-
         for (x in 0 until width) {
             for (y in 0 until height) {
                 terrain[x][y] = TerrainType.WATER
             }
         }
-
         val centerPoints = listOf(
             Pair(width / 2, height / 2),
             Pair(width / 2 + random.nextInt(-5, 6), height / 2 + random.nextInt(-5, 6)),
@@ -244,13 +183,10 @@ class GameMap(
             Pair(width / 2 + random.nextInt(-5, 6), height / 2 + random.nextInt(-5, 6)),
             Pair(width / 2 + random.nextInt(-5, 6), height / 2 + random.nextInt(-5, 6))
         )
-
         for ((cx, cy) in centerPoints) {
             growLand(cx, cy, random.nextInt(30, 35))
         }
-
         addRandomCapes(random)
-
         cleanNoise()
     }
 
@@ -259,16 +195,13 @@ class GameMap(
         var x = startX
         var y = startY
         val directions = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0))
-
-        for (i in 0 until maxSteps) {
+        for (idx in 0 until maxSteps) {
             if (x in 0 until width && y in 0 until height) {
                 terrain[x][y] = TerrainType.LAND
             }
-
             val (dx, dy) = directions.random(random)
             x += dx
             y += dy
-
             if (random.nextFloat() < 0.15f) {
                 val (dx2, dy2) = directions.random(random)
                 if (x + dx2 in 0 until width && y + dy2 in 0 until height) {
@@ -280,7 +213,6 @@ class GameMap(
 
     private fun addRandomCapes(random: Random) {
         val landCells = mutableListOf<Pair<Int, Int>>()
-
         for (x in 0 until width) {
             for (y in 0 until height) {
                 if (terrain[x][y] == TerrainType.LAND) {
@@ -288,17 +220,14 @@ class GameMap(
                 }
             }
         }
-
         val capeCount = random.nextInt(25, 40)
-        for (i in 0 until capeCount) {
+        repeat(capeCount) {
             val (sx, sy) = landCells.random(random)
-            val length = random.nextInt(10, 15) // Длина мыса
-
+            val length = random.nextInt(10, 15)
             val dir = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0)).random(random)
-
             var cx = sx
             var cy = sy
-            for (j in 0 until length) {
+            for (idx in 0 until length) {
                 cx += dir.first
                 cy += dir.second
                 if (cx in 0 until width && cy in 0 until height) {
@@ -316,19 +245,17 @@ class GameMap(
                 terrain[x][y]
             }
         }
-
         for (x in 0 until width) {
             for (y in 0 until height) {
                 val neighbors = countLandNeighbors(x, y)
                 if (terrain[x][y] == TerrainType.LAND && neighbors < 3) {
-                    newTerrain[x][y] = TerrainType.WATER // Убираем одиночки
+                    newTerrain[x][y] = TerrainType.WATER
                 }
                 if (terrain[x][y] == TerrainType.WATER && neighbors > 6) {
-                    newTerrain[x][y] = TerrainType.LAND // Убираем одиночки
+                    newTerrain[x][y] = TerrainType.LAND
                 }
             }
         }
-
         for (x in 0 until width) {
             for (y in 0 until height) {
                 terrain[x][y] = newTerrain[x][y]
@@ -354,7 +281,6 @@ class GameMap(
     private fun placeMountains() {
         val random = Random
         val landCells = mutableListOf<Pair<Int, Int>>()
-
         for (x in 0 until width) {
             for (y in 0 until height) {
                 if (terrain[x][y] == TerrainType.LAND) {
@@ -362,38 +288,29 @@ class GameMap(
                 }
             }
         }
-
-        val mountainGroups = random.nextInt(3, 7) // 3-5 групп гор на карте
-
-        for (g in 0 until mountainGroups) {
-            val attempts = 20
-            for (a in 0 until attempts) {
+        val mountainGroups = random.nextInt(3, 7)
+        repeat(mountainGroups) { _ ->
+            var placed = false
+            repeat(20) { _ ->
+                if (placed) return@repeat
                 val (sx, sy) = landCells.random(random)
-
-                if (countLandNeighbors(sx, sy) < 5) continue
-                if (hasDiagonalWater(sx, sy)) continue
-
-                val groupSize = random.nextInt(1, 4) // 1, 2 или 3
-                val placed = mutableListOf<Pair<Int, Int>>()
-                placed.add(Pair(sx, sy))
-
+                if (countLandNeighbors(sx, sy) < 5) return@repeat
+                if (hasDiagonalWater(sx, sy)) return@repeat
+                val groupSize = random.nextInt(1, 4)
+                val placedCells = mutableListOf(Pair(sx, sy))
                 var valid = true
-
-                for (i in 1 until groupSize) {
-                    val last = placed.last()
+                for (j in 1 until groupSize) {
+                    val last = placedCells.last()
                     val directions = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0))
                     val (dx, dy) = directions.random(random)
                     val nx = last.first + dx
                     val ny = last.second + dy
-
                     if (nx in 0 until width && ny in 0 until height &&
                         terrain[nx][ny] == TerrainType.LAND &&
-                        !placed.contains(Pair(nx, ny))) {
-
-
+                        !placedCells.contains(Pair(nx, ny))) {
                         val existingMountainsNearby = countAdjacentMountains(nx, ny)
-                        if (existingMountainsNearby + placed.size < 3) {
-                            placed.add(Pair(nx, ny))
+                        if (existingMountainsNearby + placedCells.size < 3) {
+                            placedCells.add(Pair(nx, ny))
                         } else {
                             valid = false
                             break
@@ -403,15 +320,127 @@ class GameMap(
                         break
                     }
                 }
-
                 if (valid) {
-                    for ((px, py) in placed) {
+                    for ((px, py) in placedCells) {
                         terrain[px][py] = TerrainType.MOUNTAIN
+                    }
+                    placed = true
+                }
+            }
+        }
+    }
+
+    private fun placeForestGroups() {
+        val random = Random
+        val groupsCount = random.nextInt(4, 7)
+        var placedGroups = 0
+        val maxAttempts = 30
+
+        for (attempt in 0 until maxAttempts) {
+            if (placedGroups >= groupsCount) break
+
+            val groupSize = random.nextInt(3, 11)
+            val startCell = findFreeLandCell()
+            if (startCell == null) continue
+
+            val group = growForestGroup(startCell.first, startCell.second, groupSize)
+
+            if (group.size >= groupSize * 0.7) {
+                for ((x, y) in group) {
+                    if (terrain[x][y] != TerrainType.CHEST) {
+                        terrain[x][y] = TerrainType.FOREST
+                    }
+                }
+                placedGroups++
+            }
+        }
+    }
+
+    private fun findFreeLandCell(): Pair<Int, Int>? {
+        val random = Random
+        for (attempt in 0 until 100) {
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (terrain[x][y] == TerrainType.LAND && !isNearSpecialObjects(x, y)) {
+                return Pair(x, y)
+            }
+        }
+        return null
+    }
+
+    private fun isNearSpecialObjects(x: Int, y: Int): Boolean {
+        for (dx in -2..2) {
+            for (dy in -2..2) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height) {
+                    when (terrain[nx][ny]) {
+                        TerrainType.MOUNTAIN,
+                        TerrainType.CHEST,
+                        TerrainType.ENEMY,
+                        TerrainType.FOREST -> return true
+                        else -> {}
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    private fun growForestGroup(startX: Int, startY: Int, targetSize: Int): MutableList<Pair<Int, Int>> {
+        val random = Random
+        val group = mutableListOf(Pair(startX, startY))
+        val frontier = mutableListOf(Pair(startX, startY))
+        val visited = mutableSetOf(Pair(startX, startY))
+
+        while (group.size < targetSize && frontier.isNotEmpty()) {
+            val current = frontier.random(random)
+            frontier.remove(current)
+            val neighbors = getAdjacentLandCells(current.first, current.second)
+            for (neighbor in neighbors) {
+                if (!visited.contains(neighbor) && group.size < targetSize &&
+                    !isNearSpecialObjects(neighbor.first, neighbor.second)) {
+                    group.add(neighbor)
+                    visited.add(neighbor)
+                    frontier.add(neighbor)
+                }
+            }
+        }
+
+        if (group.size >= 9) {
+            for ((x, y) in group) {
+                val hasNorth = group.contains(Pair(x, y + 1))
+                val hasSouth = group.contains(Pair(x, y - 1))
+                val hasWest = group.contains(Pair(x - 1, y))
+                val hasEast = group.contains(Pair(x + 1, y))
+                if (hasNorth && hasSouth && hasWest && hasEast) {
+                    terrain[x][y] = TerrainType.CHEST
+                    if (random.nextDouble() < 0.3) {
+                        val size = when {
+                            random.nextDouble() < 0.6 -> 1
+                            random.nextDouble() < 0.9 -> 2
+                            else -> 3
+                        }
+                        setMimicSize(x, y, size)
                     }
                     break
                 }
             }
         }
+        return group
+    }
+
+    private fun getAdjacentLandCells(x: Int, y: Int): List<Pair<Int, Int>> {
+        val neighbors = mutableListOf<Pair<Int, Int>>()
+        val directions = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0))
+        for ((dx, dy) in directions) {
+            val nx = x + dx
+            val ny = y + dy
+            if (nx in 0 until width && ny in 0 until height && terrain[nx][ny] == TerrainType.LAND) {
+                neighbors.add(Pair(nx, ny))
+            }
+        }
+        return neighbors
     }
 
     private fun placeChests() {
@@ -419,44 +448,36 @@ class GameMap(
         val possibleCells = mutableListOf<Pair<Int, Int>>()
         val centerX = width / 2
         val centerY = height / 2
-
         for (x in 0 until width) {
             for (y in 0 until height) {
-                // Разрешаем ставить сундуки на LAND
-                if (terrain[x][y] == TerrainType.LAND ) {
-                    // Не ставим сундуки в стартовой зоне
+                if (terrain[x][y] == TerrainType.LAND) {
                     if (kotlin.math.abs(x - centerX) > 3 || kotlin.math.abs(y - centerY) > 3) {
                         possibleCells.add(Pair(x, y))
                     }
                 }
             }
         }
-
         if (possibleCells.isEmpty()) return
-
         val chestCount = random.nextInt(4, minOf(7, possibleCells.size / 10 + 5))
         repeat(chestCount) {
             val (cx, cy) = possibleCells.random(random)
-            // Не проверяем на LAND, ставим на любую подходящую клетку
-            terrain[cx][cy] = TerrainType.Chest
-            // 30% шанс на мимика
-            if (random.nextDouble() < 0.3)
-            {
+            terrain[cx][cy] = TerrainType.CHEST
+            if (random.nextDouble() < 0.3) {
                 val size = when {
-                    random.nextDouble() < 0.6 -> 1 // 60%  на маленького мимика
-                    random.nextDouble() < 0.9 -> 2 // 30% на среднего
-                    else -> 3 // 10% на большого
+                    random.nextDouble() < 0.6 -> 1
+                    random.nextDouble() < 0.9 -> 2
+                    else -> 3
                 }
                 setMimicSize(cx, cy, size)
             }
         }
     }
+
     fun collectChest(x: Int, y: Int): Boolean {
         if (x !in 0 until width || y !in 0 until height) return false
-
-        if (terrain[x][y] == TerrainType.Chest) {
-            terrain[x][y] = TerrainType.OpenedChest // Теперь он открыт
-            mimicSizes.remove(Pair(x,y))
+        if (terrain[x][y] == TerrainType.CHEST) {
+            terrain[x][y] = TerrainType.OPENEDCHEST
+            mimicSizes.remove(Pair(x, y))
             return true
         }
         return false
@@ -464,10 +485,10 @@ class GameMap(
 
     fun checkDeleteOpenChest(x: Int, y: Int, px: Int, py: Int): Boolean {
         if (x !in 0 until width || y !in 0 until height) return false
-        val distanceToPlayer = (sqrt(((x-px)*(x-px)+ (y-py)*(y-py)).toDouble())).toInt()
-        if (terrain[x][y] == TerrainType.OpenedChest && distanceToPlayer > 4) {
+        val distanceToPlayer = sqrt(((x - px) * (x - px) + (y - py) * (y - py)).toDouble()).toInt()
+        if (terrain[x][y] == TerrainType.OPENEDCHEST && distanceToPlayer > 4) {
             terrain[x][y] = TerrainType.LAND
-            mimicSizes.remove(Pair(x,y))
+            mimicSizes.remove(Pair(x, y))
             return true
         }
         return false
@@ -494,17 +515,33 @@ class GameMap(
         for (x in (centerX - 2)..(centerX + 2)) {
             for (y in (centerY - 2)..(centerY + 2)) {
                 if (x in 0 until width && y in 0 until height) {
-                    terrain[x][y] = TerrainType.LAND // Стартовая зона всегда земля
+                    terrain[x][y] = TerrainType.LAND
                 }
             }
+        }
+    }
+
+    private fun ensureStartAreaIsLand(playerStartX: Int, playerStartY: Int) {
+        for (x in (playerStartX - 1)..(playerStartX + 1)) {
+            for (y in (playerStartY - 1)..(playerStartY + 1)) {
+                if (x in 0 until width && y in 0 until height) {
+                    if (terrain[x][y] != TerrainType.MOUNTAIN &&
+                        terrain[x][y] != TerrainType.CHEST &&
+                        terrain[x][y] != TerrainType.ENEMY &&
+                        terrain[x][y] != TerrainType.WATER) {
+                        terrain[x][y] = TerrainType.LAND
+                    }
+                }
+            }
+        }
+        if (playerStartX in 0 until width && playerStartY in 0 until height) {
+            terrain[playerStartX][playerStartY] = TerrainType.LAND
         }
     }
 
     private fun ensureSingleIsland() {
         val visited = Array(width) { BooleanArray(height) { false } }
         val landCells = mutableListOf<Pair<Int, Int>>()
-
-
         for (x in 0 until width) {
             for (y in 0 until height) {
                 if (terrain[x][y] == TerrainType.LAND) {
@@ -512,20 +549,15 @@ class GameMap(
                 }
             }
         }
-
         if (landCells.isEmpty()) return
-
-
         val mainIsland = mutableSetOf<Pair<Int, Int>>()
         val queue = ArrayDeque<Pair<Int, Int>>()
         val center = landCells.minByOrNull {
-            kotlin.math.abs(it.first - width/2) + kotlin.math.abs(it.second - height/2)
+            kotlin.math.abs(it.first - width / 2) + kotlin.math.abs(it.second - height / 2)
         } ?: return
-
         queue.add(center)
         mainIsland.add(center)
         visited[center.first][center.second] = true
-
         while (queue.isNotEmpty()) {
             val (x, y) = queue.removeFirst()
             for (dx in -1..1) {
@@ -542,8 +574,6 @@ class GameMap(
                 }
             }
         }
-
-
         for ((x, y) in landCells) {
             if (!mainIsland.contains(Pair(x, y))) {
                 terrain[x][y] = TerrainType.WATER
@@ -554,7 +584,6 @@ class GameMap(
     private fun fillSmallLakes() {
         val visited = Array(width) { BooleanArray(height) { false } }
         val lakes = mutableListOf<MutableList<Pair<Int, Int>>>()
-
         for (x in 0 until width) {
             for (y in 0 until height) {
                 if (terrain[x][y] == TerrainType.WATER && !visited[x][y]) {
@@ -565,14 +594,11 @@ class GameMap(
                 }
             }
         }
-
         lakes.sortByDescending { it.size }
-
-
         for ((index, lake) in lakes.withIndex()) {
             if (index >= 2 || lake.size <= 5) {
-                for ((x, y) in lake) {
-                    terrain[x][y] = TerrainType.LAND
+                for ((lx, ly) in lake) {
+                    terrain[lx][ly] = TerrainType.LAND
                 }
             }
         }
@@ -581,19 +607,15 @@ class GameMap(
     private fun findWaterArea(startX: Int, startY: Int, visited: Array<BooleanArray>): MutableList<Pair<Int, Int>> {
         val area = mutableListOf<Pair<Int, Int>>()
         val queue = ArrayDeque<Pair<Int, Int>>()
-
         queue.add(Pair(startX, startY))
         visited[startX][startY] = true
-
         while (queue.isNotEmpty()) {
             val (x, y) = queue.removeFirst()
             area.add(Pair(x, y))
-
             for (dx in -1..1) {
                 for (dy in -1..1) {
                     if (dx == 0 && dy == 0) continue
-                    if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > 1) continue // Только 4 направления
-
+                    if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > 1) continue
                     val nx = x + dx
                     val ny = y + dy
                     if (nx in 0 until width && ny in 0 until height &&
@@ -604,7 +626,6 @@ class GameMap(
                 }
             }
         }
-
         return area
     }
 
@@ -614,14 +635,13 @@ class GameMap(
                 for (dy in -1..1) {
                     if (dx == 0 && dy == 0) continue
                     if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > 1) continue
-
                     val nx = x + dx
                     val ny = y + dy
                     if (nx !in 0 until width || ny !in 0 until height) {
-                        return false // Касается края карты — не озеро
+                        return false
                     }
                     if (terrain[nx][ny] == TerrainType.WATER && !lake.contains(Pair(nx, ny))) {
-                        return false // Связано с другой водой — не озеро
+                        return false
                     }
                 }
             }
@@ -634,25 +654,20 @@ class GameMap(
             Pair(-1, -1), Pair(-1, 1),
             Pair(1, -1), Pair(1, 1)
         )
-
         for ((dx, dy) in diagonalDirections) {
             val nx = x + dx
             val ny = y + dy
-
             if (nx !in 0 until width || ny !in 0 until height) {
                 return true
             }
-
             if (terrain[nx][ny] == TerrainType.WATER) {
                 return true
             }
         }
-
         return false
     }
 
     private fun validateMountainPaths() {
-
         val allLandCells = mutableListOf<Pair<Int, Int>>()
         for (x in 0 until width) {
             for (y in 0 until height) {
@@ -661,13 +676,10 @@ class GameMap(
                 }
             }
         }
-
         if (allLandCells.isEmpty()) return
-
         val reachableCells = mutableListOf<Pair<Int, Int>>()
         val visited = mutableSetOf<Pair<Int, Int>>()
         val queue = ArrayDeque<Pair<Int, Int>>()
-
         val start = Pair(width / 2, height / 2)
         if (terrain[start.first][start.second] == TerrainType.LAND) {
             queue.add(start)
@@ -675,95 +687,70 @@ class GameMap(
             reachableCells.add(start)
         } else {
             val nearestLand = allLandCells.minByOrNull {
-                kotlin.math.abs(it.first - width/2) + kotlin.math.abs(it.second - height/2)
+                kotlin.math.abs(it.first - width / 2) + kotlin.math.abs(it.second - height / 2)
             } ?: return
-
             queue.add(nearestLand)
             visited.add(nearestLand)
             reachableCells.add(nearestLand)
         }
-
         while (queue.isNotEmpty()) {
             val (x, y) = queue.removeFirst()
-
             val directions = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0))
             for ((dx, dy) in directions) {
                 val nx = x + dx
                 val ny = y + dy
-
                 if (nx in 0 until width && ny in 0 until height &&
                     !visited.contains(Pair(nx, ny))) {
-
                     if (terrain[nx][ny] == TerrainType.LAND) {
                         visited.add(Pair(nx, ny))
                         reachableCells.add(Pair(nx, ny))
                         queue.add(Pair(nx, ny))
                     }
-
                 }
             }
         }
-
-
         if (reachableCells.size == allLandCells.size) {
-            return  // Всё ок, вся суша достижима
+            return
         }
-
         val unreachableCells = allLandCells.filter { !reachableCells.contains(it) }
-
-        var fixed = false
         for ((ux, uy) in unreachableCells) {
             val directions = listOf(Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0))
             for ((dx, dy) in directions) {
                 val nx = ux + dx
                 val ny = uy + dy
-
                 if (nx in 0 until width && ny in 0 until height &&
                     reachableCells.contains(Pair(nx, ny)) &&
                     terrain[nx][ny] == TerrainType.MOUNTAIN) {
                     terrain[nx][ny] = TerrainType.LAND
-                    fixed = true
                 }
             }
         }
-
-        if (fixed) {
-            validateMountainPaths()
-        }
     }
-    private fun canPlaceCity(x: Int, y: Int): Boolean
-    {
-        for (dx in 0..1)
-        {
-            for (dy in 0..1)
-            {
+
+    private fun canPlaceCity(x: Int, y: Int): Boolean {
+        for (dx in 0..1) {
+            for (dy in 0..1) {
                 val nx = x + dx
                 val ny = y + dy
-                if (nx !in 0 until width || ny !in 0 until height)
-                {
+                if (nx !in 0 until width || ny !in 0 until height) {
                     return false
                 }
-                if (terrain[nx][ny] != TerrainType.LAND)
-                {
+                if (terrain[nx][ny] != TerrainType.LAND) {
                     return false
                 }
             }
         }
         return true
     }
-    private fun goodCityPosition(x: Int, y: Int): Boolean
-    {
+
+    private fun goodCityPosition(x: Int, y: Int): Boolean {
         var landCount = 0
-        for (dx in -2..3)
-        {
-            for (dy in -2..3)
-            {
+        for (dx in -2..3) {
+            for (dy in -2..3) {
                 val nx = x + dx
                 val ny = y + dy
-                if (nx in 0 until width && ny in 0 until height)
-                {
-                    if (terrain[nx][ny] == TerrainType.LAND)
-                    {
+                if (nx in 0 until width && ny in 0 until height) {
+                    if (terrain[nx][ny] == TerrainType.LAND) {
                         landCount++
                     }
                 }
@@ -771,23 +758,22 @@ class GameMap(
         }
         return landCount > 20
     }
-    private fun placeCity()
-    {
+
+    private fun placeCity() {
         val random = Random
-        var attemps = 0
-        while (attemps < 1000)
-        {
-            attemps++
+        var attempts = 0
+        while (attempts < 1000) {
+            attempts++
             val x = random.nextInt(1, width - 2)
             val y = random.nextInt(1, height - 2)
-            if (canPlaceCity(x, y) && goodCityPosition(x,y))
-            {
-                for (dx in 0..1)
-                {
-                    for (dy in 0..1)
-                    {
-                        if (dx == 0 && dy == 0) {terrain[x + dx][y + dy] = TerrainType.CITYANCHOR} else {
-                        terrain[x + dx][y + dy] = TerrainType.CITY}
+            if (canPlaceCity(x, y) && goodCityPosition(x, y)) {
+                for (dx in 0..1) {
+                    for (dy in 0..1) {
+                        if (dx == 0 && dy == 0) {
+                            terrain[x + dx][y + dy] = TerrainType.CITYANCHOR
+                        } else {
+                            terrain[x + dx][y + dy] = TerrainType.CITY
+                        }
                     }
                 }
                 return
@@ -795,93 +781,146 @@ class GameMap(
         }
         val cx = width / 2
         val cy = height / 2
-        for (dx in 0..1)
-        {
-            for (dy in 0..1)
-            {
-                terrain[cx+dx][cy+dy] = TerrainType.CITY
+        for (dx in 0..1) {
+            for (dy in 0..1) {
+                terrain[cx + dx][cy + dy] = TerrainType.CITY
             }
         }
     }
-    // метод, чтобы вычислять спавн игрока
-    private fun isPlayerStartPosition(x: Int, y: Int, playerStartX: Int, playerStartY: Int, minDistance: Int = 3): Boolean
-    {
+
+    private fun isPlayerStartPosition(x: Int, y: Int, playerStartX: Int, playerStartY: Int, minDistance: Int = 3): Boolean {
         val dx = kotlin.math.abs(x - playerStartX)
         val dy = kotlin.math.abs(y - playerStartY)
         val distance = kotlin.math.sqrt((dx * dx + dy * dy).toDouble())
         return distance < minDistance
-
-
     }
+
+    private fun canPlaceQuestGiver(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean {
+        if (terrain[x][y] != TerrainType.LAND) return false
+        if (isPlayerStartPosition(x, y, playerStartX, playerStartY, 6)) return false
+        for (dx in -1..1) {
+            for (dy in -1..1) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height) {
+                    when (terrain[nx][ny]) {
+                        TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.OUTPOST,
+                        TerrainType.UPGRADE, TerrainType.CHEST, TerrainType.ENEMY,
+                        TerrainType.MOUNTAIN, TerrainType.TRAP, TerrainType.WATER,
+                        TerrainType.CAVEENTRANCE -> return false
+                        else -> {}
+                    }
+                }
+            }
+        }
+        return true
+    }
+
+    private fun placeQuestGivers(playerStartX: Int, playerStartY: Int) {
+        val random = Random
+        val count = random.nextInt(2, 5)
+        var placed = 0
+        var attempts = 0
+        val maxAttempts = 1000
+        while (placed < count && attempts < maxAttempts) {
+            attempts++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceQuestGiver(x, y, playerStartX, playerStartY)) {
+                terrain[x][y] = TerrainType.QUEST_GIVER
+                questGivers[Pair(x, y)] = QuestGiver(x, y)
+                placed++
+            }
+        }
+    }
+
+    private fun placeCaveEntrance(startX: Int, startY: Int) {
+        val random = Random
+        val count = random.nextInt(1, 3)
+        var placed = 0
+        var attempts = 0
+        val maxAttempts = 500
+        while (placed < count && attempts < maxAttempts) {
+            attempts++
+            val x = random.nextInt(0, width)
+            val y = random.nextInt(0, height)
+            if (canPlaceCaveEntrance(x, y, startX, startY)) {
+                terrain[x][y] = TerrainType.CAVEENTRANCE
+                placed++
+            }
+        }
+    }
+
+    private fun canPlaceCaveEntrance(x: Int, y: Int, startX: Int, startY: Int): Boolean {
+        if (terrain[x][y] != TerrainType.LAND) return false
+        if (isPlayerStartPosition(x, y, startX, startY, 10)) return false
+        for (dx in -1..1) {
+            for (dy in -1..1) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until width && ny in 0 until height) {
+                    when (terrain[nx][ny]) {
+                        TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.OUTPOST,
+                        TerrainType.UPGRADE, TerrainType.CHEST, TerrainType.ENEMY,
+                        TerrainType.MOUNTAIN, TerrainType.TRAP, TerrainType.WATER,
+                        TerrainType.FOREST -> return false
+                        else -> {}
+                    }
+                }
+            }
+        }
+        return true
+    }
+
     private fun placeEnemies(count: Int = 10, playerStartX: Int, playerStartY: Int) {
         val random = Random
         var placed = 0
-
-        // Сначала спавним врагов около сундуков
         val chestPositions = mutableListOf<Pair<Int, Int>>()
         for (x in 0 until width) {
             for (y in 0 until height) {
-                if (terrain[x][y] == TerrainType.Chest) {
+                if (terrain[x][y] == TerrainType.CHEST) {
                     chestPositions.add(Pair(x, y))
                 }
             }
         }
-
         val usedPositions = mutableSetOf<Pair<Int, Int>>()
-
-        // Для каждого сундука спавним 1-2 врага рядом
         for ((chestX, chestY) in chestPositions) {
-            val enemiesPerChest = random.nextInt(1, 4) // 2 или 4 врага
-
-            for (i in 0 until enemiesPerChest) {
-                // Ищем подходящую клетку вокруг сундука (радиус 1)
+            val enemiesPerChest = random.nextInt(1, 4)
+            repeat(enemiesPerChest) {
                 var found = false
-                for (attempt in 0 until 20) { // 20 попыток найти место
-                    val dx = random.nextInt(-1, 2) // -1, 0, 1
+                repeat(20) { _ ->
+                    if (found) return@repeat
+                    val dx = random.nextInt(-1, 2)
                     val dy = random.nextInt(-1, 2)
-
-                    if (dx == 0 && dy == 0) continue // пропускаем сам сундук
-
+                    if (dx == 0 && dy == 0) return@repeat
                     val enemyX = chestX + dx
                     val enemyY = chestY + dy
                     val enemyPos = Pair(enemyX, enemyY)
-
-                    // Проверяем, можно ли поставить врага
                     if (enemyX in 0 until width && enemyY in 0 until height &&
-                        (terrain[enemyX][enemyY] == TerrainType.LAND || terrain[enemyX][enemyY] == TerrainType.FOREST) && // можно на землю и лес
+                        (terrain[enemyX][enemyY] == TerrainType.LAND || terrain[enemyX][enemyY] == TerrainType.FOREST) &&
                         !usedPositions.contains(enemyPos) &&
                         !isPlayerStartPosition(enemyX, enemyY, playerStartX, playerStartY, 5) &&
-                        isWalkable(enemyX, enemyY) // проверка на проходимость
-                    ) {
-                        // СОХРАНЯЕМ исходный тип и ставим врага
+                        isWalkable(enemyX, enemyY)) {
                         originalTerrain[enemyX][enemyY] = terrain[enemyX][enemyY]
                         terrain[enemyX][enemyY] = TerrainType.ENEMY
                         usedPositions.add(enemyPos)
                         placed++
                         found = true
-                        break
                     }
                 }
-
-                // Если не нашли место с первой попытки, пробуем радиус 2
                 if (!found) {
-                    for (attempt in 0 until 20) {
+                    repeat(20) { _ ->
                         val dx = random.nextInt(-2, 3)
                         val dy = random.nextInt(-2, 3)
-
-                        if (dx == 0 && dy == 0) continue
-
+                        if (dx == 0 && dy == 0) return@repeat
                         val enemyX = chestX + dx
                         val enemyY = chestY + dy
                         val enemyPos = Pair(enemyX, enemyY)
-
                         if (enemyX in 0 until width && enemyY in 0 until height &&
                             (terrain[enemyX][enemyY] == TerrainType.LAND || terrain[enemyX][enemyY] == TerrainType.FOREST) &&
                             !usedPositions.contains(enemyPos) &&
                             !isPlayerStartPosition(enemyX, enemyY, playerStartX, playerStartY, 5) &&
-                            isWalkable(enemyX, enemyY)
-                        ) {
-                            // СОХРАНЯЕМ исходный тип и ставим врага
+                            isWalkable(enemyX, enemyY)) {
                             originalTerrain[enemyX][enemyY] = terrain[enemyX][enemyY]
                             terrain[enemyX][enemyY] = TerrainType.ENEMY
                             usedPositions.add(enemyPos)
@@ -892,10 +931,7 @@ class GameMap(
                 }
             }
         }
-
-        // Если нужно больше врагов, добиваем рандомными
         if (placed < count) {
-            // Собираем все возможные позиции
             val availablePositions = mutableListOf<Pair<Int, Int>>()
             for (x in 0 until width) {
                 for (y in 0 until height) {
@@ -905,21 +941,16 @@ class GameMap(
                     }
                 }
             }
-
-            // Перемешиваем и берем нужное количество
             if (availablePositions.isNotEmpty()) {
                 val shuffled = availablePositions.shuffled(random)
                 val toPlace = minOf(count - placed, shuffled.size)
-
-                for (i in 0 until toPlace) {
-                    val (x, y) = shuffled[i]
+                for (idx in 0 until toPlace) {
+                    val (x, y) = shuffled[idx]
                     originalTerrain[x][y] = terrain[x][y]
                     terrain[x][y] = TerrainType.ENEMY
                     placed++
                 }
             }
-
-            // Если всё ещё не хватает врагов, пробуем с увеличенным радиусом
             if (placed < count) {
                 var relaxedAttempts = 0
                 while (placed < count && relaxedAttempts < 1000) {
@@ -939,32 +970,20 @@ class GameMap(
         }
     }
 
-    private fun canPlaceEnemy(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean
-    {
+    private fun canPlaceEnemy(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean {
         val t = terrain[x][y]
-        if (t != TerrainType.LAND)
-        {
-            return false
-        }
-        // проверка расстояния до стартовой позиции игрока
-        if (isPlayerStartPosition(x, y, playerStartX, playerStartY, 5))
-        {
-            return false
-        }
-        for (dx in -2..2)
-        {
-            for (dy in -2..2)
-            {
+        if (t != TerrainType.LAND) return false
+        if (isPlayerStartPosition(x, y, playerStartX, playerStartY, 5)) return false
+        for (dx in -2..2) {
+            for (dy in -2..2) {
                 val nx = x + dx
                 val ny = y + dy
-                if (nx in 0 until width && ny in 0 until height)
-                {
+                if (nx in 0 until width && ny in 0 until height) {
                     if (terrain[nx][ny] == TerrainType.CITY ||
                         terrain[nx][ny] == TerrainType.OUTPOST ||
                         terrain[nx][ny] == TerrainType.UPGRADE ||
                         terrain[nx][ny] == TerrainType.TRAP ||
-                        terrain[nx][ny] == TerrainType.ENEMY)
-                    {
+                        terrain[nx][ny] == TerrainType.ENEMY) {
                         return false
                     }
                 }
@@ -972,74 +991,53 @@ class GameMap(
         }
         return true
     }
-    private fun placeTraps(count: Int = 3, playerStartX: Int, playerStartY: Int)
-    {
+
+    private fun placeTraps(count: Int = 3, playerStartX: Int, playerStartY: Int) {
         val random = Random
         var placed = 0
-        // Собираем доступные позиции
         val availablePositions = mutableListOf<Pair<Int, Int>>()
-        for (x in 0 until width)
-        {
-            for (y in 0 until height)
-            {
-                if (canPlaceTraps(x, y, playerStartX, playerStartY))
-                {
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (canPlaceTraps(x, y, playerStartX, playerStartY)) {
                     availablePositions.add(Pair(x, y))
                 }
             }
         }
-
-        // Перемешиваем и берем нужное количество
-        if (availablePositions.isNotEmpty())
-        {
+        if (availablePositions.isNotEmpty()) {
             val shuffled = availablePositions.shuffled(random)
             val toPlace = minOf(count, shuffled.size)
-
-            for (i in 0 until toPlace)
-            {
-                val (x, y) = shuffled[i]
+            for (idx in 0 until toPlace) {
+                val (x, y) = shuffled[idx]
                 terrain[x][y] = TerrainType.TRAP
                 setTrapType(x, y, TrapManager.randomTrapType())
                 placed++
             }
         }
         if (placed == 0) {
-            for (x in 0 until width)
-            {
-                for (y in 0 until height)
-                {
-                    if (terrain[x][y] == TerrainType.LAND && !isPlayerStartPosition(x, y, playerStartX, playerStartY, 2))
-                    {
+            for (x in 0 until width) {
+                for (y in 0 until height) {
+                    if (terrain[x][y] == TerrainType.LAND && !isPlayerStartPosition(x, y, playerStartX, playerStartY, 2)) {
                         terrain[x][y] = TerrainType.TRAP
                         return
                     }
                 }
             }
         }
-
     }
-    private fun canPlaceTraps(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean
-    {
-        if (terrain[x][y] != TerrainType.LAND) {
-            return false
-        }
-        // Проверка расстояния до стартовой позиции игрока
-        if (isPlayerStartPosition(x, y, playerStartX, playerStartY, 4)) {
-            return false
-        }
-        // Проверка, что не ставим ловушку на другие объекты
+
+    private fun canPlaceTraps(x: Int, y: Int, playerStartX: Int, playerStartY: Int): Boolean {
+        if (terrain[x][y] != TerrainType.LAND) return false
+        if (isPlayerStartPosition(x, y, playerStartX, playerStartY, 4)) return false
         for (dx in -1..1) {
             for (dy in -1..1) {
                 val nx = x + dx
                 val ny = y + dy
-                if (nx in 0 until width && ny in 0 until height)
-                {
+                if (nx in 0 until width && ny in 0 until height) {
                     if (terrain[nx][ny] == TerrainType.CITY ||
                         terrain[nx][ny] == TerrainType.ENEMY ||
                         terrain[nx][ny] == TerrainType.UPGRADE ||
                         terrain[nx][ny] == TerrainType.OUTPOST ||
-                        terrain[nx][ny] == TerrainType.TRAP)
-                    {
+                        terrain[nx][ny] == TerrainType.TRAP) {
                         return false
                     }
                 }
@@ -1047,312 +1045,71 @@ class GameMap(
         }
         return true
     }
-    private fun placeUpgrade()
-    {
+
+    private fun placeUpgrade() {
         val random = Random
         val min = 2
         val max = 5
         var placed = 0
-        val lands = mutableListOf<Pair<Int, Int>>() // все подходящие клетки куда можно разместить
-        for (x in 0 until width)
-        {
-            for (y in 0 until height)
-            {
-                if (canPlaceUpgrade(x, y))
-                {
+        val lands = mutableListOf<Pair<Int, Int>>()
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (canPlaceUpgrade(x, y)) {
                     lands.add(Pair(x, y))
                 }
             }
         }
         val shuffled = lands.shuffled(random)
-        for ((x, y) in shuffled)
-        {
-            if (placed >= min)
-            {
-                break
-            }
+        for ((x, y) in shuffled) {
+            if (placed >= min) break
             terrain[x][y] = TerrainType.UPGRADE
             placed++
         }
-        while (placed < max && random.nextDouble() < 0.5f && placed < shuffled.size)
-        {
+        while (placed < max && random.nextDouble() < 0.5 && placed < shuffled.size) {
             val (x, y) = shuffled[placed]
-            if (terrain[x][y] == TerrainType.LAND)
-            {
+            if (terrain[x][y] == TerrainType.LAND) {
                 terrain[x][y] = TerrainType.UPGRADE
                 placed++
             }
-            else
-            {
-                continue
-            }
         }
     }
-    private fun canPlaceUpgrade(x: Int, y: Int): Boolean
-    {
-        if (terrain[x][y] != TerrainType.LAND)
-        {
-            return false
-        }
-        return true
+
+    private fun canPlaceUpgrade(x: Int, y: Int): Boolean {
+        return terrain[x][y] == TerrainType.LAND
     }
-    private fun placeOutpost()
-    {
+
+    private fun placeOutpost() {
         val random = Random
-        if (random.nextFloat() > 0.25f)
-        {
-            return
-        }
+        if (random.nextFloat() > 0.25f) return
         var attempts = 0
-        while (attempts < 1000)
-        {
+        while (attempts < 1000) {
             attempts++
             val x = random.nextInt(0, width)
             val y = random.nextInt(0, height)
             val horizontal = random.nextBoolean()
-            if (canPlaceOutpost(x, y, horizontal))
-            {
-                if (horizontal)
-                {
+            if (canPlaceOutpost(x, y, horizontal)) {
+                if (horizontal) {
                     terrain[x][y] = TerrainType.OUTPOST
-                    terrain[x+1][y] = TerrainType.OUTPOST
-                }
-                else
-                {
+                    if (x + 1 in 0 until width) terrain[x + 1][y] = TerrainType.OUTPOST
+                } else {
                     terrain[x][y] = TerrainType.OUTPOST
-                    terrain[x][y+1] = TerrainType.OUTPOST
+                    if (y + 1 in 0 until height) terrain[x][y + 1] = TerrainType.OUTPOST
                 }
                 return
             }
         }
     }
-    private fun canPlaceOutpost(x: Int, y: Int, horizontal: Boolean): Boolean
-    {
-        val positions = if (horizontal)
-        {
-            listOf( Pair(x, y) , Pair( x + 1, y))
+
+    private fun canPlaceOutpost(x: Int, y: Int, horizontal: Boolean): Boolean {
+        val positions = if (horizontal) {
+            listOf(Pair(x, y), Pair(x + 1, y))
+        } else {
+            listOf(Pair(x, y), Pair(x, y + 1))
         }
-        else
-        {
-            listOf( Pair(x , y) , Pair(x , y + 1))
-        }
-        for ((nx, ny) in positions)
-        {
-            if (nx !in 0 until width || ny !in 0 until height)
-            {
-                return false
-            }
-            if (terrain[nx][ny] != TerrainType.LAND)
-            {
-                return false
-            }
+        for ((nx, ny) in positions) {
+            if (nx !in 0 until width || ny !in 0 until height) return false
+            if (terrain[nx][ny] != TerrainType.LAND) return false
         }
         return true
-    }
-
-
-    private fun ensureStartAreaIsLand(playerStartX: Int, playerStartY: Int) {
-        // Делаем область 3x3 вокруг игрока землёй
-        for (x in (playerStartX - 1)..(playerStartX + 1)) {
-            for (y in (playerStartY - 1)..(playerStartY + 1)) {
-                if (x in 0 until width && y in 0 until height) {
-                    // Если это не гора и не сундук (чтобы не затереть важные объекты)
-                    if (terrain[x][y] != TerrainType.MOUNTAIN &&
-                        terrain[x][y] != TerrainType.Chest &&
-                        terrain[x][y] != TerrainType.ENEMY &&
-                        terrain[x][y] != TerrainType.WATER) {
-                        terrain[x][y] = TerrainType.LAND
-                    }
-                }
-            }
-        }
-
-        // Дополнительно проверяем, что сама позиция игрока точно земля
-        if (playerStartX in 0 until width && playerStartY in 0 until height) {
-            terrain[playerStartX][playerStartY] = TerrainType.LAND
-        }
-    }
-
-    private fun placeForestGroups() {
-        val random = Random
-        val groupsCount = random.nextInt(4, 7)
-        var placedGroups = 0
-        val maxAttempts = 30
-
-        for (attempt in 0 until maxAttempts) {
-            if (placedGroups >= groupsCount) break
-
-            val groupSize = random.nextInt(3, 11)
-            val startCell = findFreeLandCell()
-            if (startCell == null) continue
-
-            val group = growForestGroup(startCell.first, startCell.second, groupSize)
-
-            if (group.size >= groupSize * 0.7) {
-                // Размещаем лес
-                for ((x, y) in group) {
-                    if (terrain[x][y] != TerrainType.Chest) {
-                        terrain[x][y] = TerrainType.FOREST
-                    }
-                }
-                placedGroups++
-            }
-        }
-    }
-
-    // Поиск свободной клетки LAND
-    private fun findFreeLandCell(): Pair<Int, Int>? {
-        val random = Random
-        for (attempt in 0 until 100) {
-            val x = random.nextInt(0, width)
-            val y = random.nextInt(0, height)
-
-            if (terrain[x][y] == TerrainType.LAND &&
-                !isNearSpecialObjects(x, y)) {
-                return Pair(x, y)
-            }
-        }
-        return null
-    }
-
-    // Проверка, что рядом нет важных объектов
-    private fun isNearSpecialObjects(x: Int, y: Int): Boolean {
-        for (dx in -2..2) {
-            for (dy in -2..2) {
-                val nx = x + dx
-                val ny = y + dy
-                if (nx in 0 until width && ny in 0 until height) {
-                    when (terrain[nx][ny]) {
-                        TerrainType.MOUNTAIN,
-                        TerrainType.Chest,
-                        TerrainType.ENEMY,
-                        TerrainType.FOREST -> return true
-                        else -> {}
-                    }
-                }
-            }
-        }
-        return false
-    }
-
-    // Выращивание группы леса
-    private fun growForestGroup(startX: Int, startY: Int, targetSize: Int): MutableList<Pair<Int, Int>> {
-        val random = Random
-        val group = mutableListOf(Pair(startX, startY))
-        val frontier = mutableListOf(Pair(startX, startY))
-        val visited = mutableSetOf(Pair(startX, startY))
-
-        while (group.size < targetSize && frontier.isNotEmpty()) {
-            val current = frontier.random(random)
-            frontier.remove(current)
-
-            val neighbors = getAdjacentLandCells(current.first, current.second)
-
-            for (neighbor in neighbors) {
-                if (!visited.contains(neighbor) && group.size < targetSize &&
-                    !isNearSpecialObjects(neighbor.first, neighbor.second)) {
-                    group.add(neighbor)
-                    visited.add(neighbor)
-                    frontier.add(neighbor)
-                }
-            }
-        }
-
-        // Гарантированный сундук в большой группе (9+ клеток)
-        if (group.size >= 9) {
-            var chestPlaced = false
-
-            for ((x, y) in group) {
-                val hasNorth = group.contains(Pair(x, y + 1))
-                val hasSouth = group.contains(Pair(x, y - 1))
-                val hasWest = group.contains(Pair(x - 1, y))
-                val hasEast = group.contains(Pair(x + 1, y))
-
-                if (hasNorth && hasSouth && hasWest && hasEast) {
-                    terrain[x][y] = TerrainType.Chest
-                    if (random.nextDouble() < 0.3)
-                    {
-                        val size = when {
-                            random.nextDouble() < 0.6 -> 1
-                            random.nextDouble() < 0.9 -> 2
-                            else -> 3
-                        }
-                        setMimicSize(x, y, size)
-                    }
-                    chestPlaced = true
-                    break
-                }
-            }
-
-            if (!chestPlaced && group.isNotEmpty()) {
-                val (x, y) = group.first()
-                terrain[x][y] = TerrainType.Chest
-            }
-        }
-
-        return group
-    }
-
-    // Получение соседних клеток LAND (4 направления)
-    private fun getAdjacentLandCells(x: Int, y: Int): List<Pair<Int, Int>> {
-        val neighbors = mutableListOf<Pair<Int, Int>>()
-        val directions = listOf(
-            Pair(0, 1), Pair(0, -1), Pair(1, 0), Pair(-1, 0)
-        )
-
-        for ((dx, dy) in directions) {
-            val nx = x + dx
-            val ny = y + dy
-            if (nx in 0 until width && ny in 0 until height &&
-                terrain[nx][ny] == TerrainType.LAND) {
-                neighbors.add(Pair(nx, ny))
-            }
-        }
-        return neighbors
-    }
-    private fun canPlaceCaveEntrance(x: Int, y: Int, startX: Int, startY: Int): Boolean
-    {
-        if (terrain[x][y] != TerrainType.LAND) return false
-        if (isPlayerStartPosition(x, y, startX, startY, 10)) return false
-        for (xx in -1..1)
-        {
-            for (yy in -1..1)
-            {
-                val dx = x + xx
-                val dy = y + yy
-                if (dx in 0 until width && dy in 0 until height)
-                {
-                    when (terrain[dx][dy])
-                    {
-                        TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.OUTPOST,
-                        TerrainType.UPGRADE, TerrainType.Chest, TerrainType.ENEMY,
-                        TerrainType.MOUNTAIN, TerrainType.TRAP, TerrainType.WATER,
-                        TerrainType.FOREST -> return false
-                        else -> {}
-                    }
-
-                }
-            }
-        }
-        return true
-    }
-    private fun placeCaveEntrance(startX: Int, startY: Int)
-    {
-        val random = Random
-        val count = random.nextInt(1, 3)
-        var placed = 0
-        var attempts = 0
-        val maxAttempts = 500
-        while (placed < count && attempts < maxAttempts)
-        {
-            attempts++
-            val x = random.nextInt(0, width)
-            val y = random.nextInt(0, height)
-            if (canPlaceCaveEntrance(x, y, startX, startY))
-            {
-                terrain[x][y] = TerrainType.CAVEENTRANCE
-                placed++
-            }
-        }
     }
 }
