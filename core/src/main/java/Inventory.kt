@@ -6,6 +6,9 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.Rectangle
+import kotlin.collections.remove
+import kotlin.compareTo
+import kotlin.dec
 
 data class Item(
     val name: String,
@@ -13,7 +16,8 @@ data class Item(
     var quantity: Int,
     val isEquippable: Boolean,
     var isEquipped: Boolean = false,
-    val equipmentItem: EquipmentItem? = null
+    val equipmentItem: EquipmentItem? = null,
+    val consumable: ConsumableItem? = null  // НОВОЕ
 )
 
 class Inventory(
@@ -75,33 +79,33 @@ class Inventory(
 
     private fun initTestItems() {
         items.addAll(listOf(
-            Item("Health Potion", "Restores 50 HP", 3, false),
-            Item("Mana Potion", "Restores 30 MP", 2, false),
             Item("Wooden Sword", "A basic sword. Damage +10", 1, true, false, EquipmentDatabase.WOODEN_SWORD),
             Item("Leather Armor", "Basic armor. Defense +15%", 1, true, false, EquipmentDatabase.LEATHER_CHESTPLATE),
             Item("Iron Helmet", "Basic helmet. Defense +10%", 1, true, false, EquipmentDatabase.IRON_HELMET),
             Item("Iron Boots", "Basic boots. Defense +10%", 1, true, false, EquipmentDatabase.IRON_BOOTS),
             Item("Wooden Shield", "Basic shield. Defense +5%", 1, true, false, EquipmentDatabase.WOODEN_SHIELD),
-            Item("Defence rune", "+20% armor in exchange for -20% max health", 1, true, false, EquipmentDatabase.DEFENCE_RUNE)
+            Item("Defence rune", "+20% armor in exchange for -20% max health", 1, true, false, EquipmentDatabase.DEFENCE_RUNE),
+            // РАСХОДНИКИ
+            Item("Small health potions", "Restores 15% of health", 3, false, consumable = ConsumableItem.healthPotionSmall(3)),
+            Item("Small mana potions", "Restores 15% of mana", 2, false, consumable = ConsumableItem.manaPotionSmall(2)),
+            Item("Antidote", "Cures poison", 1, false, consumable = ConsumableItem.antidote(1)),
+            Item("Bandage", "Stop the bleeding", 1, false, consumable = ConsumableItem.bandage(1)),
+            Item("Sponge", "Removes phlegm and restores 5% health", 1, false, consumable = ConsumableItem.sponge(1)),
+            Item("Holy water", "Relieves burn and curse", 1, false, consumable = ConsumableItem.holyWater(1)),
         ))
     }
-
-
     private fun updateAllInteractiveRects() {
         val panelW = 1200f
         val panelH = 700f
         val panelX = (screenWidth - panelW) / 2
         val panelY = (screenHeight - panelH) / 2
-
         val closeBtnW = 150f
         val closeBtnH = 90f
         val closeBtnX = panelX + panelW - closeBtnW - 20f
         val closeBtnY = panelY + 10f   // снизу панели
         closeButtonRect.set(closeBtnX, closeBtnY, closeBtnW, closeBtnH)
-
         updateItemRects(panelX, panelY, panelW, panelH)
         updateEquipmentSlotsRects(panelX, panelY, panelW, panelH)
-
         if (isItemDetailsVisible && selectedItem != null) {
             val detailsW = 400f
             val detailsH = 350f
@@ -110,7 +114,6 @@ class Inventory(
             val buttonY = detailsY + 50f
             val buttonW = 120f
             val buttonH = 50f
-
             if (selectedItem!!.isEquippable) {
                 equipButtonRect.set(detailsX + 50f, buttonY, buttonW, buttonH)
             } else {
@@ -119,7 +122,6 @@ class Inventory(
             dropButtonRect.set(detailsX + 200f, buttonY, buttonW, buttonH)
         }
     }
-
     private fun updateItemRects(panelX: Float, panelY: Float, panelW: Float, panelH: Float) {
         itemRects.clear()
         val startX = panelX + 50f
@@ -127,7 +129,6 @@ class Inventory(
         val itemSize = 80f
         val padding = 20f
         val itemsPerRow = 4
-
         items.forEachIndexed { index, _ ->
             val row = index / itemsPerRow
             val col = index % itemsPerRow
@@ -136,7 +137,6 @@ class Inventory(
             itemRects.add(Rectangle(x, y - itemSize, itemSize, itemSize))
         }
     }
-
     private fun updateEquipmentSlotsRects(panelX: Float, panelY: Float, panelW: Float, panelH: Float) {
         val equipPanelX = panelX + panelW - 350f
         val equipPanelY = panelY + 50f
@@ -164,7 +164,6 @@ class Inventory(
             slotY -= (slotSize + 15f)
         }
     }
-
     fun toggle() {
         isVisible = !isVisible
         if (!isVisible) {
@@ -173,7 +172,6 @@ class Inventory(
             selectedItemIndex = -1
         }
     }
-
     fun handleInput(player: Player) {
         val touchX = Gdx.input.x.toFloat()
         val touchY = Gdx.input.y.toFloat()
@@ -256,7 +254,6 @@ class Inventory(
             isDropPressed = false
         }
     }
-
     // ==================== ОТРИСОВКА ====================
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player) {
         currentPlayer = player
@@ -302,7 +299,6 @@ class Inventory(
         batch.color = Color.WHITE
         font.data.setScale(1f)
     }
-
     // ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
     private fun unequipItemByType(type: EquipmentType, player: Player) {
         val item = player.equipment.getEquipped(type) ?: return
@@ -323,7 +319,6 @@ class Inventory(
             }
         }
     }
-
     private fun unequipRune(slotIndex: Int, player: Player) {
         val rune = player.equipment.getRune(slotIndex) ?: return
         if (player.equipment.unequipRune(slotIndex, player)) {
@@ -343,7 +338,6 @@ class Inventory(
             }
         }
     }
-
     private fun handleEquipItem(item: Item, player: Player) {
         if (!item.isEquippable) return
         val equipmentItem = item.equipmentItem
@@ -407,30 +401,40 @@ class Inventory(
             println("Failed to equip: ${item.name}. Slot may be occupied or item incompatible.")
         }
     }
-
     private fun handleUseItem(item: Item, player: Player) {
-        if (!item.isEquippable && item.quantity > 0) {
-            when (item.name) {
-                "Health Potion" -> player.currentHealth = minOf(player.currentHealth + 50, player.maxHealth)
-                "Mana Potion" -> player.currentMana = minOf(player.currentMana + 30, player.maxMana)
+        if (item.isEquippable) return
+        if (item.consumable != null) {        // Если это расходник - используем его эффект
+            if (item.consumable.useOutsideBattle(player)) {
+                if (item.consumable.quantity <= 0) {
+                    items.remove(item)
+                    isItemDetailsVisible = false
+                    selectedItem = null
+                    selectedItemIndex = -1
+                } else {
+                    item.quantity = item.consumable.quantity
+                }
             }
-            item.quantity--
-            if (item.quantity <= 0) {
-                items.remove(item)
-                isItemDetailsVisible = false
-                selectedItem = null
-                selectedItemIndex = -1
-            }
+            return
+        }
+        when (item.name) {        // Старая логика для зелий (её можно удалить или оставить для совместимости)
+            "Health Potion" -> player.currentHealth = minOf(player.currentHealth + 50, player.maxHealth)
+            "Mana Potion" -> player.currentMana = minOf(player.currentMana + 30, player.maxMana)
+            else -> return
+        }
+        item.quantity--
+        if (item.quantity <= 0) {
+            items.remove(item)
+            isItemDetailsVisible = false
+            selectedItem = null
+            selectedItemIndex = -1
         }
     }
-
     private fun handleDropItem(item: Item) {
         items.remove(item)
         isItemDetailsVisible = false
         selectedItem = null
         selectedItemIndex = -1
     }
-
     private fun renderEquipmentPanel(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
         val equipPanelX = panelX + panelW - 350f
         val equipPanelY = panelY + 50f
@@ -540,7 +544,6 @@ class Inventory(
 
         renderPlayerStats(batch, whitePixel, equipPanelX, equipPanelY, equipPanelW, equipPanelH, player)
     }
-
     private fun renderPlayerStats(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, player: Player) {
         val statsX = panelX - 250f
         val statsY = panelY + 10f
@@ -560,7 +563,6 @@ class Inventory(
         font.draw(batch, "LUCK: ${(player.luck * 100).toInt()}%", statsX + 20f, statsY - 5f)
         font.draw(batch, "CORRUPT: ${player.corruption}", statsX + 150f, statsY - 5f)
     }
-
     private fun renderItems(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float) {
         val startX = panelX + 50f
         val startY = panelY + panelH - 150f
@@ -611,7 +613,6 @@ class Inventory(
             font.draw(batch, shortName, x + 5f, y - itemSize + 15f)
         }
     }
-
     private fun renderItemDetails(batch: SpriteBatch, whitePixel: Texture, panelX: Float, panelY: Float, panelW: Float, panelH: Float, item: Item) {
         val detailsW = 400f
         val detailsH = 350f
@@ -682,7 +683,6 @@ class Inventory(
         }
         font.data.setScale(1f)
     }
-
     fun addEquipmentItem(equipmentItem: EquipmentItem, quantity: Int = 1) {
         val existingItem = items.find { it.equipmentItem?.id == equipmentItem.id }
         if (existingItem != null) {
@@ -698,7 +698,6 @@ class Inventory(
             ))
         }
     }
-
     fun addItem(item: Item) {
         println("=== ADDING ITEM TO INVENTORY ===")
         println("Item: ${item.name}, Quantity: ${item.quantity}")
@@ -720,7 +719,6 @@ class Inventory(
             }
         }
     }
-
     fun removeItem(itemName: String, quantity: Int = 1) {
         val item = items.find { it.name == itemName }
         item?.let {
@@ -728,6 +726,23 @@ class Inventory(
             if (it.quantity <= 0) items.remove(it)
         }
     }
-
     fun getEquippableItems(): List<Item> = items.filter { it.isEquippable }
+    fun getConsumableItem(type: ConsumableType): ConsumableItem? {
+        val item = items.find { it.consumable?.type == type && it.quantity > 0 }
+        return item?.consumable?.copyWithQuantity(item.quantity)
+    }
+    fun hasConsumable(type: ConsumableType): Boolean {
+        return items.any { it.consumable?.type == type && it.quantity > 0 }
+    }
+    fun removeConsumable(type: ConsumableType): Boolean {
+        val item = items.find { it.consumable?.type == type }
+        if (item != null && item.quantity > 0) {
+            item.quantity--
+            if (item.quantity <= 0) {
+                items.remove(item)
+            }
+            return true
+        }
+        return false
+    }
 }
