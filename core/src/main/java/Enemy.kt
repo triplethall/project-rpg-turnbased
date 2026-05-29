@@ -826,7 +826,7 @@ enum class Enemy
         baseEnemyCritChance = 0.05,
     ),
     DRAGON_BOSS(
-        displayEnemyName = "Mary Ann",
+        displayEnemyName = "Helkaiser",
         baseEnemyDamage = 30,
         baseEnemyMageDamage = 55,
         baseEnemyMaxHealth = 500,

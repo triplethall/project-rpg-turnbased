@@ -221,7 +221,7 @@ class GameMap(
         placeChests()
         placeCity()
         placeCaveEntrance(playerStartX, playerStartY)
-        placeBossNearCaveEntrance(playerStartX, playerStartY)
+        placeBossNearCaveEntrance()
         placeEnemies(10, playerStartX, playerStartY)
         placeTraps(3, playerStartX, playerStartY)
         placeUpgrade()
@@ -1361,7 +1361,7 @@ class GameMap(
             }
         }
     }
-    private fun placeBossNearCaveEntrance(playerStartX: Int, playerStartY: Int) {
+    private fun placeBossNearCaveEntrance() {
         val random = Random
         val caveEntrances = mutableListOf<Pair<Int, Int>>()
         for (x in 0 until width) {
