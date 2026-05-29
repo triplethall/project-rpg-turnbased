@@ -202,7 +202,7 @@ class MapRenderer (
                     renderBeachCorners(batch, x, y, posX, posY, light)
                 }
                 when (terrain) {
-                    TerrainType.LAND, TerrainType.UPGRADE,TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.MOUNTAIN, TerrainType.OpenedChest, TerrainType.Chest, TerrainType.FOREST, TerrainType.ENEMY -> {
+                    TerrainType.LAND, TerrainType.TRAP, TerrainType.TRAP_TRIGGERED, TerrainType.UPGRADE, TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.MOUNTAIN, TerrainType.OpenedChest, TerrainType.Chest, TerrainType.FOREST, TerrainType.ENEMY -> {
                         batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                         batch.draw(dirtTexture, posX, posY, cellSize, cellSize)
                     }
@@ -344,16 +344,16 @@ class MapRenderer (
                         font.draw(batch, "!", posX + cellSize/2 - 5f, posY + cellSize - 10f)
                     }
                     TerrainType.TRAP_TRIGGERED -> {
-                        batch.color = Color(1f, 1f, 1f, 1f).mul(light, light, light, 1f)
-                        batch.draw(trapTriggeredTexture, posX, posY, cellSize, cellSize)
+                        batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
+                        batch.draw(trapTriggeredTexture, posX-7.5f, posY-7.5f, cellSize*1.5f, cellSize*1.5f)
                     }
                     else -> {
                         val color = when (terrain) {
                             TerrainType.MOUNTAIN -> continue
                             TerrainType.CITY -> continue
                             TerrainType.ENEMY -> Color.RED
-                            TerrainType.TRAP -> continue
                             TerrainType.TRAP_TRIGGERED -> continue
+                            TerrainType.TRAP -> continue
                             TerrainType.UPGRADE -> continue
                             TerrainType.OUTPOST -> Color.CORAL
                             TerrainType.FOREST -> continue
