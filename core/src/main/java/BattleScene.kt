@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.math.Rectangle
+import kotlin.div
 import kotlin.random.Random
 
 class BattleScene(
@@ -113,6 +114,8 @@ class BattleScene(
     private val battleLog = mutableListOf<String>()
     private var showLogs = false
     private var lastDebuffDamage = 0
+    private val consumablesButtonRect = Rectangle()
+    private var showConsumablesMenu = false
 
     // ===== РАДИАЛЬНОЕ МЕНЮ НАВЫКОВ =====
     private var showSkillWheel = false
@@ -198,7 +201,6 @@ class BattleScene(
 
         battleLog.clear()
     }
-
     fun startBattle(enemyCellX: Int, enemyCellY: Int) {
         println("DEBUG: Player class = ${player.playerClass}")
         if (player.currentHealth <= 0) {
@@ -208,7 +210,6 @@ class BattleScene(
         val randomCount = (1..3).random()
         startBattle(enemyCellX, enemyCellY, randomCount)
     }
-
     fun startMimicBattle(x: Int, y: Int, mimicSize: Int) {
         val mimicType = when (mimicSize) {
             2 -> Enemy.MEDIUM_MIMIC
@@ -220,12 +221,10 @@ class BattleScene(
         messageSystem.addMessage("MIMIC ATTACKED YOU!", Color.FIREBRICK)
         addToBattleLog("MIMIC ATTACKED YOU!")
     }
-
     private fun addToBattleLog(msg: String) {
         battleLog.add(msg)
         if (battleLog.size > 20) battleLog.removeAt(0)
     }
-
     private fun updateEnemyBars() {
         enemyBars.clear()
         val rectHeight = 150f
@@ -276,7 +275,6 @@ class BattleScene(
             enemyBars.add(StatBar(barX, barY, barWidth, barHeight, Color.RED))
         }
     }
-
     private fun useSkill(skill: Skill) {
         if (!skill.canUse(player, enemies)) {
             messageSystem.addMessage("${skill.name} cant use!", Color.GRAY)
@@ -295,7 +293,6 @@ class BattleScene(
             addToBattleLog("${skill.name} used!")
         }
     }
-
     fun handleInput(player: Player): Boolean {
         if (!isActive) return false
 
@@ -316,20 +313,21 @@ class BattleScene(
             }
             return true
         }
-
+        if (showConsumablesMenu && Gdx.input.justTouched()) {        // Закрытие меню расходников при клике вне
+            showConsumablesMenu = false
+            return true
+        }
         if (Gdx.input.justTouched()) {
             // 1. Радиальное меню
             if (showSkillWheel) {
                 return handleSkillWheelInput(touchX, yInverted)
             }
-
             // 2. Кнопка открытия меню навыков
             if (!madeMoveThisTurn && skillsMenuButtonRect.contains(touchX, yInverted)) {
                 showSkillWheel = true
                 buildSkillWheel()
                 return true
             }
-
             // 3. Выбор цели для навыка
             if (waitingForSkillTarget && selectedSkill != null) {
                 val clickedIndex = getEnemyPos(touchX, yInverted)
@@ -345,7 +343,6 @@ class BattleScene(
                     return true
                 }
             }
-
             // 4. Выбор врага
             if (!madeMoveThisTurn && !waitingForSkillTarget) {
                 val clickedIndex = getEnemyPos(touchX, yInverted)
@@ -354,34 +351,34 @@ class BattleScene(
                     return true
                 }
             }
-
             // 5. Кнопка АТАКИ
             if (!madeMoveThisTurn && attackButtonRect.contains(touchX, yInverted)) {
                 performAttack()
                 return true
             }
-
             // 6. Кнопка СЛЕДУЮЩИЙ ХОД
             if (madeMoveThisTurn && nextTurnButtonRect.contains(touchX, yInverted)) {
                 nextTurn()
                 return true
             }
-
             // 7. Кнопка ПОБЕГА (flee)
             if (!madeMoveThisTurn && fleeButtonRect.contains(touchX, yInverted)) {
                 flee()
                 return true
             }
-
             // 8. Кнопка ЛОГОВ
             if (!madeMoveThisTurn && logsButtonRect.contains(touchX, yInverted)) {
                 showLogs = !showLogs
                 return true
             }
+            // 9. Кнопка РАСХОДНИКОВ
+            if (!madeMoveThisTurn && consumablesButtonRect.contains(touchX, yInverted)) {
+                showConsumablesMenu = true
+                return true
+            }
         }
         return false
     }
-
     fun getEnemyPos(x: Float, y: Float): Int {
         val rectHeight = 150f
         val rectWidth = 160f
@@ -420,14 +417,12 @@ class BattleScene(
         }
         return -1
     }
-
     private fun victoryScreen() {
         println("victory")
         SoundManager.playSound("sounds/victorySound.mp3")
         showVictoryScreen = true
         addToBattleLog("VICTORY!")
     }
-
     private fun defeatScreen() {
         println("defeat")
         SoundManager.playSound("sounds/battleFail.mp3")
@@ -443,7 +438,6 @@ class BattleScene(
         showDefeatScreen = true
         addToBattleLog("DEFEAT...")
     }
-
     private fun drawVictoryScreen(batch: SpriteBatch, whitePixel: Texture) {
         batch.color = Color(0f, 0f, 0f, 0.5f)
         batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
@@ -466,7 +460,6 @@ class BattleScene(
 
         batch.color = Color.WHITE
     }
-
     private fun drawDefeatScreen(batch: SpriteBatch, whitePixel: Texture) {
         batch.color = Color(0f, 0f, 0f, 0.5f)
         batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
@@ -489,9 +482,7 @@ class BattleScene(
 
         batch.color = Color.WHITE
     }
-
     fun isShowingEndScreen(): Boolean = showVictoryScreen || showDefeatScreen
-
     private fun performAttack() {
         if (isFleeing) {
             messageSystem.addMessage("trying to escape! can't attack!", Color.RED)
@@ -571,7 +562,6 @@ class BattleScene(
         }
         madeMoveThisTurn = true
     }
-
     private fun enemyTurn() {
         if (enemies.isEmpty()) return
 
@@ -660,7 +650,6 @@ class BattleScene(
             }
         }
     }
-
     private fun applyEnemyDebuff(enemy: BattleEnemy) {
         val debuffChance = when (enemy.enemyType) {
             EnemyType.WATER -> 0.20
@@ -715,7 +704,6 @@ class BattleScene(
             else -> {}
         }
     }
-
     private fun nextTurn() {
         madeMoveThisTurn = false
         player.skills.forEach { it.reduceCooldown() }
@@ -728,7 +716,7 @@ class BattleScene(
         player.currentMana = (player.currentMana + manaRegen).coerceAtMost(player.maxMana)
 
         if (manaRegen > 0 && player.currentMana < player.maxMana) {
-            messageSystem.addMessage("Восстановлено $manaRegen маны", Color.CYAN)
+            messageSystem.addMessage("restored $manaRegen mana", Color.CYAN)
             addToBattleLog("+$manaRegen MP")
         }
 
@@ -736,7 +724,6 @@ class BattleScene(
             enemyTurn()
         }
     }
-
     private fun flee() {
         if (isFleeing) {
             isFleeing = false
@@ -759,14 +746,12 @@ class BattleScene(
         font.color = color
         font.draw(batch, text, x, y)
     }
-
     fun update(delta: Float) {
         if (!isActive) return
         if (::messageSystem.isInitialized) {
             messageSystem.update(delta)
         }
     }
-
     fun render(batch: SpriteBatch, whitePixel: Texture, player: Player) {
         stateTime += Gdx.graphics.deltaTime
 
@@ -802,17 +787,45 @@ class BattleScene(
         val nextTurnY = attackY + buttonSize + buttonSpacing
         val fleeY = nextTurnY + buttonSize + buttonSpacing
         val logsY = fleeY + buttonSize + buttonSpacing
+        val consumablesY = logsY + buttonSize + buttonSpacing
 
         attackButtonRect.set(startX, attackY, buttonSize, buttonSize)
         nextTurnButtonRect.set(startX, nextTurnY, buttonSize, buttonSize)
         fleeButtonRect.set(startX, fleeY, buttonSize, buttonSize)
         logsButtonRect.set(startX, logsY, buttonSize, buttonSize)
+        consumablesButtonRect.set(startX, consumablesY, buttonSize, buttonSize)
 
         batch.color = Color.WHITE
         batch.draw(attackTexture, attackButtonRect.x, attackButtonRect.y, buttonSize, buttonSize)
         batch.draw(nextTurnTexture, nextTurnButtonRect.x, nextTurnButtonRect.y, buttonSize, buttonSize)
         batch.draw(fleeTexture, fleeButtonRect.x, fleeButtonRect.y, buttonSize, buttonSize)
         batch.draw(logsTexture, logsButtonRect.x, logsButtonRect.y, buttonSize, buttonSize)
+
+        // ===== НОВАЯ КНОПКА РАСХОДНИКОВ =====
+        batch.color = Color(0.2f, 0.5f, 0.2f, 1f)  // Тёмно-зелёный фон
+        batch.draw(whitePixel, consumablesButtonRect.x, consumablesButtonRect.y, buttonSize, buttonSize)
+
+        // Рамка для кнопки
+        batch.color = Color.GOLD
+        batch.draw(whitePixel, consumablesButtonRect.x - 2f, consumablesButtonRect.y - 2f, buttonSize + 4f, 2f)
+        batch.draw(whitePixel, consumablesButtonRect.x - 2f, consumablesButtonRect.y + buttonSize, buttonSize + 4f, 2f)
+        batch.draw(whitePixel, consumablesButtonRect.x - 2f, consumablesButtonRect.y, 2f, buttonSize)
+        batch.draw(whitePixel, consumablesButtonRect.x + buttonSize, consumablesButtonRect.y, 2f, buttonSize)
+
+        font.color = Color.WHITE
+        font.data.setScale(0.9f)
+        layout.setText(font, "ITEMS")
+        font.draw(batch, "ITEMS",
+            consumablesButtonRect.x + (buttonSize - layout.width) / 2,
+            consumablesButtonRect.y + buttonSize - 25f)
+
+        // Маленькая иконка рюкзака/сумки
+        font.data.setScale(1.2f)
+        font.draw(batch, " I ",
+            consumablesButtonRect.x + (buttonSize - 30f) / 2,
+            consumablesButtonRect.y + 40f)
+        font.data.setScale(1f)
+        // ===== КОНЕЦ НОВОЙ КНОПКИ =====
 
         // Далее старый код отрисовки врагов и т.д. (без изменений)
         batch.color = Color.BLUE
@@ -912,15 +925,6 @@ class BattleScene(
             skillsBtnY + skillsMenuButtonSize/2 + layout.height/2)
         font.data.setScale(1f)
 
-        // --- Отладочная кнопка урона (можно оставить) ---
-        val l_btnX = screenWidth / 2 - 100f
-        val l_btnY = 300f
-        getDmgButtonRect.set(l_btnX, l_btnY, 200f, 60f)
-        batch.color = Color.GRAY
-        batch.draw(whitePixel, l_btnX, l_btnY, 200f, 60f)
-        font.color = Color.WHITE
-        font.draw(batch, "getDmg", l_btnX + 30f, l_btnY + 35f)
-
         // Дебаффы игрока
         fun renderDebuffs(batch: SpriteBatch, player: Player) {
             if (!player.debuffManager.isEmpty()) {
@@ -939,7 +943,7 @@ class BattleScene(
         if (waitingForSkillTarget && selectedSkill != null) {
             font.color = Color.YELLOW
             font.data.setScale(1.2f)
-            val text = ">>> Выбери цель для ${selectedSkill!!.name} <<<"
+            val text = ">>> Choose a goal for ${selectedSkill!!.name} <<<"
             layout.setText(font, text)
             batch.color = Color(0f, 0f, 0f, 0.5f)
             batch.draw(whitePixel,
@@ -966,6 +970,11 @@ class BattleScene(
         // Окно логов (если открыто)
         if (showLogs) {
             drawLogWindow(batch, whitePixel)
+        }
+
+        // Меню расходников (если открыто)
+        if (showConsumablesMenu) {
+            drawConsumablesMenu(batch, whitePixel)
         }
 
         font.data.setScale(1f)
@@ -1307,8 +1316,36 @@ class BattleScene(
     {
         slimeAtlas?.dispose()
     } // утечка памяти
-}
+    private fun drawConsumablesMenu(batch: SpriteBatch, whitePixel: Texture) {
+        batch.color = Color(0f, 0f, 0f, 0.85f)
+        batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
+        val menuWidth = 500f
+        val menuHeight = 450f
+        val menuX = (screenWidth - menuWidth) / 2
+        val menuY = (screenHeight - menuHeight) / 2
 
+        batch.color = Color.DARK_GRAY
+        batch.draw(whitePixel, menuX, menuY, menuWidth, menuHeight)
+
+        font.color = Color.YELLOW
+        font.data.setScale(1.5f)
+        font.draw(batch, "=== ПРЕДМЕТЫ ===", menuX + 130f, menuY + menuHeight - 30f)
+        // Кнопка закрытия
+        val closeRect = Rectangle(menuX + menuWidth - 55f, menuY + menuHeight - 45f, 40f, 40f)
+        batch.color = Color.RED
+        batch.draw(whitePixel, closeRect.x, closeRect.y, closeRect.width, closeRect.height)
+        font.color = Color.WHITE
+        font.data.setScale(1f)
+        font.draw(batch, "X", closeRect.x + 12f, closeRect.y + 28f)
+        // Здесь будет список предметов из инвентаря
+        font.color = Color.LIGHT_GRAY
+        font.data.setScale(1.2f)
+        font.draw(batch, "Coming soon...", menuX + 150f, menuY + 200f)
+        font.draw(batch, "Use items in battle", menuX + 130f, menuY + 170f)
+        font.data.setScale(1f)
+        batch.color = Color.WHITE
+    }
+}
 data class SkillWheelButton(
     val skill: Skill,
     val rect: Rectangle,
