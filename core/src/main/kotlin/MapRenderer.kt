@@ -353,7 +353,7 @@ class MapRenderer (
                             TerrainType.CITY -> continue
                             TerrainType.ENEMY -> Color.RED
                             TerrainType.TRAP_TRIGGERED -> continue
-                            TerrainType.TRAP -> continue
+                            TerrainType.TRAP -> Color.GRAY // Пока серое чтоб было видно, где ловушка находится. Позже сделать continue
                             TerrainType.UPGRADE -> continue
                             TerrainType.OUTPOST -> Color.CORAL
                             TerrainType.FOREST -> continue
