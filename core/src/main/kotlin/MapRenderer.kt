@@ -27,6 +27,7 @@ class MapRenderer (
     private val dirtTexture: Texture
     private val mtnTexture: Texture
     private val caveTexture: Texture
+    private val trapTriggeredTexture: Texture
     private lateinit var beachCorner: TextureRegion
     private val CORNER_W = 32f
     private val CORNER_H = 32f
@@ -106,6 +107,7 @@ class MapRenderer (
             TextureRegion(Texture("map_layers/grass_spoilers/light_grass$i.png"))
         }
         caveTexture = Texture("caves/cave0.png")
+        trapTriggeredTexture = Texture("trap_triggered.png")
         generateGrassVariations()
     }
 
@@ -200,7 +202,7 @@ class MapRenderer (
                     renderBeachCorners(batch, x, y, posX, posY, light)
                 }
                 when (terrain) {
-                    TerrainType.LAND, TerrainType.UPGRADE,TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.MOUNTAIN, TerrainType.OpenedChest, TerrainType.Chest, TerrainType.FOREST, TerrainType.ENEMY -> {
+                    TerrainType.LAND, TerrainType.TRAP, TerrainType.TRAP_TRIGGERED, TerrainType.UPGRADE, TerrainType.CITY, TerrainType.CITYANCHOR, TerrainType.MOUNTAIN, TerrainType.OpenedChest, TerrainType.Chest, TerrainType.FOREST, TerrainType.ENEMY -> {
                         batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
                         batch.draw(dirtTexture, posX, posY, cellSize, cellSize)
                     }
@@ -341,13 +343,17 @@ class MapRenderer (
                         batch.color = Color.YELLOW
                         font.draw(batch, "!", posX + cellSize/2 - 5f, posY + cellSize - 10f)
                     }
+                    TerrainType.TRAP_TRIGGERED -> {
+                        batch.color = Color.WHITE.cpy().mul(light, light, light, 1f)
+                        batch.draw(trapTriggeredTexture, posX-7.5f, posY-7.5f, cellSize*1.5f, cellSize*1.5f)
+                    }
                     else -> {
                         val color = when (terrain) {
                             TerrainType.MOUNTAIN -> continue
                             TerrainType.CITY -> continue
                             TerrainType.ENEMY -> Color.RED
-                            TerrainType.TRAP -> Color.GRAY
-                            TerrainType.TRAP_TRIGGERED -> Color.DARK_GRAY
+                            TerrainType.TRAP_TRIGGERED -> continue
+                            TerrainType.TRAP -> continue
                             TerrainType.UPGRADE -> continue
                             TerrainType.OUTPOST -> Color.CORAL
                             TerrainType.FOREST -> continue
