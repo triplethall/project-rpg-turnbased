@@ -370,7 +370,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             TerrainType terrain = gameMap.getTerrain(targetX, targetY);
             if (player.tryMoveTo(targetX, targetY, gameMap, CELL_SIZE, CELL_GAP)) {
                 SoundManager.playSound("sounds/step.mp3");
-                if (terrain == TerrainType.Chest) {
+                if (terrain == TerrainType.CHEST) {
                     int mimicSize = gameMap.getMimicSize(targetX, targetY);
                     chestMenu.show(targetX, targetY, mimicSize);
                 } else if (terrain == TerrainType.QUEST_GIVER) {
