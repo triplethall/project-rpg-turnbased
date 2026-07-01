@@ -707,7 +707,7 @@ class BattleScene(
             else -> 0.0
         }
 
-        val finalChance = debuffChance * (1.0 + player.will)
+        val finalChance = debuffChance * (1.0 - player.will)
         if (Random.nextDouble() >= finalChance) return
 
         when (enemy.enemyType) {
