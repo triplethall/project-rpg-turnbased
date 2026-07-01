@@ -79,6 +79,41 @@ class BattleScene(
             attackFrames.add(slimeAtlas?.findRegion("attack3"))
             slimeAttackAnimation = Animation(0.1f, attackFrames, Animation.PlayMode.NORMAL)
 
+            debuffIcons.clear()
+            Gdx.app.log("BATTLE_DEBUG", "Загрузка иконок баффов дебаффов")
+            DebuffType.values().forEach { type ->
+                val isBuff = type.name.startsWith("BUFF_") || type in listOf(
+                    DebuffType.DODGE, DebuffType.RESURRECTION, DebuffType.CLONE, DebuffType.BANNER
+                )
+                val fold = if (isBuff) "buffs" else "debuffs"
+                val filename = when(type) {
+                    DebuffType.BUFF_CRIT -> "CRIT_BUFF"
+                    DebuffType.BUFF_DAMAGE -> "DAMAGE_BUFF"
+                    DebuffType.BUFF_DEFENSE -> "DEFENCE_BUFF"
+                    DebuffType.BUFF_HEALTH -> "HEALTH_BUFF"
+                    DebuffType.BUFF_SPEED -> "SPEED_BUFF"
+                    DebuffType.BUFF_WILL -> "WILL_BUFF"
+                    DebuffType.BUFF_INVULNERABLE -> "INVULNERABLE_BUFF"
+                    DebuffType.BUFF_INFINITE_MANA -> "INFMANA_BUFF"
+
+                    // для всех остальных (DODGE, BANNER, CLONE, RESURRECTION и дебаффов)
+                    else -> {
+                        val suffix = if (isBuff) "_BUFF" else "_DEBUFF"
+                        "${type.name}$suffix"
+                    }
+                }
+                val path = "arena_gui/$fold/$filename.png"
+                val fileEx = Gdx.files.internal(path)
+                if (!fileEx.exists())
+                {
+                    Gdx.app.log("BATTLE_DEBUG", "Ошибка загрузки: $path")
+                }
+                else
+                {
+                    val tex = Texture(fileEx)
+                    debuffIcons[type] = TextureRegion(tex)
+                }
+            }
         } catch (e: Exception) {
             Gdx.app.error("BATTLE_DEBUG", "КРАШ ПРИ ЗАГРУЗКЕ: ${e.message}")
             e.printStackTrace()
@@ -110,7 +145,8 @@ class BattleScene(
     private lateinit var playerManaBar: StatBar
     private lateinit var messageSystem: BattleMessageSystem
     private val enemyBars = mutableListOf<StatBar>()
-    private val debuffRenderer = DebuffRenderer(font)
+    private val debuffIcons = mutableMapOf<DebuffType, TextureRegion>()
+    private val debuffRenderer = DebuffRenderer(font, debuffIcons)
     private val battleLog = mutableListOf<String>()
     private var showLogs = false
     private var lastDebuffDamage = 0
@@ -671,7 +707,7 @@ class BattleScene(
             else -> 0.0
         }
 
-        val finalChance = debuffChance * (1.0 - player.will)
+        val finalChance = debuffChance * (1.0 + player.will)
         if (Random.nextDouble() >= finalChance) return
 
         when (enemy.enemyType) {
@@ -829,9 +865,10 @@ class BattleScene(
         font.data.setScale(1f)
         // ===== КОНЕЦ НОВОЙ КНОПКИ =====
 
-        // Далее старый код отрисовки врагов и т.д. (без изменений)
+        val playerX = space + 400f
+        val playerY = rectY - 100f
         batch.color = Color.BLUE
-        batch.draw(whitePixel, space + 400f, rectY - 100f, rectWidth, rectHeight)
+        batch.draw(whitePixel, playerX, playerY, rectWidth, rectHeight)
 
         if (enemies.isNotEmpty()) {
             val enemyStartX = rectX - 400f
@@ -933,18 +970,18 @@ class BattleScene(
         font.data.setScale(1f)
 
         // Дебаффы игрока
-        fun renderDebuffs(batch: SpriteBatch, player: Player) {
+        fun renderDebuffs(batch: SpriteBatch, player: Player, playerX: Float, playerY: Float) {
             if (!player.debuffManager.isEmpty()) {
                 debuffRenderer.renderDebuffs(
                     batch,
                     player.debuffManager.getAllDebuff(),
-                    20f,
-                    screenHeight * 0.85f,
+                    playerX,
+                    playerY + 120f,
                     true
                 )
             }
         }
-        renderDebuffs(batch, player)
+        renderDebuffs(batch, player, playerX, playerY)
 
         // Индикатор выбора цели
         if (waitingForSkillTarget && selectedSkill != null) {
