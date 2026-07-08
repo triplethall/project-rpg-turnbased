@@ -21,7 +21,6 @@ class BattleScene(
     private val BGArena: Texture,
     private val whitePixel: Texture,
     private val barTexture: Texture,
-    // НОВЫЕ ТЕКСТУРЫ для кнопок
     private val attackTexture: Texture,
     private val nextTurnTexture: Texture,
     private val fleeTexture: Texture,
@@ -37,7 +36,6 @@ class BattleScene(
     private var slimeIdleAnimation: Animation<TextureRegion>? = null
     private var slimeAttackAnimation: Animation<TextureRegion>? = null
     private var stateTime = 0f
-    private val getDmgButtonRect = Rectangle()
     fun loadAssets() {
         try {
             val atlasPath = "npc/enemy/slime1/slime1-idle.atlas"
@@ -200,7 +198,6 @@ class BattleScene(
         skillButtons.clear()
     }
 
-    // ===== НОВЫЙ МЕТОД ДЛЯ БОЯ СО СПИСКОМ ВРАГОВ =====
     fun startBattleWithEnemies(enemiesList: List<BattleEnemy>, cells: List<Pair<Int, Int>>) {
         if (player.currentHealth <= 0) {
             println("player is DEAD, cannot start battle")
@@ -238,7 +235,7 @@ class BattleScene(
         battleLog.clear()
     }
     fun startBattle(enemyCellX: Int, enemyCellY: Int) {
-        println("DEBUG: Player class = ${player.playerClass}")
+        Gdx.app.log("BATTLE_DEBUG", "Player class is ${player.playerClass}") // пусть будет на всяк
         if (player.currentHealth <= 0) {
             println("player is DEAD LMAO")
             return
@@ -529,7 +526,7 @@ class BattleScene(
 
         // Уклонение
         if (target.canDodge(isPhysical = true)) {
-            messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+            messageSystem.addMessage("${target.name} dodged the attack!", Color.YELLOW)
             addToBattleLog("${target.name} dodged attack!")
             madeMoveThisTurn = true
             return
@@ -538,7 +535,7 @@ class BattleScene(
         if (target.enemyType == EnemyType.WIND) {
             val dodgeChance = 0.25
             if (Random.nextDouble() < dodgeChance) {
-                messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+                messageSystem.addMessage("${target.name} dodged the attack!", Color.YELLOW)
                 addToBattleLog("${target.name} dodged attack!")
                 madeMoveThisTurn = true
                 return
@@ -558,7 +555,7 @@ class BattleScene(
         val attackHit = target.takeDamage(dmgWithDef, EnemyType.NO_TYPE, false)
 
         if (!attackHit) {
-            messageSystem.addMessage("${target.name} уклонился от атаки!", Color.YELLOW)
+            messageSystem.addMessage("${target.name} dodged the attack!", Color.YELLOW)
             addToBattleLog("${target.name} dodged!")
             madeMoveThisTurn = true
             return
@@ -572,7 +569,7 @@ class BattleScene(
 
         if (!target.isAlive()) {
             if (target.tryResurrect()) {
-                messageSystem.addMessage("${target.name} воскрес!", Color.PURPLE)
+                messageSystem.addMessage("${target.name} resurrected!", Color.PURPLE)
                 addToBattleLog("${target.name} resurrected!")
                 return
             }
@@ -655,7 +652,7 @@ class BattleScene(
                     if (enemy.enemyType == EnemyType.DARK) {
                         val stolen = enemy.tryLifeSteal(dmgWithDef)
                         if (stolen > 0) {
-                            messageSystem.addMessage("${enemy.name} крадет $stolen здоровья!", Color.PURPLE)
+                            messageSystem.addMessage("${enemy.name} steals $stolen health!", Color.PURPLE)
                             addToBattleLog("${enemy.name} steals $stolen HP")
                         }
                     }
@@ -677,7 +674,7 @@ class BattleScene(
         }
 
         if (player.currentHealth <= 0) {
-            messageSystem.addMessage("бро тебе нужно больше тренироваться", Color.RED)
+            messageSystem.addMessage("бро тебе нужно больше тренироваться", Color.RED) // всё равно не видно
             defeatScreen()
             return
         }
@@ -713,37 +710,37 @@ class BattleScene(
         when (enemy.enemyType) {
             EnemyType.POISON -> {
                 player.applyDebuff(DebuffType.POISON, 3, 1.0, 1)
-                messageSystem.addMessage("Игрок отравлен!", Color.GREEN)
+                messageSystem.addMessage("Player is poisoned!", Color.GREEN)
                 addToBattleLog("Poisoned!")
             }
             EnemyType.FIRE -> {
                 player.applyDebuff(DebuffType.BURN, 3, 1.0)
-                messageSystem.addMessage("Игрок горит!", Color.FIREBRICK)
+                messageSystem.addMessage("Player is burning!", Color.FIREBRICK)
                 addToBattleLog("Burning!")
             }
             EnemyType.ICE -> {
                 player.applyDebuff(DebuffType.FREEZE, 1, 1.0)
-                messageSystem.addMessage("Игрок заморожен!", Color.CYAN)
+                messageSystem.addMessage("Player is freezed!", Color.CYAN)
                 addToBattleLog("Frozen!")
             }
             EnemyType.ELECTRIC -> {
                 player.applyDebuff(DebuffType.PARALYSIS, 2, 0.8)
-                messageSystem.addMessage("Игрок парализован!", Color.YELLOW)
+                messageSystem.addMessage("Player is paralyzed!", Color.YELLOW)
                 addToBattleLog("Paralyzed!")
             }
             EnemyType.CURSED -> {
                 player.applyDebuff(DebuffType.CURSE, 3, 0.7)
-                messageSystem.addMessage("Проклятие падает на игрока!", Color.PURPLE)
+                messageSystem.addMessage("Player is cursed!", Color.PURPLE)
                 addToBattleLog("Cursed!")
             }
             EnemyType.WATER -> {
                 player.applyDebuff(DebuffType.WET, 3, 1.0)
-                messageSystem.addMessage("Игрок промок! (+25% урон от молний)", Color.CYAN)
+                messageSystem.addMessage("Player is wet!", Color.CYAN)
                 addToBattleLog("Wet!")
             }
             EnemyType.BLOOD -> {
                 player.applyDebuff(DebuffType.BLEED, 3, 1.0, 1)
-                messageSystem.addMessage("Игрок истекает кровью!", Color.RED)
+                messageSystem.addMessage("Player is bleeding!", Color.RED)
                 addToBattleLog("Bleeding!")
             }
             else -> {}
@@ -863,7 +860,6 @@ class BattleScene(
             consumablesButtonRect.x + (buttonSize - 30f) / 2,
             consumablesButtonRect.y + 40f)
         font.data.setScale(1f)
-        // ===== КОНЕЦ НОВОЙ КНОПКИ =====
 
         val playerX = space + 400f
         val playerY = rectY - 100f
@@ -1367,7 +1363,7 @@ class BattleScene(
 
         font.color = Color.YELLOW
         font.data.setScale(1.5f)
-        font.draw(batch, "=== ПРЕДМЕТЫ ===", menuX + 130f, menuY + menuHeight - 30f)
+        font.draw(batch, "=== ITEMS ===", menuX + 130f, menuY + menuHeight - 30f)
         // Кнопка закрытия
         val closeRect = Rectangle(menuX + menuWidth - 55f, menuY + menuHeight - 45f, 40f, 40f)
         batch.color = Color.RED
