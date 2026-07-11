@@ -68,6 +68,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private Texture nextTurnTexture;
     private Texture fleeTexture;
     private Texture logsTexture;
+    private Texture consumablesTexture;
+    private Texture skillsTexture;
 
     // ---  метод для проверки открытых окон ---
     private boolean isAnyModalOpen() {
@@ -170,12 +172,16 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             nextTurnTexture = new Texture("arena_gui/nextturnbtn.png");
             fleeTexture = new Texture("arena_gui/escapebtn.png");
             logsTexture = new Texture("arena_gui/logsbtn.png");
+            consumablesTexture = new Texture("arena_gui/consumablesbtn.png");
+            skillsTexture = new Texture("arena_gui/skillsbtn.png");
         } catch (Exception e) {
             Gdx.app.error("RPG", "Failed to load battle button textures, using whitePixel");
             attackTexture = whitePixel;
             nextTurnTexture = whitePixel;
             fleeTexture = whitePixel;
             logsTexture = whitePixel;
+            consumablesTexture = whitePixel;
+            skillsTexture = whitePixel;
         }
 
         SoundManager.playMusic("music/mainMenu.mp3", true);
@@ -194,7 +200,9 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             attackTexture,
             nextTurnTexture,
             fleeTexture,
-            logsTexture
+            logsTexture,
+            consumablesTexture,
+            skillsTexture
         );
         battleScene.loadAssets();
 
@@ -266,6 +274,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             boolean menuClicked = pauseMenu.handleInput(player);
             isPaused = pauseMenu.isVisible();
             chestMenu.handleInput();
+            inventory.handleInput(player);
             boolean cityMenuClicked = cityMenu.handleInput();
             boolean caveMenuClicked = caveMenu.handleInput();
             boolean shopClicked = false;
@@ -372,7 +381,18 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 }
                 return;
             }
-            // NEW / UPDATE
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
+                Gdx.app.log("BATTLE_DEBUG", "ENEMY CELL TOUCHED");
+                int dx = Math.abs(player.getX() - targetX);
+                int dy = Math.abs(player.getY() - targetY);
+                boolean isNear = (dx + dy == 1);
+                Gdx.app.log("BATTLE_DEBUG", "IS IT NEAR?" + isNear);
+                if (isNear)
+                {
+                    battleScene.startBattle(targetX, targetY);
+                } // враги теперь не начинают бой за км от игрока
+            }
+
             TerrainType terrain = gameMap.getTerrain(targetX, targetY);
             if (player.tryMoveTo(targetX, targetY, gameMap, CELL_SIZE, CELL_GAP)) {
                 SoundManager.playSound("sounds/step.mp3");
@@ -384,9 +404,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                     if (qg != null) questGiverMenu.show(qg);
                 }
             }
-            if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
-                battleScene.startBattle(targetX, targetY);
-            }
+
         }
     }
 

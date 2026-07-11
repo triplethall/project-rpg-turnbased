@@ -21,11 +21,12 @@ class BattleScene(
     private val BGArena: Texture,
     private val whitePixel: Texture,
     private val barTexture: Texture,
-    // НОВЫЕ ТЕКСТУРЫ для кнопок
     private val attackTexture: Texture,
     private val nextTurnTexture: Texture,
     private val fleeTexture: Texture,
-    private val logsTexture: Texture
+    private val logsTexture: Texture,
+    private val consumableTexture: Texture,
+    private val skillsTexture: Texture
 ) {
     var isActive = false
         private set
@@ -94,6 +95,11 @@ class BattleScene(
     private val nextTurnButtonRect = Rectangle()
     private val fleeButtonRect = Rectangle()
     private val logsButtonRect = Rectangle()
+    private val consumablesButtonRect = Rectangle()
+    private var isConsumablesMenuOpen = false
+    private var battleConsumablesList = listOf<ConsumableItem>()
+    private var consumableRects = mutableListOf<Pair<ConsumableItem, Rectangle>>()
+    private val skillsMenuButtonRect = Rectangle()
     private var isFleeing = false
     private var fleeTurnsLeft = 0
     private var enemyX = 0
@@ -114,7 +120,6 @@ class BattleScene(
     private val battleLog = mutableListOf<String>()
     private var showLogs = false
     private var lastDebuffDamage = 0
-    private val consumablesButtonRect = Rectangle()
     private var showConsumablesMenu = false
 
     // ===== РАДИАЛЬНОЕ МЕНЮ НАВЫКОВ =====
@@ -126,11 +131,9 @@ class BattleScene(
     private val skillWheelButtonSize = 120f
     private var skillWheelSelectedIndex = -1
 
-    // Кнопка для открытия меню навыков
-    private val skillsMenuButtonRect = Rectangle()
-    private val skillsMenuButtonSize = 80f
-
     fun startBattle(enemyCellX: Int, enemyCellY: Int, enemyCount: Int) {
+        // Очищаем лог при старте боя
+        battleLog.clear()
         messageSystem = BattleMessageSystem(font, screenWidth, screenHeight, whitePixel)
         messageSystem.addMessage("start", Color.YELLOW)
         this.enemyX = enemyCellX
@@ -139,6 +142,10 @@ class BattleScene(
         isActive = true
         madeMoveThisTurn = false
         enemyIndex = 0
+
+        val msg = "Battle begin! Enemy count: ${enemies.size}"
+        messageSystem.addMessage(msg, Color.YELLOW)
+        addToBattleLog(msg)
 
         SoundManager.pausePlaylist()
         SoundManager.playMusic("music/battle.mp3", true)
@@ -155,9 +162,6 @@ class BattleScene(
             player.learnSkillsForClass()
         }
         updateSkillButtons()
-
-        // Очищаем лог при старте боя
-        battleLog.clear()
     }
 
     fun updateSkillButtons() {
@@ -178,6 +182,7 @@ class BattleScene(
         this.fleeTurnsLeft = 0
         this.showVictoryScreen = false
         this.showDefeatScreen = false
+        battleLog.clear()
 
         messageSystem = BattleMessageSystem(font, screenWidth, screenHeight, whitePixel)
         val msg = "Battle begin! Enemy count: ${enemies.size}"
@@ -199,7 +204,6 @@ class BattleScene(
         }
         updateSkillButtons()
 
-        battleLog.clear()
     }
     fun startBattle(enemyCellX: Int, enemyCellY: Int) {
         println("DEBUG: Player class = ${player.playerClass}")
@@ -223,6 +227,7 @@ class BattleScene(
     }
     private fun addToBattleLog(msg: String) {
         battleLog.add(msg)
+        Gdx.app.log("BATTLELOG_DEBUG" , msg)
         if (battleLog.size > 20) battleLog.removeAt(0)
     }
     private fun updateEnemyBars() {
@@ -314,6 +319,8 @@ class BattleScene(
             return true
         }
         if (showConsumablesMenu && Gdx.input.justTouched()) {        // Закрытие меню расходников при клике вне
+            // FIXME: а зачем тогда кнопка закрытия (Х)? я потом переделаю регистрацию нажатия,
+            // TODO: интегрировать инвентарь в кнопку расходников
             showConsumablesMenu = false
             return true
         }
@@ -518,8 +525,6 @@ class BattleScene(
             return
         }
 
-//        target.takeDamage(dmgWithDef)
-        // из-за ^этой^ строки был "двойной" урон
         SoundManager.playSound("sounds/atack.mp3")
         val dmgMsg = "dealt $dmgWithDef dmg to ${target.name}"
         messageSystem.addMessage(dmgMsg, Color.GREEN)
@@ -583,7 +588,8 @@ class BattleScene(
                     addToBattleLog("${enemy.name} skips turn")
                     enemy.processDebuffs()
                     return@forEach
-                }
+                } // ну пж.. смотри хотя бы что тебе нейронка выдает а не тупо копи пасти..
+                // FIXME: если враг будет менять состояние пропуска хода, то нужно переделать это.
 
                 // Лечение HOLY
                 if (enemy.enemyType == EnemyType.HOLY && enemy.isAlive()) {
@@ -635,19 +641,6 @@ class BattleScene(
             messageSystem.addMessage("бро тебе нужно больше тренироваться", Color.RED)
             defeatScreen()
             return
-        }
-
-        if (isFleeing) {
-            fleeTurnsLeft--
-            if (fleeTurnsLeft <= 0) {
-                endBattleAndClearEnemy()
-                isFleeing = false
-                addToBattleLog("You escaped!")
-                return
-            } else {
-                messageSystem.addMessage("$fleeTurnsLeft more turns until escape", Color.CYAN)
-                addToBattleLog("$fleeTurnsLeft turns to escape")
-            }
         }
     }
     private fun applyEnemyDebuff(enemy: BattleEnemy) {
@@ -724,20 +717,19 @@ class BattleScene(
             enemyTurn()
         }
     }
-    private fun flee() {
-        if (isFleeing) {
-            isFleeing = false
-            fleeTurnsLeft = 0
-            madeMoveThisTurn = true
-            messageSystem.addMessage("canceling attempt of escaping. TURN IS WASTED BTWWWW", Color.CORAL)
-            addToBattleLog("Escape canceled! Turn wasted.")
-            return
+    private fun flee() { // решил сделать побег с шансом... т.к. убрали кнопку пропуска хода :/
+        val fleeChance = 0.50
+        val finalChance = (fleeChance - (enemies.size * 0.15).coerceIn(0.10,0.60))
+        if (Random.nextDouble() < finalChance)
+        {
+            endBattleAndClearEnemy()
         }
-        isFleeing = true
-        fleeTurnsLeft = 2
-        madeMoveThisTurn = true
-        messageSystem.addMessage("player is escaping! $fleeTurnsLeft turns left till escape!", Color.CYAN)
-        addToBattleLog("Attempting to escape...")
+        else
+        {
+            messageSystem.addMessage("Escape failed..", Color.RED)
+            addToBattleLog("Escape failed")
+            madeMoveThisTurn = true
+        }
     }
     // Функция в функции не самый лучший варик. Вынес ее сюда для оптимизации кода
     private fun drawStatWithShadow(batch: SpriteBatch, text: String, x: Float, y: Float, color: Color) {
@@ -772,9 +764,7 @@ class BattleScene(
         val rectX = screenWidth - rectWidth - space
         batch.draw(BGArena, 0f, 0f, screenWidth, screenHeight)
 
-        // НОВЫЕ КНОПКИ с текстурами 64x64
-        // НОВЫЕ КНОПКИ с текстурами 150x150, расположенные вертикально справа
-        val buttonSize = 150f
+        val buttonSize = 140f
         val buttonSpacing = 30f
         val rightMargin = 20f
         val bottomMargin = 50f
@@ -788,46 +778,23 @@ class BattleScene(
         val fleeY = nextTurnY + buttonSize + buttonSpacing
         val logsY = fleeY + buttonSize + buttonSpacing
         val consumablesY = logsY + buttonSize + buttonSpacing
+        val skillsBtnY = consumablesY + buttonSize + buttonSpacing
 
         attackButtonRect.set(startX, attackY, buttonSize, buttonSize)
         nextTurnButtonRect.set(startX, nextTurnY, buttonSize, buttonSize)
         fleeButtonRect.set(startX, fleeY, buttonSize, buttonSize)
         logsButtonRect.set(startX, logsY, buttonSize, buttonSize)
         consumablesButtonRect.set(startX, consumablesY, buttonSize, buttonSize)
+        skillsMenuButtonRect.set(startX, skillsBtnY, buttonSize, buttonSize)
 
         batch.color = Color.WHITE
         batch.draw(attackTexture, attackButtonRect.x, attackButtonRect.y, buttonSize, buttonSize)
         batch.draw(nextTurnTexture, nextTurnButtonRect.x, nextTurnButtonRect.y, buttonSize, buttonSize)
         batch.draw(fleeTexture, fleeButtonRect.x, fleeButtonRect.y, buttonSize, buttonSize)
         batch.draw(logsTexture, logsButtonRect.x, logsButtonRect.y, buttonSize, buttonSize)
-
-        // ===== НОВАЯ КНОПКА РАСХОДНИКОВ =====
-        batch.color = Color(0.2f, 0.5f, 0.2f, 1f)  // Тёмно-зелёный фон
-        batch.draw(whitePixel, consumablesButtonRect.x, consumablesButtonRect.y, buttonSize, buttonSize)
-
-        // Рамка для кнопки
-        batch.color = Color.GOLD
-        batch.draw(whitePixel, consumablesButtonRect.x - 2f, consumablesButtonRect.y - 2f, buttonSize + 4f, 2f)
-        batch.draw(whitePixel, consumablesButtonRect.x - 2f, consumablesButtonRect.y + buttonSize, buttonSize + 4f, 2f)
-        batch.draw(whitePixel, consumablesButtonRect.x - 2f, consumablesButtonRect.y, 2f, buttonSize)
-        batch.draw(whitePixel, consumablesButtonRect.x + buttonSize, consumablesButtonRect.y, 2f, buttonSize)
-
-        font.color = Color.WHITE
-        font.data.setScale(0.9f)
-        layout.setText(font, "ITEMS")
-        font.draw(batch, "ITEMS",
-            consumablesButtonRect.x + (buttonSize - layout.width) / 2,
-            consumablesButtonRect.y + buttonSize - 25f)
-
-        // Маленькая иконка рюкзака/сумки
-        font.data.setScale(1.2f)
-        font.draw(batch, " I ",
-            consumablesButtonRect.x + (buttonSize - 30f) / 2,
-            consumablesButtonRect.y + 40f)
-        font.data.setScale(1f)
-        // ===== КОНЕЦ НОВОЙ КНОПКИ =====
-
-        // Далее старый код отрисовки врагов и т.д. (без изменений)
+        batch.draw(consumableTexture, consumablesButtonRect.x, consumablesButtonRect.y, buttonSize, buttonSize)
+        batch.draw(skillsTexture, skillsMenuButtonRect.x, skillsMenuButtonRect.y, buttonSize, buttonSize)
+        // больше кнопок не поместится... сделать цикл, чтобы смещать Х когда кнопок больше 6
         batch.color = Color.BLUE
         batch.draw(whitePixel, space + 400f, rectY - 100f, rectWidth, rectHeight)
 
@@ -904,26 +871,6 @@ class BattleScene(
                 }
             }
         }
-
-        // Кнопка открытия меню навыков
-        val skillsBtnX = screenWidth - skillsMenuButtonSize - 20f
-        val skillsBtnY = screenHeight - skillsMenuButtonSize - 20f
-        skillsMenuButtonRect.set(skillsBtnX, skillsBtnY, skillsMenuButtonSize, skillsMenuButtonSize)
-
-        batch.color = Color.PURPLE
-        batch.draw(whitePixel, skillsBtnX, skillsBtnY, skillsMenuButtonSize, skillsMenuButtonSize)
-        batch.color = Color.WHITE
-        batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY - 2f, skillsMenuButtonSize + 4f, 2f)
-        batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY + skillsMenuButtonSize, skillsMenuButtonSize + 4f, 2f)
-        batch.draw(whitePixel, skillsBtnX - 2f, skillsBtnY, 2f, skillsMenuButtonSize)
-        batch.draw(whitePixel, skillsBtnX + skillsMenuButtonSize, skillsBtnY, 2f, skillsMenuButtonSize)
-        font.color = Color.WHITE
-        font.data.setScale(1.5f)
-        layout.setText(font, "⚔")
-        font.draw(batch, "⚔",
-            skillsBtnX + skillsMenuButtonSize/2 - layout.width/2,
-            skillsBtnY + skillsMenuButtonSize/2 + layout.height/2)
-        font.data.setScale(1f)
 
         // Дебаффы игрока
         fun renderDebuffs(batch: SpriteBatch, player: Player) {
