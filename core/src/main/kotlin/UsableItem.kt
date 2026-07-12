@@ -98,33 +98,33 @@ data class ConsumableItem(// Класс расходного предмета
                 val healAmount = (player.maxHealth * 0.15).toInt().coerceAtLeast(1)
                 val oldHealth = player.currentHealth
                 player.currentHealth = min(player.currentHealth + healAmount, player.maxHealth)
-                log("🍺 $name restored ${player.currentHealth - oldHealth} HP!", Color.GREEN)
+                log("$name restored ${player.currentHealth - oldHealth} HP!", Color.GREEN)
                 true
             }
             ConsumableType.MANA_POTION_SMALL -> {
                 val manaAmount = (player.maxMana * 0.15).toInt().coerceAtLeast(1)
                 val oldMana = player.currentMana
                 player.currentMana = min(player.currentMana + manaAmount, player.maxMana)
-                log("🔮 $name restored ${player.currentMana - oldMana} MP!", Color.CYAN)
+                log("$name restored ${player.currentMana - oldMana} MP!", Color.CYAN)
                 true
             }
             ConsumableType.ANTIDOTE -> {
                 if (player.debuffManager.hasDebuff(DebuffType.POISON)) {
                     player.debuffManager.removeDebuff(DebuffType.POISON)
-                    log("💚 $name removed the poisoning!", Color.GREEN)
+                    log("$name removed the poisoning!", Color.GREEN)
                     true
                 } else {
-                    log("⚠️ $name does not work: there is no poisoning!", Color.RED)
+                    log("$name does not work: there is no poisoning!", Color.RED)
                     false
                 }
             }
             ConsumableType.BANDAGE -> {
                 if (player.debuffManager.hasDebuff(DebuffType.BLEED)) {
                     player.debuffManager.removeDebuff(DebuffType.BLEED)
-                    log("🩹 $name stopped the bleeding!", Color.GREEN)
+                    log("$name stopped the bleeding!", Color.GREEN)
                     true
                 } else {
-                    log("⚠️ $name does not work: no bleeding!", Color.RED)
+                    log("$name does not work: no bleeding!", Color.RED)
                     false
                 }
             }
@@ -135,7 +135,7 @@ data class ConsumableItem(// Класс расходного предмета
                 if (player.debuffManager.hasDebuff(DebuffType.WET)) {
                     player.debuffManager.removeDebuff(DebuffType.WET)
                 }
-                log("🧽 $name restored ${player.currentHealth - oldHealth} HP and he took off his phlegm!", Color.GREEN)
+                log("$name restored ${player.currentHealth - oldHealth} HP and he took off his phlegm!", Color.GREEN)
                 true
             }
             ConsumableType.HOLY_WATER -> {
@@ -149,13 +149,13 @@ data class ConsumableItem(// Класс расходного предмета
                     anyRemoved = true
                 }
                 if (anyRemoved) {
-                    log("💧 $name Lifted the curse and burn!", Color.PURPLE)
+                    log("$name Lifted the curse and burn!", Color.PURPLE)
                     true
                 } else {
-                    log("⚠️ $name not effective: no curse or burning!", Color.RED)
+                    log("$name not effective: no curse or burning!", Color.RED)
                     false
                 }
-            }
+            } // FIXME: ПОЖАЛУЙСТА НЕ ИСПОЛЬЗУЙТЕ ЭМОДЗИ
         }
         if (success) {
             quantity--

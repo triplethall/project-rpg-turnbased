@@ -67,7 +67,7 @@ class DodgeSkill : Skill("dodge", "Dodge", "Increases dodge chance by 80% for 3 
 class SlashSkill : Skill("slash", "Slash", "Deals damage to all enemies", 15, 2) {
     override fun execute(caster: Player, targets: List<BattleEnemy>, battleLog: BattleMessageSystem): SkillResult {
         var totalDamage = 0
-        val baseDamage = caster.damage + (caster.mageDamage / 2) // Зависит от урона
+        val baseDamage = caster.damage + (caster.mageDamage / 2) // Зависит от урона и маг. урона
 
         targets.forEach { enemy ->
             if (enemy.isAlive()) {

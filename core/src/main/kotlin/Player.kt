@@ -91,6 +91,11 @@ class Player(
         playerClass.applyToPlayer(this)
     }
 
+    lateinit var inventory: Inventory
+    fun initInventory(font: BitmapFont, width: Float, height: Float)
+    {
+        this.inventory = Inventory(font, width, height)
+    }
     val debuffManager = DebuffManager()
     private var skipTurn = false
 

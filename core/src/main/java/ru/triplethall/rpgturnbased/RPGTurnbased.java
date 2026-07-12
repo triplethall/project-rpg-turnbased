@@ -209,9 +209,10 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(),
             pauseButtonTexture, statsBackgroundTexture, continueButtonTexture, exitButtonTexture, pauseBackgroundTexture, settingsButtonTexture);
 
-        inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventoryButtonTexture);
+        inventory = new Inventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         player = new Player();
+        player.initInventory(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         player.loadMapModel();
         shopMenu = new ShopMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), inventory, player);
         player.spawnOnShore(gameMap);

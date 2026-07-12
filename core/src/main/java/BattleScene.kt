@@ -97,8 +97,13 @@ class BattleScene(
     private val logsButtonRect = Rectangle()
     private val consumablesButtonRect = Rectangle()
     private var isConsumablesMenuOpen = false
-    private var battleConsumablesList = listOf<ConsumableItem>()
-    private var consumableRects = mutableListOf<Pair<ConsumableItem, Rectangle>>()
+    private var battleConsumablesList = listOf<Item>() // расходники в бою
+    private var consumableRects = mutableListOf<Pair<ConsumableItem, Rectangle>>() // и их хитбоксы? ну прямоугольники крч
+    private val menuWidth = 500f
+    private val menuHeight = 650f
+    private val menuX get() = (screenWidth - menuWidth) / 2
+    private val menuY get() = (screenHeight - menuHeight) / 2
+    private val closeRect get() = Rectangle(menuX + menuWidth - 55f, menuY + menuHeight - 45f, 40f, 40f)
     private val skillsMenuButtonRect = Rectangle()
     private var isFleeing = false
     private var fleeTurnsLeft = 0
@@ -290,12 +295,48 @@ class BattleScene(
         if (result.success) {
             player.currentMana -= skill.manaCost
             madeMoveThisTurn = true
-            updateEnemyBars()
-            if (enemies.all { !it.isAlive() }) {
-                victoryScreen()
+            val deadEnemies = enemies.filter { !it.isAlive() }
+
+            deadEnemies.forEach { target ->
+                if (target.tryResurrect()) {
+                    messageSystem.addMessage("${target.name} resurrected!", Color.PURPLE)
+                    addToBattleLog("${target.name} resurrected!")
+                }
+                else
+                {
+                    messageSystem.addMessage("${target.name} is ded", Color.ORANGE)
+                    addToBattleLog("${target.name} died")
+
+                    val gainExp = (target.maxHealth * 50 + target.damage * 100).coerceAtLeast(10)
+                    player.addExperience(gainExp)
+                    messageSystem.addMessage("got $gainExp from ${target.name}", Color.GOLD)
+                    addToBattleLog("+$gainExp XP")
+
+                    if (target.enemyType == EnemyType.CURSED)
+                    {
+                        player.applyDebuff(DebuffType.CURSE, 3, 0.7)
+                        messageSystem.addMessage("${target.name} cursed you!", Color.PURPLE)
+                        addToBattleLog("You are cursed!")
+                    }
+                }
             }
+            enemies.removeAll { !it.isAlive() }
+            updateEnemyBars()
             messageSystem.addMessage("${skill.name} used!", Color.CYAN)
             addToBattleLog("${skill.name} used!")
+            if (enemies.isEmpty()) {
+                messageSystem.addMessage("victory🕺")
+                addToBattleLog("Victory!")
+                victoryScreen()
+                return
+            } else if (deadEnemies.isNotEmpty())
+            {
+                messageSystem.addMessage("${enemies.size} enemies left")
+                addToBattleLog("${enemies.size} enemies remain")
+            }
+            if (enemyIndex >= enemies.size) {
+                enemyIndex = 0
+            }
         }
     }
     fun handleInput(player: Player): Boolean {
@@ -319,9 +360,30 @@ class BattleScene(
             return true
         }
         if (showConsumablesMenu && Gdx.input.justTouched()) {        // Закрытие меню расходников при клике вне
-            // FIXME: а зачем тогда кнопка закрытия (Х)? я потом переделаю регистрацию нажатия,
-            // TODO: интегрировать инвентарь в кнопку расходников
-            showConsumablesMenu = false
+            if (closeRect.contains(touchX, yInverted))
+            {
+                showConsumablesMenu = false
+                return true
+            }
+            for (pair in consumableRects)
+            {
+                val consumable = pair.first
+                val rect = pair.second
+                if (rect.contains(touchX, yInverted))
+                {
+                    val success = consumable.useInBattle(player) { msg, clr ->
+                        messageSystem.addMessage(msg, clr)
+                        addToBattleLog(msg)
+                    }
+                    if (success)
+                    {
+                        updateEnemyBars()
+                        madeMoveThisTurn = true
+                    }
+                    showConsumablesMenu = false
+                    return true
+                }
+            }
             return true
         }
         if (Gdx.input.justTouched()) {
@@ -380,6 +442,7 @@ class BattleScene(
             }
             // 9. Кнопка РАСХОДНИКОВ
             if (!madeMoveThisTurn && consumablesButtonRect.contains(touchX, yInverted)) {
+                battleConsumablesList = player.inventory.getItems().filter {it.consumable!=null && it.quantity > 0}
                 showConsumablesMenu = true
                 return true
             }
@@ -1264,33 +1327,42 @@ class BattleScene(
         slimeAtlas?.dispose()
     } // утечка памяти
     private fun drawConsumablesMenu(batch: SpriteBatch, whitePixel: Texture) {
-        batch.color = Color(0f, 0f, 0f, 0.85f)
+        batch.color = Color(0f, 0f, 0f, 0.85f) // фон
         batch.draw(whitePixel, 0f, 0f, screenWidth, screenHeight)
-        val menuWidth = 500f
-        val menuHeight = 450f
-        val menuX = (screenWidth - menuWidth) / 2
-        val menuY = (screenHeight - menuHeight) / 2
 
         batch.color = Color.DARK_GRAY
-        batch.draw(whitePixel, menuX, menuY, menuWidth, menuHeight)
+        batch.draw(whitePixel, menuX, menuY, menuWidth, menuHeight) // само меню
 
         font.color = Color.YELLOW
         font.data.setScale(1.5f)
         font.draw(batch, "=== ПРЕДМЕТЫ ===", menuX + 130f, menuY + menuHeight - 30f)
-        // Кнопка закрытия
-        val closeRect = Rectangle(menuX + menuWidth - 55f, menuY + menuHeight - 45f, 40f, 40f)
         batch.color = Color.RED
         batch.draw(whitePixel, closeRect.x, closeRect.y, closeRect.width, closeRect.height)
         font.color = Color.WHITE
         font.data.setScale(1f)
         font.draw(batch, "X", closeRect.x + 12f, closeRect.y + 28f)
         // Здесь будет список предметов из инвентаря
-        font.color = Color.LIGHT_GRAY
-        font.data.setScale(1.2f)
-        font.draw(batch, "Coming soon...", menuX + 150f, menuY + 200f)
-        font.draw(batch, "Use items in battle", menuX + 130f, menuY + 170f)
-        font.data.setScale(1f)
+        consumableRects.clear()
+        val startX = menuX + 40f
+        val startY = menuY + menuHeight - 90f
+        val itemSize = 80f
+        val padding = 20f
+        val cols = 4
+        battleConsumablesList.forEachIndexed { index, item ->
+            val consumable = item.consumable ?: return@forEachIndexed
+            val col = index % cols
+            val row = index / cols
+            val x = startX + col * (itemSize + padding)
+            val y = startY - row * (itemSize + padding) - itemSize
+            val rect = Rectangle(x, y, itemSize, itemSize)
+            consumableRects.add(Pair(consumable, rect))
+            batch.color = Color.GRAY
+            batch.draw(whitePixel, x, y, itemSize, itemSize)
+            font.data.setScale(0.8f)
+            font.draw(batch, "${item.name} (${item.quantity})", x+5f, y+itemSize-15f)
+        }
         batch.color = Color.WHITE
+        font.data.setScale(1f)
     }
 }
 data class SkillWheelButton(

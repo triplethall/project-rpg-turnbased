@@ -23,8 +23,7 @@ data class Item(
 class Inventory(
     private val font: BitmapFont,
     private val screenWidth: Float,
-    private val screenHeight: Float,
-    private var invbutt: Texture
+    private val screenHeight: Float
 ) {
     var isVisible = false
         private set
@@ -54,6 +53,7 @@ class Inventory(
     private val runeSlots = mutableListOf<Rectangle>()
 
     private val items = mutableListOf<Item>()
+    fun getItems(): List<Item> = items
     private var selectedItem: Item? = null
     private var selectedItemIndex = -1
 
