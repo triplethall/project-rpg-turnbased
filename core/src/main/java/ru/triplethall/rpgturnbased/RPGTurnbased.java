@@ -13,7 +13,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 
 public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionListener {
     private SpriteBatch batch;
-    private QuestGiverMenu questGiverMenu;      // NEW
+    private QuestGiverMenu questGiverMenu;
+    private DialogueManager dialogueManager;
+    private com.badlogic.gdx.utils.Array<DialogueNode> allDialogueNodes;
     private CameraControl cameraControl;
     private MapRenderer mapRenderer;
     private Inventory inventory;
@@ -80,7 +82,8 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             || (cityMenu != null && cityMenu.isVisible())
             || (shopMenu != null && shopMenu.isVisible())
             || (caveMenu != null && caveMenu.isVisible())
-            || (questGiverMenu != null && questGiverMenu.isVisible());      // NEW
+            || (questGiverMenu != null && questGiverMenu.isVisible())
+            || (dialogueManager != null && dialogueManager.getCurrentNode() != null);
     }
 
     @Override
@@ -91,8 +94,21 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
 
         chestClosed = new Texture("bg/chest_closed.png");
         chestOpen = new Texture("bg/chest_open.png");
+        dialogueManager = new DialogueManager();
 
-        questGiverMenu = new QuestGiverMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());   // NEW
+        try {
+            com.badlogic.gdx.utils.Json json = new com.badlogic.gdx.utils.Json();
+            com.badlogic.gdx.files.FileHandle fileHandle = Gdx.files.internal("dialogs.json");
+            // im not sure what it does but if it works - it works
+            // dont forget to pray to god for it to work
+            // it doesnt work, i wasnt praying enough
+            allDialogueNodes = (com.badlogic.gdx.utils.Array<DialogueNode>) json.fromJson(com.badlogic.gdx.utils.Array.class, DialogueNode.class, fileHandle);
+            Gdx.app.log("DIALOGUE_DEBUG", "Loaded successfully: " + allDialogueNodes.size + " nodes.");
+        } catch (Exception e) {
+            Gdx.app.error("DIALOGUE_DEBUG", "Failed to load dialogs.json", e);
+            allDialogueNodes = new com.badlogic.gdx.utils.Array<>();
+        }
+        questGiverMenu = new QuestGiverMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), dialogueManager);   // NEW
 
         cityMenu = new CityMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         caveMenu = new CaveMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -400,9 +416,19 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                 if (terrain == TerrainType.Chest) {
                     int mimicSize = gameMap.getMimicSize(targetX, targetY);
                     chestMenu.show(targetX, targetY, mimicSize);
-                } else if (terrain == TerrainType.QUEST_GIVER) {
+                } else if (terrain == TerrainType.QUEST_GIVER)
+                {
+                    java.util.List<DialogueNode> nodesList = new java.util.ArrayList<>();
+                    for (DialogueNode node : allDialogueNodes)
+                    {
+                        nodesList.add(node);
+                    }
+                    dialogueManager.startDialogue(nodesList, 3);
                     QuestGiver qg = gameMap.getQuestGiver(targetX, targetY);
-                    if (qg != null) questGiverMenu.show(qg);
+                    if (qg != null)
+                    {
+                        questGiverMenu.show(qg);
+                    }
                 }
             }
 

@@ -1,0 +1,60 @@
+[
+  {
+    "id": 1,
+    "speaker": "speaker name1",
+    "text": "ID=1 welcome text",
+    "next_id": 2
+  },
+  {
+    "id": 2,
+    "speaker": "speaker name2",
+    "text": "ID=2 what happen text",
+    "next_id": -1
+  },
+  {
+    "id": 3,
+    "speaker": "quest giver",
+    "text": "Hello! I am quest giver and this text will represent how much symbols can fit in this dialogue UI. Unfortunately, I still can't give you any quests, so the only thing that I can do, is tell you, that this dialogue's ID is 3!",
+    "choices": [
+      {
+        "text": "Why you can't give quests?",
+        "next_id": 4
+      },
+      {
+        "text": "okay bozo lol cya",
+        "next_id": -1
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "speaker": "quist giver",
+    "text": "Because someone is not capable to do some basic programming, so I am stuck as neuro-sloppic blue square in a map. Did I mention that this dialogue's ID is 4?",
+    "choices": [
+      {
+        "text": "Must be tuff :frozen_face:",
+        "next_id": 5
+      },
+      {
+        "text": "What's current dialogue's ID?",
+        "next_id": 6
+      },
+      {
+        "text": "womp womp cry about it",
+        "next_id": -1
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "speaker": "quid giver",
+    "text": "what",
+    "next_id": -1
+  },
+  {
+    "id": 6,
+    "speaker": "id giver",
+    "text": "Right now you have jumped from ID 4 to ID 6!",
+    "next_id": -1
+  }
+]
