@@ -17,7 +17,7 @@ class BattleEnemy(
 {
     val debuffManager = DebuffManager()
 
-    // Флаг для отслеживания первой атаки по кролику // NEW: Добавлен флаг для механики уклонения кролика
+    // Флаг для отслеживания первой атаки по кролику
     private var firstAttackDodged = false
 
     private var skipTurn = false
@@ -27,10 +27,10 @@ class BattleEnemy(
     fun isAlive(): Boolean = currentHealth > 0
 
     // METHOD FOR ENEMY TO TAKE DAMAGE (с учетом типа врага)
-    fun takeDamage(amount: Int, attackerType: EnemyType = EnemyType.NO_TYPE, isMagic: Boolean = false): Boolean { // NEW: Метод теперь возвращает Boolean (попадание/промах)
+    fun takeDamage(amount: Int, attackerType: EnemyType = EnemyType.NO_TYPE, isMagic: Boolean = false): Boolean {
         var finalDamage = amount
 
-        // Особый эффект для кроликов - 50% шанс уклониться от первой атаки в бою // NEW: Механика первой атаки по кролику
+        // Особый эффект для кроликов - 50% шанс уклониться от первой атаки в бою
         if (this.enemyType == EnemyType.BUNNY && !firstAttackDodged) {
             if (Random.nextDouble() < 0.5) {
                 firstAttackDodged = true
@@ -43,23 +43,18 @@ class BattleEnemy(
         // Применяем особые эффекты типа врага ПРИ ПОЛУЧЕНИИ УРОНА
         when (this.enemyType) {
             EnemyType.FIRE -> {
-                // "При получении урона огнем - восстанавливает 10% здоровья"
+                // При получении урона огнем - восстанавливает 10% здоровья
                 if (attackerType == EnemyType.FIRE) {
                     val healAmount = (maxHealth * 0.1).toInt()
                     currentHealth = (currentHealth + healAmount).coerceAtMost(maxHealth)
                     println("${this.name} (${this.enemyType.displayName}) восстанавливает $healAmount здоровья от огненной атаки!")
                 }
             }
-            EnemyType.WIND, EnemyType.BUNNY -> {
-                // Кролики тоже имеют шанс уклонения как WIND
-                // Эффект применяется в canHit()
-            }
 
             EnemyType.EARTH -> {
-                // "Имеет +30% к защите от физических атак"
-
+                // Имеет +30% к защите от физических атак
                 if (!isMagic) {
-                    finalDamage = (finalDamage * 0.7).toInt() // NEW: Уменьшение физического урона для земляных врагов
+                    finalDamage = (finalDamage * 0.7).toInt()
                 }
             }
             else -> {}
@@ -71,7 +66,7 @@ class BattleEnemy(
             println("${this.name} (${this.enemyType.displayName}) получает $finalDamage урона")
         }
 
-        return true // NEW: Возвращаем true при успешном попадании
+        return true
     }
     // METHOD FOR ENEMY TO TAKE DAMAGE
     fun takeDamage(amount: Int) {
@@ -82,12 +77,12 @@ class BattleEnemy(
         val randomMultiplier = 0.8 + Random.nextDouble() * 0.4
         val baseDamage = if (isMagic) magicDamage else damage
 
-        // Кролики-берсерки наносят больше урона при низком здоровье // NEW: Бонус урона для берсерков при низком HP
+        // Кролики-берсерки наносят больше урона при низком здоровье (+30% урона при здоровье ниже 50%)
         var damageMultiplier = 1.0
         if (enemyType == EnemyType.BERSERK) {
             val healthPercent = currentHealth.toDouble() / maxHealth
             if (healthPercent < 0.5) {
-                damageMultiplier = 1.3 // +30% урона при здоровье ниже 50%
+                damageMultiplier = 1.3
             }
         }
 
@@ -110,7 +105,7 @@ class BattleEnemy(
         return Random.nextDouble() < hitChance
     }
 
-    // Метод для проверки уклонения врага (для атак игрока) // NEW: Добавлен метод проверки уклонения врага
+    // Метод для проверки уклонения врага (для атак игрока)
     fun canDodge(isPhysical: Boolean = true): Boolean {
         return when (enemyType) {
             EnemyType.WIND -> {
@@ -127,7 +122,7 @@ class BattleEnemy(
         }
     }
 
-    // Метод для воскрешения нежити // NEW: Добавлен метод воскрешения для нежити
+    // Метод для воскрешения нежити
     fun tryResurrect(): Boolean {
         if (enemyType == EnemyType.UNDEAD && currentHealth <= 0) {
             if (Random.nextDouble() < 0.3) {
@@ -139,7 +134,7 @@ class BattleEnemy(
         return false
     }
 
-    // Метод для кражи жизни (DARK тип) // NEW: Добавлен метод кражи жизни для тёмных врагов
+    // Метод для кражи жизни (DARK тип)
     fun tryLifeSteal(damageDealt: Int): Int {
         if (enemyType == EnemyType.DARK && damageDealt > 0) {
             val stealAmount = (damageDealt * 0.1).toInt()
@@ -164,7 +159,6 @@ class BattleEnemy(
         }
 
         fun createRandomEnemies(count: Int): MutableList<BattleEnemy> {
-            // NEW: Теперь используются все враги, а не только слизни
             val allEnemies = Enemy.values().toList()
 
             return (1..count).map {
@@ -173,7 +167,7 @@ class BattleEnemy(
             }.toMutableList()
         }
 
-        // Метод для создания врагов определенного типа (например, только скелеты) // NEW: Добавлен метод фильтрации врагов по категориям
+        // Метод для создания врагов определенного типа (например, только скелеты)
         fun createEnemiesByCategory(count: Int, category: String): MutableList<BattleEnemy> {
             val filteredEnemies = when (category.lowercase()) {
                 "slime" -> Enemy.values().filter { it.displayEnemyName.contains("Slime") }
@@ -250,7 +244,6 @@ class BattleEnemy(
 
     fun tryApplyDebuffOnHit(debuffType: DebuffType, chance: Double, duration: Int, intensity: Double = 1.0) {
         if (Random.nextDouble() < chance) {
-            // Применяем к игроку через колбэк (нужно передавать ссылку на игрока)
             println("${name} применяет ${debuffType.name}!")
         }
     }

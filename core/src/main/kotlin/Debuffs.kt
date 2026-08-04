@@ -3,6 +3,7 @@ package ru.triplethall.rpgturnbased
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.scenes.scene2d.ui.Stack
 import kotlin.random.Random
 
@@ -235,8 +236,12 @@ class DebuffApplier {
 
 
 // Класс для отображения дебаффов в битве
-class DebuffRenderer(private val font: BitmapFont) {
-
+// NEW: теперь вместо поломанных эмодзи-символом, отображает корректные пнг иконки
+class DebuffRenderer(
+    private val font: BitmapFont,
+    private val icons: Map<DebuffType, TextureRegion>
+)
+{
     fun renderDebuffs(
         batch: SpriteBatch,
         debuffs: List<DebuffEffect>,
@@ -247,8 +252,8 @@ class DebuffRenderer(private val font: BitmapFont) {
         if (debuffs.isEmpty()) return
 
         val startX = if (isPlayer) x + 5f else x + 85f
-        var currentY = y + 20f
-        val iconSize = 24f
+        val currentY = y + 20f
+        val iconSize = 32f
         val spacing = 28f
 
         debuffs.forEachIndexed { index, debuff ->
@@ -267,68 +272,16 @@ class DebuffRenderer(private val font: BitmapFont) {
     }
 
     private fun drawDebuffIcon(batch: SpriteBatch, debuff: DebuffEffect, x: Float, y: Float, size: Float) {
-        // Цвет для разных типов
-        batch.color = when (debuff.type) {
-            // Дебаффы
-            DebuffType.POISON -> Color.GREEN
-            DebuffType.BURN -> Color.ORANGE
-            DebuffType.FREEZE -> Color.CYAN
-            DebuffType.PARALYSIS -> Color.YELLOW
-            DebuffType.CURSE -> Color.PURPLE
-            DebuffType.WEAKNESS -> Color.GRAY
-            DebuffType.SLOW -> Color.LIGHT_GRAY
-            DebuffType.STUN -> Color.GOLD
-            DebuffType.BLEED -> Color.RED
-            DebuffType.SILENCE -> Color.BROWN
-            DebuffType.WET -> Color.BLUE
-
-            // Баффы
-            DebuffType.DODGE -> Color.CYAN
-            DebuffType.RESURRECTION -> Color.GOLD
-            DebuffType.BUFF_DEFENSE -> Color.BLUE
-            DebuffType.BUFF_CRIT -> Color.ORANGE
-            DebuffType.BUFF_SPEED -> Color.GREEN
-            DebuffType.BUFF_DAMAGE -> Color.RED
-            DebuffType.BUFF_INVULNERABLE -> Color.PINK
-            DebuffType.BUFF_INFINITE_MANA -> Color.PURPLE
-            DebuffType.BUFF_HEALTH -> Color.GREEN
-            DebuffType.BUFF_WILL -> Color.WHITE
-            DebuffType.CLONE -> Color.DARK_GRAY
-            DebuffType.BANNER -> Color.GOLDENROD
+        val iconRegion = icons[debuff.type]
+        if (iconRegion != null)
+        {
+            batch.color = Color.WHITE
+            batch.draw(iconRegion, x, y, size, size)
         }
-
-        font.color = batch.color
-        val symbol = when (debuff.type) {
-            // Дебаффы
-            DebuffType.POISON -> "☠"
-            DebuffType.BURN -> "🔥"
-            DebuffType.FREEZE -> "❄"
-            DebuffType.PARALYSIS -> "⚡"
-            DebuffType.CURSE -> "👻"
-            DebuffType.WEAKNESS -> "↓"
-            DebuffType.SLOW -> "🐌"
-            DebuffType.STUN -> "💫"
-            DebuffType.BLEED -> "🩸"
-            DebuffType.SILENCE -> "🔇"
-            DebuffType.WET -> "💧"
-
-            // Баффы
-            DebuffType.DODGE -> "↗"
-            DebuffType.RESURRECTION -> "✝"
-            DebuffType.BUFF_DEFENSE -> "🛡"
-            DebuffType.BUFF_CRIT -> "★"
-            DebuffType.BUFF_SPEED -> "⚡"
-            DebuffType.BUFF_DAMAGE -> "⚔"
-            DebuffType.BUFF_INVULNERABLE -> "✨"
-            DebuffType.BUFF_INFINITE_MANA -> "∞"
-            DebuffType.BUFF_HEALTH -> "❤"
-            DebuffType.BUFF_WILL -> "🧠"
-            DebuffType.CLONE -> "👥"
-            DebuffType.BANNER -> "🚩"
+        else
+        {
+            batch.color = Color.WHITE
         }
-        font.draw(batch, symbol, x + 4f, y + size - 6f)
-
-        batch.color = Color.WHITE
     }
 
     private fun drawDurationDots(batch: SpriteBatch, debuff: DebuffEffect, x: Float, y: Float, size: Float) {

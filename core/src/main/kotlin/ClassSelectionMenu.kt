@@ -313,7 +313,7 @@ class ClassSelectionMenu(
         titleFont.dispose()
         classFont.dispose()
         descFont.dispose()
-        statsFont.dispose()  // ✅ ДОБАВИТЬ
+        statsFont.dispose()
         selectButtonTexture?.dispose()
         backButtonTexture?.dispose()
     }
