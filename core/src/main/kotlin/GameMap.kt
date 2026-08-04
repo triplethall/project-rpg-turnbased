@@ -19,7 +19,8 @@ enum class TerrainType {
     OpenedChest,
     FOREST,
     CAVEENTRANCE,
-    QUEST_GIVER     // NEW
+    QUEST_GIVER,
+    BOSS             // NEW
 }
 
 class GameMap(
@@ -35,6 +36,9 @@ class GameMap(
     private val mimicSizes = mutableMapOf<Pair<Int, Int>, Int>()
     // хранит тип ловушки
     private val trapTypes = mutableMapOf<Pair<Int, Int>, TrapType>()
+    private val bossCells = mutableListOf<Pair<Int, Int>>()
+    fun isBoss(x: Int, y: Int): Boolean = bossCells.contains(Pair(x, y))
+    fun clearBoss(x: Int, y: Int) { bossCells.remove(Pair(x, y)) }
 
     fun setTrapType(x: Int, y: Int, type: TrapType)
     {
@@ -65,6 +69,7 @@ class GameMap(
     fun restoreAfterBattle(x: Int, y: Int) {
         if (terrain[x][y] == TerrainType.ENEMY) {
             terrain[x][y] = originalTerrain[x][y] // восстанавливаем исходный тип
+            bossCells.remove(Pair(x, y))
         }
     }
 
@@ -216,6 +221,7 @@ class GameMap(
         placeChests()
         placeCity()
         placeCaveEntrance(playerStartX, playerStartY)
+        placeBossNearCaveEntrance()
         placeEnemies(10, playerStartX, playerStartY)
         placeTraps(3, playerStartX, playerStartY)
         placeUpgrade()
@@ -1355,4 +1361,31 @@ class GameMap(
             }
         }
     }
+    private fun placeBossNearCaveEntrance() {
+        val random = Random
+        val caveEntrances = mutableListOf<Pair<Int, Int>>()
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (terrain[x][y] == TerrainType.CAVEENTRANCE)
+                    caveEntrances.add(Pair(x, y))
+            }
+        }
+        for ((cx, cy) in caveEntrances) {
+            val directions = listOf(Pair(0,1), Pair(0,-1), Pair(1,0), Pair(-1,0))
+            val freeCells = directions.mapNotNull { (dx, dy) ->
+                val nx = cx + dx
+                val ny = cy + dy
+                if (nx in 0 until width && ny in 0 until height && terrain[nx][ny] == TerrainType.LAND)
+                    Pair(nx, ny)
+                else null
+            }
+            if (freeCells.isNotEmpty()) {
+                val bossPos = freeCells.random(random)
+                originalTerrain[bossPos.first][bossPos.second] = TerrainType.LAND  // сохраняем
+                terrain[bossPos.first][bossPos.second] = TerrainType.ENEMY
+                bossCells.add(bossPos)
+            }
+        }
+    }
+
 }

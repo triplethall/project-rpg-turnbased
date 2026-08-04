@@ -44,6 +44,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
     private float mapWidthPixels;
     private float mapHeightPixels;
     private BattleScene battleScene;
+    private BossBattleScene bossBattleScene;
     private ChestMenu chestMenu;
     private Texture chestClosed;
     private Texture chestOpen;
@@ -221,6 +222,20 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             skillsTexture
         );
         battleScene.loadAssets();
+        bossBattleScene = new BossBattleScene(
+            font,
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            gameMap,
+            BGArena,
+            whitePixel,
+            barTexture,
+            attackTexture,
+            nextTurnTexture,
+            fleeTexture,
+            logsTexture
+        );
+        bossBattleScene.loadAssets();
 
         pauseMenu = new PauseMenu(font, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(),
             pauseButtonTexture, statsBackgroundTexture, continueButtonTexture, exitButtonTexture, pauseBackgroundTexture, settingsButtonTexture);
@@ -243,6 +258,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         });
         player.syncRenderPos(CELL_SIZE, CELL_GAP);
         battleScene.setPlayer(player);
+        bossBattleScene.setPlayer(player);
 
         mainUI = new MainUI(
             font,
@@ -312,6 +328,11 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             if (battleScene.isActive()) {
                 battleScene.update(Gdx.graphics.getDeltaTime());
                 battleScene.handleInput(player);
+            }
+            else if (bossBattleScene != null && bossBattleScene.isActive())
+            {
+                bossBattleScene.update(Gdx.graphics.getDeltaTime());
+                bossBattleScene.handleInput(player);
             } else if (!isPaused && !menuClicked && !chestMenu.isVisible() && !cityMenu.isVisible() && !shopMenu.isVisible() && !caveMenu.isVisible() && !uiHandled && !isAnyModalOpen()) {
                 handlePlayerInput();
             }
@@ -340,7 +361,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             }
             mapRenderer.update(Gdx.graphics.getDeltaTime());
 
-            if (!battleScene.isShowingEndScreen()) {
+            if (!battleScene.isShowingEndScreen() && (bossBattleScene == null || !bossBattleScene.isShowingEndScreen())) {
                 batch.setProjectionMatrix(cameraControl.getCamera().combined);
                 batch.begin();
                 mapRenderer.render(batch, player);
@@ -353,14 +374,21 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
 
-        if (!battleScene.isActive()) {
+        boolean anyBattleActive = battleScene.isActive() || (bossBattleScene != null && bossBattleScene.isActive());
+        if (!anyBattleActive) {
             mainUI.render(batch);
         }
 
         chestMenu.render(batch, whitePixel);
         pauseMenu.render(batch, whitePixel, player);
         inventory.render(batch, whitePixel, player);
-        if (battleScene.isActive()) battleScene.render(batch, whitePixel, player);
+        if (battleScene.isActive()) {
+            battleScene.render(batch, whitePixel, player);
+        }
+        else if (bossBattleScene != null && bossBattleScene.isActive())
+        {
+            bossBattleScene.render(batch, whitePixel, player);
+        }
         cityMenu.render(batch, shapeRenderer);
         caveMenu.render(batch, shapeRenderer);
         shopMenu.render(batch, shapeRenderer, whitePixel);
@@ -431,7 +459,17 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
                     }
                 }
             }
-
+            if (gameMap.getTerrain(targetX, targetY) == TerrainType.ENEMY) {
+                if (gameMap.isBoss(targetX, targetY))
+                {
+                    BattleEnemy boss = BossFactory.INSTANCE.createBossEnemy();
+                    bossBattleScene.startBossBattle(boss, targetX, targetY);
+                }
+                else
+                {
+                    battleScene.startBattle(targetX, targetY);
+                }
+            }
         }
     }
 
