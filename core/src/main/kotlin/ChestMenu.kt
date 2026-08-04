@@ -11,7 +11,11 @@ class ChestMenu(
     private val font: BitmapFont,
     private val player: Player,
     private val gameMap: GameMap,
-    private val battleScene: BattleScene
+    private val battleScene: BattleScene,
+    private val openButtonTexture: Texture,
+    private val attackButtonTexture: Texture,
+    private val ignoreButtonTexture: Texture,
+    private val statsBackgroundTexture: Texture
 ) {
     var isVisible = false
 
@@ -124,34 +128,25 @@ class ChestMenu(
 
         updateLayout() // Чтобы меню всегда было в центре экрана
 
-        // Фон (темно-серый)
-        batch.color = Color(0.15f, 0.15f, 0.15f, 0.9f)
-        batch.draw(whitePixel, menuRect.x, menuRect.y, menuRect.width, menuRect.height)
-
-        // Рамка (светло-серая)
-        batch.color = Color.LIGHT_GRAY
-        val thickness = 2f
-        batch.draw(whitePixel, menuRect.x, menuRect.y, menuRect.width, thickness) // низ
-        batch.draw(whitePixel, menuRect.x, menuRect.y + menuRect.height, menuRect.width, thickness) // верх
-        batch.draw(whitePixel, menuRect.x, menuRect.y, thickness, menuRect.height) // лево
-        batch.draw(whitePixel, menuRect.x + menuRect.width, menuRect.y, thickness, menuRect.height) // право
+        batch.color = Color.WHITE
+        batch.draw(statsBackgroundTexture, menuRect.x, menuRect.y, menuRect.width, menuRect.height)
 
         // Кнопки
         // IGNORE
-        batch.color = Color.DARK_GRAY
-        batch.draw(whitePixel, ignoreBtnRect.x, ignoreBtnRect.y, ignoreBtnRect.width, ignoreBtnRect.height)
+        batch.color = Color.WHITE
+        batch.draw(ignoreButtonTexture, ignoreBtnRect.x, ignoreBtnRect.y, ignoreBtnRect.width, ignoreBtnRect.height)
         // OPEN
-        batch.color = Color.YELLOW
-        batch.draw(whitePixel, openBtnRect.x, openBtnRect.y, openBtnRect.width, openBtnRect.height)
+        batch.color = Color.WHITE
+        batch.draw(openButtonTexture, openBtnRect.x, openBtnRect.y, openBtnRect.width, openBtnRect.height)
         // ATTACK
-        batch.color = Color.RED
-        batch.draw(whitePixel, attackBtnRect.x, attackBtnRect.y, attackBtnRect.width, attackBtnRect.height)
+        batch.color = Color.WHITE
+        batch.draw(attackButtonTexture, attackBtnRect.x, attackBtnRect.y, attackBtnRect.width, attackBtnRect.height)
 
         // Текст
         batch.color = Color.WHITE
         font.draw(batch, "You approach the chest..", menuRect.x + 80, menuRect.y + menuRect.height - 40)
-        font.draw(batch, "IGNORE", ignoreBtnRect.x + 35, ignoreBtnRect.y + 40)
-        font.draw(batch, "OPEN", openBtnRect.x + 35, openBtnRect.y + 40)
-        font.draw(batch, "ATTACK", attackBtnRect.x + 35, attackBtnRect.y + 40)
+        // font.draw(batch, "IGNORE", ignoreBtnRect.x + 35, ignoreBtnRect.y + 40)
+        // font.draw(batch, "OPEN", openBtnRect.x + 35, openBtnRect.y + 40)
+        // font.draw(batch, "ATTACK", attackBtnRect.x + 35, attackBtnRect.y + 40)
     }
 }

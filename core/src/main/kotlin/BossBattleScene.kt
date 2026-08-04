@@ -66,7 +66,8 @@ class BossBattleScene(
     private lateinit var playerManaBar: StatBar
     private lateinit var messageSystem: BattleMessageSystem
     private val enemyBars = mutableListOf<StatBar>()
-    private val debuffRenderer = DebuffRenderer(font)
+    private val debuffIcons = mutableMapOf<DebuffType, TextureRegion>()
+    private val debuffRenderer = DebuffRenderer(font, debuffIcons)
     private val battleLog = mutableListOf<String>()
     private var showLogs = false
     private var lastDebuffDamage = 0

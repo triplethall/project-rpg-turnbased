@@ -902,32 +902,6 @@ class BattleScene(
         batch.draw(skillsTexture, skillsMenuButtonRect.x, skillsMenuButtonRect.y, buttonSize, buttonSize)
         // больше кнопок не поместится... сделать цикл, чтобы смещать Х когда кнопок больше 6
 
-
-        // ===== НОВАЯ КНОПКА РАСХОДНИКОВ =====
-        batch.color = Color(0.2f, 0.5f, 0.2f, 1f)  // Тёмно-зелёный фон
-        batch.draw(whitePixel, consumablesButtonRect.x, consumablesButtonRect.y, buttonSize, buttonSize)
-
-        // Рамка для кнопки
-        batch.color = Color.GOLD
-        batch.draw(whitePixel, consumablesButtonRect.x - 2f, consumablesButtonRect.y - 2f, buttonSize + 4f, 2f)
-        batch.draw(whitePixel, consumablesButtonRect.x - 2f, consumablesButtonRect.y + buttonSize, buttonSize + 4f, 2f)
-        batch.draw(whitePixel, consumablesButtonRect.x - 2f, consumablesButtonRect.y, 2f, buttonSize)
-        batch.draw(whitePixel, consumablesButtonRect.x + buttonSize, consumablesButtonRect.y, 2f, buttonSize)
-
-        font.color = Color.WHITE
-        font.data.setScale(0.9f)
-        layout.setText(font, "ITEMS")
-        font.draw(batch, "ITEMS",
-            consumablesButtonRect.x + (buttonSize - layout.width) / 2,
-            consumablesButtonRect.y + buttonSize - 25f)
-
-        // Маленькая иконка рюкзака/сумки
-        font.data.setScale(1.2f)
-        font.draw(batch, " I ",
-            consumablesButtonRect.x + (buttonSize - 30f) / 2,
-            consumablesButtonRect.y + 40f)
-        font.data.setScale(1f)
-
         val playerX = space + 400f
         val playerY = rectY - 100f
         batch.color = Color.BLUE
@@ -1385,6 +1359,9 @@ class BattleScene(
         isActive = false
         madeMoveThisTurn = false
         isFleeing = false
+        showLogs = false
+        waitingForSkillTarget = false
+        selectedSkill = null
         fleeTurnsLeft = 0
         enemies.clear()
         enemyCells = emptyList()
