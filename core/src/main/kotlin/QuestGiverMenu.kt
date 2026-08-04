@@ -58,8 +58,8 @@ class QuestGiverMenu(
                 return false
             }
             val choices = node.choices
-            if (choices != null && choices.size > 0) { // Используем .size вместо .isNotEmpty()
-                for (i in 0 until choices.size) { // Итерируемся по размеру Array
+            if (choices != null && choices.size > 0) { // chto?
+                for (i in 0 until choices.size) {
                     if (i < choiceButtons.size && choiceButtons[i].contains(x, y)) {
                         dialogueManager.selectNode(choices[i].nextId)
                         return true

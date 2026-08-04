@@ -48,13 +48,24 @@
   {
     "id": 5,
     "speaker": "quid giver",
-    "text": "what",
-    "next_id": -1
+    "text": "btw look how russian text looks in this game: \"брр бррр патапим\". and this is how emoji's look: \"😭🙏🥀\"",
+    "choices": [
+      {
+        "text": "and why i need it",
+        "next_id": 7
+      }
+    ]
   },
   {
     "id": 6,
     "speaker": "id giver",
     "text": "Right now you have jumped from ID 4 to ID 6!",
+    "next_id": -1
+  },
+  {
+    "id": 7,
+    "speaker": "squid game",
+    "text": "Dad, I'm EHEE Fish Fillet - A song by Melvin: \"I'm gooning everyday\" Give me your dream meal and I'll go try it. EHEE, get the famous EHEE with the EHEE oooooo. dzamenamena E AE waka waka E EA AEO AEO AEO AEO. Can you guess the fake person? You want me to do some EHEE?! Oh I'll do some EHEE! (screaming wildly) How to say \"Book\" in Russian? EHEE. Lady... I ain't got all day... Americano? Cappuccino? Latte? Nescofe. Are you joking!? No, I'm dad. Mom: \"what was that noise?\" Me in my room: tung tung tung sahur. I don't like ehee ehee eeheee. V etot den' 12 Jan 2025 \"Zakusone\". That was a Gregley production (trollface yara yara)",
     "next_id": -1
   }
 ]

@@ -101,7 +101,7 @@ public class RPGTurnbased extends ApplicationAdapter implements ClassSelectionLi
             com.badlogic.gdx.files.FileHandle fileHandle = Gdx.files.internal("dialogs.json");
             // im not sure what it does but if it works - it works
             // dont forget to pray to god for it to work
-            // it doesnt work, i wasnt praying enough
+            // it works 😃😃😃 i prayed enough😌😌
             allDialogueNodes = (com.badlogic.gdx.utils.Array<DialogueNode>) json.fromJson(com.badlogic.gdx.utils.Array.class, DialogueNode.class, fileHandle);
             Gdx.app.log("DIALOGUE_DEBUG", "Loaded successfully: " + allDialogueNodes.size + " nodes.");
         } catch (Exception e) {
