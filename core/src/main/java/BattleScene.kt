@@ -161,6 +161,7 @@ class BattleScene(
     private var showLogs = false
     private var lastDebuffDamage = 0
     private var showConsumablesMenu = false
+    private var isBossFight = false
 
     // ===== РАДИАЛЬНОЕ МЕНЮ НАВЫКОВ =====
     private var showSkillWheel = false
@@ -263,6 +264,12 @@ class BattleScene(
         startBattleWithEnemies(listOf(mimic), listOf(Pair(x, y)))
         messageSystem.addMessage("MIMIC ATTACKED YOU!", Color.FIREBRICK)
         addToBattleLog("MIMIC ATTACKED YOU!")
+    }
+    fun startBossBattle(boss: BattleEnemy, x: Int, y: Int)
+    {
+        startBattleWithEnemies(listOf(boss), listOf(Pair(x, y)))
+        isBossFight = true
+        messageSystem.addMessage("BOSS FIGHT U DEAD", Color.RED)
     }
     private fun addToBattleLog(msg: String) {
         battleLog.add(msg)
@@ -825,6 +832,11 @@ class BattleScene(
         }
     }
     private fun flee() { // решил сделать побег с шансом... т.к. убрали кнопку пропуска хода :/
+        if (isBossFight)
+        {
+            messageSystem.addMessage("Cannot escape during boss fight", Color.FIREBRICK)
+            return
+        }
         val fleeChance = 0.50
         val finalChance = (fleeChance - (enemies.size * 0.15).coerceIn(0.10,0.60))
         if (Random.nextDouble() < finalChance)
@@ -1363,6 +1375,7 @@ class BattleScene(
         waitingForSkillTarget = false
         selectedSkill = null
         fleeTurnsLeft = 0
+        isBossFight = false
         enemies.clear()
         enemyCells = emptyList()
         SoundManager.stopMusic()
